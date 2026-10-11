@@ -1,0 +1,891 @@
+/* ==========================================================================
+   Kampung Spirit: theme
+   Loaded after Bootstrap (see main.js), so these rules override its defaults.
+
+   1. Colours and fonts      5. Navbar
+   2. Base text (18px, 22px  6. Page layout
+      for seniors)           7. Request card (simple, opens on hover/tap)
+   3. Buttons                8. Badges, alerts, empty state, modal
+   4. Forms                  9. Landing page
+   ========================================================================== */
+
+
+/* 1. Colours and fonts
+   -------------------------------------------------------------------------- */
+:root {
+  --ks-teal: #0b6e6e;
+  --ks-teal-dark: #095757;
+  --ks-teal-deep: #0a5555;     /* landing page panel */
+  --ks-teal-tint: #e3f1f0;     /* selected / hover backgrounds */
+  --ks-heading: #0f3b3d;
+  --ks-ink: #16272b;           /* body text */
+  --ks-muted: #465a60;         /* secondary text (7:1 on white) */
+  --ks-bg: #e7f1ef;            /* page background (soft sage) */
+  --ks-surface: #ffffff;
+  --ks-line: #d3dedd;          /* soft dividers and card borders */
+  --ks-line-strong: #6f8589;   /* input borders (3:1 on white) */
+  --ks-amber-bg: #fdefc4;      /* points and "needs attention" */
+  --ks-amber-ink: #5f4200;
+  --ks-danger: #b02a37;
+
+  /* One colour per category: --cat (text, edge, tick) and --cat-tint (backgrounds) */
+  --cat: var(--ks-teal);
+  --cat-tint: var(--ks-teal-tint);
+
+  --ks-font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --ks-font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+
+  /* Point Bootstrap at our palette */
+  --bs-primary: var(--ks-teal);
+  --bs-primary-rgb: 11, 110, 110;
+  --bs-secondary-rgb: 70, 90, 96;
+  --bs-secondary-color: var(--ks-muted);
+  --bs-link-color-rgb: 11, 110, 110;
+  --bs-link-hover-color-rgb: 9, 87, 87;
+  --bs-body-bg: var(--ks-bg);
+  --bs-body-color: var(--ks-ink);
+  --bs-body-font-family: var(--ks-font-body);
+  --bs-body-line-height: 1.6;
+  --bs-border-color: var(--ks-line);
+}
+
+
+/* 2. Base text
+   -------------------------------------------------------------------------- */
+
+/* 112.5% of the browser default = 18px, and it still follows the user's own text-size setting */
+html {
+  font-size: 112.5%;
+}
+
+/* Seniors get larger text: 137.5% = 22px. Everything is sized in rem, so text,
+   buttons, spacing and inputs all grow together. The senior layout has a
+   .role-senior element, and :has() lets <html> notice that. */
+html:has(.role-senior) {
+  font-size: 137.5%;
+}
+
+body {
+  background-color: var(--ks-bg);
+  color: var(--ks-ink);
+}
+
+.page-title {
+  font-family: var(--ks-font-display);
+  font-size: clamp(1.75rem, 1.4rem + 1.4vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ks-teal-dark);
+  margin: 0;
+}
+
+.page-subtitle {
+  margin: 0.4rem 0 0;
+  font-size: 1.05rem;
+  color: var(--ks-muted);
+}
+
+/* On the dark navbar the focus ring is white */
+.app-navbar :focus-visible {
+  outline-color: #fff;
+}
+
+/* A clear keyboard focus ring everywhere */
+:focus-visible,
+.btn:focus-visible,
+.nav-link:focus-visible,
+.navbar-brand:focus-visible,
+.dropdown-item:focus-visible {
+  outline: 3px solid var(--ks-teal-dark);
+  outline-offset: 3px;
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+/* 3. Buttons: large touch targets (48px+), one clear primary action
+   -------------------------------------------------------------------------- */
+.btn {
+  --bs-btn-padding-x: 1.4rem;
+  --bs-btn-padding-y: 0.65rem;
+  --bs-btn-font-size: 1rem;
+  --bs-btn-font-weight: 600;
+  --bs-btn-border-radius: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  line-height: 1.3;
+}
+
+.btn-lg {
+  --bs-btn-padding-x: 1.75rem;
+  --bs-btn-padding-y: 0.8rem;
+  --bs-btn-font-size: 1.125rem;
+  --bs-btn-border-radius: 0.85rem;
+  min-height: 3.5rem;
+}
+
+.btn-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--ks-teal);
+  --bs-btn-border-color: var(--ks-teal);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--ks-teal-dark);
+  --bs-btn-hover-border-color: var(--ks-teal-dark);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #074545;
+  --bs-btn-active-border-color: #074545;
+  /* Disabled looks plainly "off" (grey, still readable) instead of a faded teal */
+  --bs-btn-disabled-color: #4f6368;
+  --bs-btn-disabled-bg: #e1e8e8;
+  --bs-btn-disabled-border-color: #e1e8e8;
+  --bs-btn-disabled-opacity: 1;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--ks-teal);
+  --bs-btn-bg: #fff;
+  --bs-btn-border-color: var(--ks-teal);
+  --bs-btn-hover-color: var(--ks-teal-dark);
+  --bs-btn-hover-bg: var(--ks-teal-tint);
+  --bs-btn-hover-border-color: var(--ks-teal);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--ks-teal);
+  --bs-btn-active-border-color: var(--ks-teal);
+  --bs-btn-disabled-color: var(--ks-teal);
+  --bs-btn-disabled-border-color: var(--ks-teal);
+}
+
+.btn-outline-secondary {
+  --bs-btn-color: #33474c;
+  --bs-btn-bg: #fff;
+  --bs-btn-border-color: var(--ks-line-strong);
+  --bs-btn-hover-color: var(--ks-ink);
+  --bs-btn-hover-bg: #e9eeee;
+  --bs-btn-hover-border-color: var(--ks-line-strong);
+  --bs-btn-active-color: var(--ks-ink);
+  --bs-btn-active-bg: #dde5e5;
+  --bs-btn-active-border-color: var(--ks-line-strong);
+}
+
+.btn-outline-danger {
+  --bs-btn-color: var(--ks-danger);
+  --bs-btn-bg: #fff;
+  --bs-btn-border-color: var(--ks-danger);
+  --bs-btn-hover-color: #8f202b;
+  --bs-btn-hover-bg: #fbe9eb;
+  --bs-btn-hover-border-color: var(--ks-danger);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--ks-danger);
+  --bs-btn-active-border-color: var(--ks-danger);
+}
+
+.btn-danger {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--ks-danger);
+  --bs-btn-border-color: var(--ks-danger);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #8f202b;
+  --bs-btn-hover-border-color: #8f202b;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #7a1b25;
+  --bs-btn-active-border-color: #7a1b25;
+}
+
+/* Big selectable tiles (the category picker). A tick shows what is chosen, so
+   the choice is never shown by colour alone. */
+.choice-tile {
+  --bs-btn-color: var(--ks-ink);
+  --bs-btn-bg: #fff;
+  --bs-btn-border-width: 2px;
+  --bs-btn-border-color: var(--ks-line-strong);
+  --bs-btn-hover-color: var(--ks-ink);
+  --bs-btn-hover-bg: var(--cat-tint);
+  --bs-btn-hover-border-color: var(--cat);
+  --bs-btn-active-color: var(--ks-ink);
+  --bs-btn-active-bg: var(--cat-tint);
+  --bs-btn-active-border-color: var(--cat);
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.choice-tile .category-icon {
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.05rem;
+}
+
+.choice-tile.active::after {
+  content: '\2713';
+  margin-left: auto;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--cat);
+}
+
+
+/* 4. Forms
+   -------------------------------------------------------------------------- */
+.form-label {
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  color: var(--ks-ink);
+}
+
+.form-control,
+.form-select {
+  min-height: 3.25rem;
+  padding: 0.7rem 1rem;
+  font-size: 1rem;
+  color: var(--ks-ink);
+  background-color: #fff;
+  border: 2px solid var(--ks-line-strong);
+  border-radius: 0.75rem;
+}
+
+.form-select {
+  padding-right: 2.75rem;
+}
+
+.form-control::placeholder {
+  color: #5d7176;
+  opacity: 1;
+}
+
+.form-control:focus,
+.form-select:focus {
+  color: var(--ks-ink);
+  border-color: var(--ks-teal);
+  box-shadow: 0 0 0 0.25rem rgba(11, 110, 110, 0.2);
+}
+
+.form-control.is-invalid {
+  border-color: var(--ks-danger);
+}
+
+.invalid-feedback {
+  margin-top: 0.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ks-danger);
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+@media (max-width: 575.98px) {
+  .form-actions .btn {
+    flex: 1 1 100%;
+  }
+}
+
+.points-note {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  background: var(--ks-amber-bg);
+  color: var(--ks-amber-ink);
+  border-radius: 0.75rem;
+}
+
+
+/* 5. Navbar: white, one clear current page, big tap targets
+   -------------------------------------------------------------------------- */
+.app-navbar {
+  --bs-navbar-padding-y: 0.65rem;
+  --bs-navbar-toggler-icon-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='white' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+  background: var(--ks-teal-deep);
+  border-bottom: 4px solid #e9b949;   /* warm amber edge */
+}
+
+.app-navbar .navbar-brand {
+  font-family: var(--ks-font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.app-navbar .navbar-brand:hover,
+.app-navbar .navbar-brand:focus {
+  color: #fff;
+}
+
+.app-navbar .navbar-nav .nav-link {
+  white-space: nowrap;
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: 0.65rem;
+}
+
+.app-navbar .navbar-nav .nav-link:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.app-navbar .navbar-nav .nav-link.active {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.app-navbar .navbar-toggler {
+  padding: 0.45rem 0.65rem;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 0.65rem;
+}
+
+.app-navbar .navbar-toggler:focus {
+  box-shadow: none;
+}
+
+.navbar-collapse .navbar-nav + .navbar-nav {
+  margin-top: 0.5rem;
+}
+
+/* Bootstrap keeps the navbar on one row once it is expanded. Senior text is
+   larger, so there the links and the name can be wider than the screen. Let the
+   menu drop to a second row when (and only when) it does not fit. */
+.app-navbar > .container {
+  flex-wrap: wrap;
+  row-gap: 0.25rem;
+}
+
+@media (min-width: 1200px) {
+  .app-navbar .navbar-nav.me-auto {
+    flex: none;
+  }
+
+  .app-navbar .navbar-nav.ms-auto,
+  .app-navbar .nav-item.dropdown {
+    min-width: 0;
+  }
+}
+
+@media (min-width: 1200px) {
+  .navbar-collapse .navbar-nav + .navbar-nav {
+    margin-top: 0;
+  }
+}
+
+/* Name + avatar button */
+.app-navbar .user-toggle {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  padding: 0.3rem 1rem 0.3rem 0.35rem;
+}
+
+.avatar-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ks-teal-dark);
+  font-weight: 700;
+}
+
+.user-name {
+  min-width: 0;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.points-pill {
+  display: inline-block;
+  padding: 0.4rem 0.95rem;
+  border-radius: 999px;
+  background: var(--ks-amber-bg);
+  color: var(--ks-amber-ink);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dropdown-menu {
+  --bs-dropdown-bg: #fff;
+  min-width: 15rem;
+  padding: 0.5rem;
+  border: 1px solid var(--ks-line);
+  border-radius: 0.9rem;
+  box-shadow: 0 12px 32px rgba(16, 40, 44, 0.14);
+}
+
+.dropdown-menu .dropdown-header {
+  padding: 0.6rem 0.85rem;
+  font-size: 1rem;
+  color: var(--ks-ink);
+}
+
+.dropdown-menu .dropdown-item {
+  padding: 0.7rem 0.85rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 0.6rem;
+}
+
+.menu-meta {
+  color: var(--ks-muted);
+}
+
+.dropdown-menu .dropdown-item.text-danger {
+  color: var(--ks-danger) !important;
+}
+
+.dropdown-menu .dropdown-item.text-danger:hover {
+  background: #fbe9eb;
+}
+
+
+/* Category colours */
+.cat-tech { --cat: #2563a8; --cat-tint: #dce9f7; }
+.cat-grocery { --cat: #2f7d3a; --cat-tint: #dcf0df; }
+.cat-lifting { --cat: #b45309; --cat-tint: #fde8d0; }
+.cat-translation { --cat: #7b3fa0; --cat-tint: #eddff6; }
+.cat-companion-walk { --cat: #b83a62; --cat-tint: #fadde7; }
+
+
+/* 6. Page layout: one readable column
+   -------------------------------------------------------------------------- */
+.container.app-container {
+  max-width: 920px;
+}
+
+.app-main {
+  padding: 2.5rem 0 4rem;
+}
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  margin-bottom: 2rem;
+}
+
+.form-page {
+  max-width: 44rem;
+}
+
+.request-list {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.count-pill {
+  display: inline-flex;
+  padding: 0.45rem 1rem;
+  border: 1px solid var(--ks-line-strong);
+  border-radius: 999px;
+  background: #fff;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.count-pill.is-full {
+  background: var(--ks-amber-bg);
+  border-color: #d3ad45;
+  color: var(--ks-amber-ink);
+}
+
+
+/* 7. Request card: what, how long, how much. Nothing else unless needed.
+   -------------------------------------------------------------------------- */
+.card {
+  --bs-card-border-color: var(--ks-line);
+  --bs-card-border-radius: 1rem;
+  --bs-card-inner-border-radius: calc(1rem - 1px);
+  --bs-card-bg: var(--ks-surface);
+  box-shadow: 0 1px 3px rgba(10, 60, 60, 0.08);
+}
+
+.request-card {
+  position: relative;               /* the title button is stretched over the card */
+  border-left: 6px solid var(--cat);
+  transition: box-shadow 0.2s ease;
+}
+
+.request-card.is-expanded {
+  box-shadow: 0 10px 28px rgba(10, 60, 60, 0.16);
+}
+
+.request-card .card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1.25rem 1.75rem;
+}
+
+.request-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.category-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-weight: 700;
+  color: var(--cat);
+}
+
+.category-icon {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.7rem;
+  background: var(--cat-tint);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.request-title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ks-heading);
+}
+
+/* The title is a button so keyboard and touch users can open the card.
+   Its ::after covers the whole card, so a tap anywhere opens or closes it. */
+.request-toggle {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.request-toggle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+/* The ring goes around the whole card instead of just the title text */
+.request-toggle:focus-visible {
+  outline: none;
+}
+
+.request-card:has(.request-toggle:focus-visible) {
+  outline: 3px solid var(--ks-teal-dark);
+  outline-offset: 3px;
+}
+
+.request-hint {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ks-muted);
+}
+
+/* Details slide open. A grid row going from 0fr to 1fr animates the height.
+   While closed they are visibility:hidden, so Tab and screen readers skip them. */
+.request-details {
+  position: relative;               /* sits above the stretched title button, so its buttons can be pressed */
+  z-index: 1;
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition: grid-template-rows 0.25s ease, visibility 0s linear 0.25s;
+}
+
+.request-card.is-expanded .request-details {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition: grid-template-rows 0.25s ease, visibility 0s;
+}
+
+.request-details-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+  overflow: hidden;
+  /* room so focus rings are not cut off by overflow: hidden */
+  padding: 0.25rem;
+  margin: -0.25rem;
+}
+
+.request-desc {
+  margin: 0;
+  max-width: 65ch;
+  font-size: 1.05rem;
+}
+
+.request-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2.5rem;
+  margin: 0;
+  padding: 0.85rem 1.1rem;
+  background: var(--cat-tint);
+  border-radius: 0.75rem;
+}
+
+.request-facts dt {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #33474c;
+}
+
+.request-facts dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.request-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 1.5rem;
+  margin: 0;
+  color: var(--ks-muted);
+}
+
+.request-people strong {
+  color: var(--ks-ink);
+}
+
+/* Four-step tracker, shown only while a task is in progress */
+.progress-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.progress-steps li {
+  font-size: 0.9rem;
+  color: var(--ks-muted);
+}
+
+.progress-steps li::before {
+  content: '';
+  display: block;
+  height: 0.4rem;
+  margin-bottom: 0.45rem;
+  border-radius: 999px;
+  background: #cfdcdb;
+}
+
+.progress-steps li.is-done::before {
+  background: var(--ks-teal);
+}
+
+.progress-steps li.is-current {
+  font-weight: 700;
+  color: var(--ks-heading);
+}
+
+.request-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--ks-line);
+}
+
+/* No buttons for this status: hide the divider too */
+.request-actions:empty {
+  display: none;
+}
+
+.request-note {
+  margin: 0;
+  color: var(--ks-muted);
+}
+
+.request-success {
+  margin: 0;
+  font-weight: 700;
+  color: #1c5a2d;
+}
+
+
+@media (max-width: 575.98px) {
+  .app-main {
+    padding-top: 1.75rem;
+  }
+
+  .request-card .card-body {
+    padding: 1.25rem;
+  }
+
+  .progress-steps li {
+    font-size: 0.85rem;
+  }
+}
+
+
+/* 8. Badges, alerts, empty state, modal
+   -------------------------------------------------------------------------- */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.9rem;
+  border-radius: 999px;
+  background: var(--pill-bg);
+  color: var(--pill-ink);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.status-pill::before {
+  content: '';
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-open { --pill-bg: #dcf0e2; --pill-ink: #1c5a2d; }
+.status-accepted { --pill-bg: #d9ebf7; --pill-ink: #164565; }
+.status-pending { --pill-bg: var(--ks-amber-bg); --pill-ink: var(--ks-amber-ink); }
+.status-completed { --pill-bg: #e5ebea; --pill-ink: #2f4448; }
+.status-cancelled { --pill-bg: #f6dddf; --pill-ink: #7a1f29; }
+
+.alert {
+  padding: 1rem 1.25rem;
+  font-weight: 500;
+  border-radius: 0.75rem;
+}
+
+.empty-state {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  background: #f6fbfa;
+  border: 2px dashed #7fb3b0;
+  border-radius: 1rem;
+}
+
+.empty-state-message {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--ks-muted);
+}
+
+.modal {
+  --bs-modal-bg: #fff;
+}
+
+.modal-content {
+  border: 0;
+  border-radius: 1.1rem;
+  box-shadow: 0 24px 64px rgba(10, 30, 34, 0.28);
+}
+
+.modal-header {
+  padding: 1.5rem 1.5rem 0;
+  border-bottom: 0;
+}
+
+.modal-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--ks-heading);
+}
+
+.modal-body {
+  padding: 1rem 1.5rem;
+  font-size: 1.1rem;
+}
+
+.modal-footer {
+  padding: 0.5rem 1.5rem 1.5rem;
+  border-top: 0;
+}
+
+.modal-backdrop.show {
+  opacity: 0.55;
+}
+
+
+/* 9. Landing page: a calm teal panel with the tagline, and a simple sign-in
+   -------------------------------------------------------------------------- */
+.landing-hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 3rem;
+  padding: clamp(1.75rem, 5vw, 4rem);
+  background-color: var(--ks-teal-deep);
+  background-image:
+    radial-gradient(circle at 88% 10%, rgba(233, 185, 73, 0.9) 0 4.5rem, transparent 4.55rem),
+    radial-gradient(circle at 96% 24%, rgba(255, 255, 255, 0.1) 0 8rem, transparent 8.05rem),
+    radial-gradient(circle at 6% 98%, rgba(255, 255, 255, 0.09) 0 14rem, transparent 14.05rem);
+  color: #fff;
+}
+
+.landing-brand {
+  margin: 0;
+  font-family: var(--ks-font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.landing-tagline {
+  max-width: 17ch;
+  margin: 0;
+  color: #fff;
+  text-wrap: balance;
+  font-family: var(--ks-font-display);
+  font-size: clamp(2.25rem, 1.5rem + 3vw, 3.75rem);
+  font-weight: 700;
+  line-height: 1.12;
+}
+
+.landing-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+  background: var(--ks-bg);
+}
+
+.login-box {
+  width: 100%;
+  max-width: 26rem;
+}
+
+.role-hint {
+  min-height: 3.2em;
+  text-wrap: balance;
+  margin: 0.75rem 0 1.5rem;
+  color: var(--ks-muted);
+}
+
+@media (min-width: 992px) {
+  .landing-row {
+    min-height: 100vh;
+  }
+}

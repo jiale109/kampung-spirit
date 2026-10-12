@@ -19,8 +19,12 @@ const store = useHelpRequestStore()
     <div v-else class="request-list">
       <RequestCard v-for="request in store.myTasks" :key="request.id" :request="request" :show-helper="false">
         <template #actions>
-          <button v-if="request.status === 'accepted'" class="btn btn-primary btn-lg" data-testid="mark-done"
-            @click="store.markDone(request.id)">Mark as done</button>
+          <template v-if="request.status === 'accepted'">
+            <button class="btn btn-primary btn-lg" data-testid="mark-done"
+              @click="store.markDone(request.id)">Mark as done</button>
+            <button class="btn btn-outline-secondary btn-lg" data-testid="withdraw"
+              @click="store.withdrawFromTask(request.id)">Withdraw</button>
+          </template>
           <span v-if="request.status === 'pending_confirmation'" class="request-note">
             Waiting for {{ request.seniorName }} to confirm. Points are released after that.
           </span>

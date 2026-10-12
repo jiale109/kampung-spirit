@@ -55,16 +55,8 @@
 
 /* 112.5% of the browser default = 18px, and it still follows the user's own text-size setting */
 html {
-  font-size: 112.5%;
-}
-
-/* Seniors get larger text: 137.5% = 22px. Everything is sized in rem, so text,
-   buttons, spacing and inputs all grow together. The senior layout has a
-   .role-senior element, and :has() lets <html> notice that. */
-html:has(.role-senior) {
   font-size: 137.5%;
 }
-
 body {
   background-color: var(--ks-bg);
   color: var(--ks-ink);

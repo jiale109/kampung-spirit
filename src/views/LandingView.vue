@@ -73,9 +73,9 @@ function enter() {
           <!-- Senior / Youth toggle -->
           <div class="btn-group w-100" role="group" aria-label="Choose your role">
             <button type="button" class="btn btn-lg btn-outline-primary" :class="{ active: role === 'senior' }"
-              :aria-pressed="role === 'senior'" @click="chooseRole('senior')">Senior</button>
+              :aria-pressed="role === 'senior'" @click="chooseRole('senior')">Beneficiary</button>
             <button type="button" class="btn btn-lg btn-outline-primary" :class="{ active: role === 'youth' }"
-              :aria-pressed="role === 'youth'" @click="chooseRole('youth')">Youth</button>
+              :aria-pressed="role === 'youth'" @click="chooseRole('youth')">Volunteer</button>
           </div>
           <p class="role-hint" aria-live="polite">{{ roleHint }}</p>
 

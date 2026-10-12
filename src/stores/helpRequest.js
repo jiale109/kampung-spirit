@@ -134,6 +134,15 @@ export const useHelpRequestStore = defineStore('helpRequest', () => {
     getRequestById(id).status = 'pending_confirmation'
   }
 
+  // The volunteer backs out of an accepted task. It goes back on the board for others.
+  function withdrawFromTask(id) {
+    const request = getRequestById(id)
+    if (request.status !== 'accepted' || request.helperId !== auth.user.id) return
+    request.status = 'open'
+    request.helperId = null
+    request.helperName = null
+  }
+
   // Put the sample data back (for demos)
   function reset() {
     requests.value = seedRequests()
@@ -145,6 +154,6 @@ export const useHelpRequestStore = defineStore('helpRequest', () => {
     myRequests, openRequests, myTasks, activeCount, atLimit, myPoints,
     getRequestById,
     createRequest, updateRequest, cancelRequest, confirmDone,
-    acceptRequest, markDone, reset,
+    acceptRequest, markDone, withdrawFromTask, reset,
   }
 })

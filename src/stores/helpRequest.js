@@ -31,26 +31,31 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { useAuthStore } from './auth.js'
-import { seedRequests, seedPoints } from '../lib/seed.js'
+import { usePointsStore } from './points.js'
+import { seedRequests } from '../lib/seed.js'
 import { calcPoints, MAX_ACTIVE_TASKS } from '../lib/points.js'
 
 const STORAGE_KEY = 'kampung-helpboard'
-
 // Status of a request moves like this:
 // open -> accepted -> pending_confirmation -> completed   (or cancelled)
 
 export const useHelpRequestStore = defineStore('helpRequest', () => {
   const auth = useAuthStore()
-
+  const pointsStore = usePointsStore()
+  
   // Load from the browser if we have saved data, otherwise start with the sample data
   const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
   const requests = ref(saved ? saved.requests : seedRequests())
-  const points = ref(saved ? saved.points : seedPoints()) // { youthId: points }
 
-  // Save to the browser whenever something changes
-  watch([requests, points], () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ requests: requests.value, points: points.value }))
-  }, { deep: true })
+
+  // Save only requests to localStorage under 'kampung-helpboard'
+  watch(
+    requests,
+    () => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ requests: requests.value }))
+    },
+    { deep: true },
+  )
 
   // ---- What each person sees ----
 
@@ -69,7 +74,8 @@ export const useHelpRequestStore = defineStore('helpRequest', () => {
   })
   const atLimit = computed(() => activeCount.value >= MAX_ACTIVE_TASKS)
 
-  const myPoints = computed(() => points.value[auth.user?.id] ?? 0)
+  // Delegate myPoints to pointsStore for backward compatibility
+  const myPoints = computed(() => pointsStore.myPoints)
 
   function getRequestById(id) {
     return requests.value.find((r) => r.id === id) ?? null
@@ -110,7 +116,11 @@ export const useHelpRequestStore = defineStore('helpRequest', () => {
     const request = getRequestById(id)
     if (request.status !== 'pending_confirmation') return
     request.status = 'completed'
-    points.value[request.helperId] = (points.value[request.helperId] ?? 0) + request.points
+     pointsStore.awardPoints(
+      request.helperId,
+      request.points,
+      `Completed help request: ${request.title}`,
+    )
   }
 
   // ---- Youth actions ----
@@ -146,11 +156,11 @@ export const useHelpRequestStore = defineStore('helpRequest', () => {
   // Put the sample data back (for demos)
   function reset() {
     requests.value = seedRequests()
-    points.value = seedPoints()
+    pointsStore.reset()
   }
 
   return {
-    requests, points,
+    requests,
     myRequests, openRequests, myTasks, activeCount, atLimit, myPoints,
     getRequestById,
     createRequest, updateRequest, cancelRequest, confirmDone,

@@ -1,4 +1,4 @@
-<script setup>
+<script setup> 
 /*
   ============================================================================
   GUIDE: Kampung Points, Rewards and Community Challenge   Owner: Nathaniel Low

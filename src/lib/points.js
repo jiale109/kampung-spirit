@@ -33,3 +33,13 @@ export const MAX_ACTIVE_TASKS = 2
 export function calcPoints(difficulty, duration) {
   return Math.round(10 * difficulties[difficulty] * (duration / 30))
 }
+
+// Hangout attendance or hosting (e.g. 60 mins base = 20 points)
+export function pointsForHangout(durationMinutes = 60) {
+  return Math.round(20 * (durationMinutes / 60))
+}
+
+// Skill swap teaching or participation (e.g. 60 mins base = 30 points)
+export function pointsForSkillSwap(durationMinutes = 60) {
+  return Math.round(30 * (durationMinutes / 60))
+}

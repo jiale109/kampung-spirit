@@ -43,3 +43,5 @@ export function pointsForHangout(durationMinutes = 60) {
 export function pointsForSkillSwap(durationMinutes = 60) {
   return Math.round(30 * (durationMinutes / 60))
 }
+// Monthly community challenge target 
+export const COMMUNITY_TARGET = 10000

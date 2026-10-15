@@ -69,3 +69,11 @@ export function seedRequests() {
       'Lifting', 'Medium', 30, 'completed', 'y2'),
   ]
 }
+
+// Starting points ledger for each youth (matches original seed: y1: 120, y2: 200)
+export function seedLedger() {
+  return [
+    { id: 'p1', userId: 'y1', amount: 120, reason: 'Starting balance', createdAt: Date.now() - 86400000 },
+    { id: 'p2', userId: 'y2', amount: 200, reason: 'Starting balance', createdAt: Date.now() - 86400000 },
+  ]
+}

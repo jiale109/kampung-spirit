@@ -166,7 +166,7 @@ function confirmRedeem() {
     </div>
 
     <!-- Feedback messages -->
-    <div v-if="message" class="alert alert-success alert-dismissible fade show mb-4" role="status">
+    <div v-if="message" class="alert alert-success alert-dismissible show mb-4" role="status">
       {{ message }}
       <button type="button" class="btn-close" aria-label="Close" @click="message = ''"></button>
     </div>
@@ -175,6 +175,59 @@ function confirmRedeem() {
       <button type="button" class="btn-close" aria-label="Close" @click="error = ''"></button>
     </div>
 
+
+    <!--community challenge-->
+    <div class="card border-0 rounded-4 mb-4 text-white overflow-hidden community-challenge-card">
+      <div class="card-body p-4 position-relative">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+          <div>
+            <span class="badge bg-warning text-dark px-3 py-1 rounded-pill  fw-bold mb-1">
+               Monthly Estate Challenge
+            </span>
+            <h2 class="h5 fw-bold mb-0 text-white">Eunos Kampung Spirit Goal</h2>
+          </div>
+          <!-- Numbers as text -->
+          <div class="text-end">
+            <span class="fs-5 fw-bold font-monospace">
+              {{ pointsStore.communityPointsThisMonth.toLocaleString() }} of {{ pointsStore.COMMUNITY_TARGET.toLocaleString() }}
+            </span>
+            <small class="d-block text-white-50">points earned this month</small>
+          </div>
+        </div>
+
+        <!--Progress Bar -->
+        <div
+          class="progress my-3 bg-white bg-opacity-25 rounded-pill"
+          style="height: 18px;"
+          role="progressbar"
+          :aria-valuenow="pointsStore.communityPointsThisMonth"
+          aria-valuemin="0"
+          :aria-valuemax="pointsStore.COMMUNITY_TARGET"
+          :aria-label="`Community progress: ${pointsStore.communityProgress}%`"
+        >
+          <div
+            class="progress-bar progress-bar-striped progress-bar-animated bg-warning text-dark fw-bold rounded-pill"
+            :style="{ width: pointsStore.communityProgress + '%' }"
+          >
+            <span v-if="pointsStore.communityProgress >= 15" class="small">
+              {{ pointsStore.communityProgress }}%
+            </span>
+          </div>
+        </div>
+
+        <!-- Target status & Bonus description -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center small text-white-50 gap-2">
+          <span>
+            {{
+              pointsStore.isCommunityTargetReached
+                ? 'Target reached! All contributors received a +50 pts bonus.'
+                : `${(pointsStore.COMMUNITY_TARGET - pointsStore.communityPointsThisMonth).toLocaleString()} more points to unlock a 50 pts bonus for all contributors!`
+            }}
+          </span>
+          <span class="text-white fw-semibold">{{ pointsStore.communityProgress }}% achieved</span>
+        </div>
+      </div>
+    </div>
     <!-- Tab Toggle: Browse vs My Wallet -->
     <div class="btn-group w-100 mb-4" role="group" aria-label="Rewards view">
       <button
@@ -225,7 +278,7 @@ function confirmRedeem() {
           :class="selectedType === t.name ? 'btn-primary active text-white' : 'btn-outline-secondary bg-white'"
           @click="selectedType = t.name"
         >
-          <span>{{ t.icon }}</span>
+          <!-- <span>{{ t.icon }}</span> -->
           <span>{{ t.name }}</span>
         </button>
       </div>
@@ -455,3 +508,9 @@ function confirmRedeem() {
     <div v-if="activeModalVoucher || voucherToConfirm" class="modal-backdrop show"></div>
   </div>
 </template>
+
+<style>
+.community-challenge-card {
+  background:  #0b6e6e ;
+}
+</style>

@@ -70,10 +70,14 @@ export function seedRequests() {
   ]
 }
 
-// Starting points ledger for each youth (matches original seed: y1: 120, y2: 200)
+// Starting points ledger
+// y1 is Wei Jie, y2 is Aisha. inital points i put 120 and 200
+// s3 is fatimah
 export function seedLedger() {
+  const day = 86400000
   return [
-    { id: 'p1', userId: 'y1', amount: 120, reason: 'Starting balance', createdAt: Date.now() - 86400000 },
-    { id: 'p2', userId: 'y2', amount: 200, reason: 'Starting balance', createdAt: Date.now() - 86400000 },
+    { id: 'p1', userId: 'y1', amount: 120, reason: 'Starting balance', createdAt: Date.now() - day },
+    { id: 'p2', userId: 'y2', amount: 200, reason: 'Starting balance', createdAt: Date.now() - day * 2 },
+    { id: 'p5', userId: 's3', amount: 6400, reason: 'Community activity', createdAt: Date.now() - day * 5 },
   ]
 }

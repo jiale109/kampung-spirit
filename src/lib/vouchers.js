@@ -1,12 +1,18 @@
 // Category filter pills
 export const voucherTypes = [
-  { name: 'All', icon: '✨' },
-  { name: 'Hawker', icon: '🍜' },
-  { name: 'Kopitiam', icon: '☕' },
-  { name: 'Supermarket', icon: '🛒' },
-  { name: 'Pharmacy', icon: '💊' },
+  { name: 'All' },
+  { name: 'Hawker' },
+  { name: 'Kopitiam' },
+  { name: 'Supermarket'},
+  { name: 'Pharmacy' },
 ]
-
+// export const voucherTypes = [
+//   { name: 'All', icon: '✨' },
+//   { name: 'Hawker', icon: '🍜' },
+//   { name: 'Kopitiam', icon: '☕' },
+//   { name: 'Supermarket', icon: '🛒' },
+//   { name: 'Pharmacy', icon: '💊' },
+// ]
 export function voucherTypeClass(type) {
   const match = voucherTypes.find((t) => t.name.toLowerCase() === type.toLowerCase())
   return match ? match.colorClass : 'cat-tech'
@@ -36,7 +42,7 @@ export const vouchers = [
     merchant: 'FairPrice',
     branch: 'Blk 418 Eunos Crescent',
     type: 'Supermarket',
-    title: '$5 grocery voucher',
+    title: '$5 Grocery Voucher',
     cost: 150,
     logo: '/images/merchants/fairprice.png',
     bg: 'white',
@@ -60,11 +66,11 @@ export const vouchers = [
     merchant: 'Cold Storage',
     branch: 'PLQ Mall (Near Eunos)',
     type: 'Supermarket',
-    title: '$10 fresh produce voucher',
+    title: '$10 Grocery Voucher',
     cost: 250,
     logo: '/images/merchants/coldstorage.png',
     bg: 'white',
-    description: 'Enjoy $10 off fresh fruits, vegetables, dairy, and bakery items.',
+    description: 'Enjoy $10 off your purchase at Cold Storage.',
     terms: 'Valid with a minimum spend of $20.',
   },
   {
@@ -96,11 +102,11 @@ export const vouchers = [
     merchant: 'Guardian',
     branch: 'Geylang Serai / Eunos',
     type: 'Pharmacy',
-    title: '$3 personal care voucher',
+    title: '$3 Guardian Voucher',
     cost: 80,
     logo: '/images/merchants/guardian.png',
-    bg: '#E6863E',
-    description: 'Get $3 off personal toiletries, body wash, and health care items.',
+    bg: '#FF7E27',
+    description: 'Get $3 off your purchase at Guardian',
     terms: 'Present code at checkout. Valid for 30 days.',
   },
 ]

@@ -45,3 +45,4 @@ export function pointsForSkillSwap(durationMinutes = 60) {
 }
 // Monthly community challenge target 
 export const COMMUNITY_TARGET = 10000
+export const COMMUNITY_BONUS = 50

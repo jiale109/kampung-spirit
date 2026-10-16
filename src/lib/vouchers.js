@@ -28,7 +28,7 @@ export const vouchers = [
     cost: 50,
     logo: '/images/merchants/7eleven.png', //  points to public/images/merchants/7eleven.png
     bg: '#008163',
-    description: 'Get $2 off ready-to-eat meals, snacks, or drinks at 7-Eleven Eunos MRT.',
+    description: 'Get $2 off your purchase at 7-Eleven.',
     terms: 'Minimum spend of $4. Valid for 30 days.',
   },
   {
@@ -40,7 +40,7 @@ export const vouchers = [
     cost: 150,
     logo: '/images/merchants/fairprice.png',
     bg: 'white',
-    description: 'Get $5 off your total grocery bill at FairPrice Supermarket Eunos.',
+    description: 'Get $5 off your total grocery bill at FairPrice Supermarket.',
     terms: 'Valid on all groceries. No minimum spend.',
   },
   {

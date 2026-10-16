@@ -97,6 +97,13 @@ const filteredVouchers = computed(() => {
     return matchesCategory && matchesSearch
   })
 })
+// Generates a Google Maps link to search for nearby outlets
+function getGoogleMapsUrl(voucher) {
+  if (!voucher) return '#'
+  // Uses custom mapQuery if defined, or defaults to "<Merchant Name> near me"
+  const query = voucher.mapQuery || `${voucher.merchant} near me`
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+}
 </script>
 
 <template>
@@ -130,14 +137,10 @@ const filteredVouchers = computed(() => {
 
     <!--  Category Filters -->
     <div class="d-flex gap-2 overflow-auto pb-2 mb-4" role="tablist">
-      <button
-        v-for="t in voucherTypes"
-        :key="t.name"
-        type="button"
+      <button v-for="t in voucherTypes" :key="t.name" type="button"
         class="btn rounded-pill px-3 text-nowrap d-inline-flex align-items-center gap-2"
         :class="selectedType === t.name ? 'btn-primary active text-white' : 'btn-outline-secondary bg-white'"
-        @click="selectedType = t.name"
-      >
+        @click="selectedType = t.name">
         <span>{{ t.icon }}</span>
         <span>{{ t.name }}</span>
       </button>
@@ -152,62 +155,46 @@ const filteredVouchers = computed(() => {
     </div>
 
     <!-- Empty State -->
-    <EmptyState
-      v-if="filteredVouchers.length === 0"
-      message="No matching rewards found. Try a different search."
-    />
+    <EmptyState v-if="filteredVouchers.length === 0" message="No matching rewards found. Try a different search." />
 
 
-<div v-else class="row row-cols-1 row-cols-md-2 g-4">
-  <div v-for="voucher in filteredVouchers" :key="voucher.id" class="col">
-    <VoucherCard
-      :voucher="voucher"
-      :can-afford="pointsStore.myPoints >= voucher.cost"
-      @select="activeModalVoucher = $event"
-    />
-  </div>
-</div>
+    <div v-else class="row row-cols-1 row-cols-md-2 g-4">
+      <div v-for="voucher in filteredVouchers" :key="voucher.id" class="col">
+        <VoucherCard :voucher="voucher" :can-afford="pointsStore.myPoints >= voucher.cost"
+          @select="activeModalVoucher = $event" />
+      </div>
+    </div>
 
     <!-- Voucher Details -->
-    <div
-      v-if="activeModalVoucher"
-      class="modal show d-block"
-      role="dialog"
-      aria-modal="true"
-      @click.self="activeModalVoucher = null"
-    >
+    <div v-if="activeModalVoucher" class="modal show d-block" role="dialog" aria-modal="true"
+      @click.self="activeModalVoucher = null">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
           <div class="modal-header border-0 pb-0">
             <h2 class="modal-title h5 fw-bold">{{ activeModalVoucher.merchant }}</h2>
-            <button
-              type="button"
-              class="btn-close"
-              aria-label="Close"
-              @click="activeModalVoucher = null"
-            ></button>
+            <button type="button" class="btn-close" aria-label="Close" @click="activeModalVoucher = null"></button>
           </div>
           <div class="modal-body">
-            <div
-              class="mb-3 text-center p-3 rounded-3"
-              :style="{ backgroundColor: activeModalVoucher.bg }"
-            >
-              <img
-                :src="activeModalVoucher.logo"
-                :alt="activeModalVoucher.merchant"
-                style="height: 80px; object-fit: contain;"
-                @error="$event.target.style.display = 'none'"
-              />
+            <div class="mb-3 text-center p-3 rounded-3" :style="{ backgroundColor: activeModalVoucher.bg }">
+              <img :src="activeModalVoucher.logo" :alt="activeModalVoucher.merchant"
+                style="height: 80px; object-fit: contain;" @error="$event.target.style.display = 'none'" />
             </div>
             <h3 class="h5 fw-bold mb-1">{{ activeModalVoucher.title }}</h3>
-            <p class="text-muted small mb-3">📍 {{ activeModalVoucher.branch }}</p>
+            <!--Google Maps Link for Nearby Outlets -->
+            <div class="mb-3">
+              <a :href="getGoogleMapsUrl(activeModalVoucher)" target="_blank" rel="noopener noreferrer"
+                class="btn btn-sm btn-outline-primary rounded-pill d-inline-flex align-items-center gap-1 text-decoration-none px-3 py-1">
+                <span>Find {{ activeModalVoucher.merchant }} near me</span>
+                <span class="small" aria-hidden="true">↗</span>
+              </a>
+            </div>
 
             <p class="mb-3">{{ activeModalVoucher.description }}</p>
 
             <div class="alert alert-light border d-flex justify-content-between align-items-center mb-3">
-              <span><strong>Cost:</strong> ⭐ {{ activeModalVoucher.cost }} pts</span>
+              <span><strong>Cost:</strong>  {{ activeModalVoucher.cost }} pts</span>
               <span class="text-muted small">
-                Your balance: <strong>⭐ {{ pointsStore.myPoints }} pts</strong>
+                Your balance: <strong> {{ pointsStore.myPoints }} pts</strong>
               </span>
             </div>
 
@@ -216,18 +203,12 @@ const filteredVouchers = computed(() => {
             </small>
           </div>
           <div class="modal-footer border-0 pt-0">
-            <button
-              type="button"
-              class="btn btn-outline-secondary rounded-pill px-4"
-              @click="activeModalVoucher = null"
-            >
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4"
+              @click="activeModalVoucher = null">
               Close
             </button>
-            <button
-              type="button"
-              class="btn btn-primary rounded-pill px-4"
-              :disabled="pointsStore.myPoints < activeModalVoucher.cost"
-            >
+            <button type="button" class="btn btn-primary rounded-pill px-4"
+              :disabled="pointsStore.myPoints < activeModalVoucher.cost">
               {{
                 pointsStore.myPoints >= activeModalVoucher.cost
                   ? `Redeem for ${activeModalVoucher.cost} pts`

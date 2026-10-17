@@ -1,46 +1,115 @@
 /*
   ============================================================================
-  GUIDE: Authentication store                            Owner: Reuben Tham
+  Authentication store                                   Owner: Reuben Tham
   ============================================================================
-  Today: login(userId) just picks a demo user from lib/seed.js and keeps it in
-  localStorage. Plan for the real version (Express + MongoDB):
+  Sign up, log in and the logged-in person's profile, using Supabase Auth.
 
-  - Keep the SAME names the rest of the app uses: auth.user (null when logged
-    out; { id, name, role, block } when logged in), auth.login(), auth.logout().
-    Pages and the route guard (router/index.js) only use these, so nothing else
-    needs to change.
-  - Add register({ name, email, password, role, block }) and make login() take
-    { email, password }. Return { ok: true } or { ok: false, error: '...' }, like
-    acceptRequest() in stores/helpRequest.js, so pages can show the error.
-  - Backend: POST /auth/register, POST /auth/login (return a JWT and the user),
-    GET /auth/me (check the token). Send the token with axios on every request.
-  - Add an init() that calls GET /auth/me on page load, and call it from
-    router.beforeEach (the exemplar project does the same with auth.init()).
-  - Store the role on the user in the database. The guard already checks
-    to.meta.role, and the server must ALSO check the role on each route, because
-    the browser can be changed by the user.
-  - Never store passwords yourself: hash them on the server (bcrypt).
+  auth.user is null when logged out, otherwise the person's row from profiles:
+    { id, name, block, interests, large_text, age_group, guardian_status }
+  age_group is 'youth' (12-21), 'adult' (22-64) or 'senior' (65+).
+  guardian_status is 'not_needed', 'pending' or 'verified' (under 18s need a
+  verified guardian before they can accept tasks).
+
+  Every action returns { ok: true } or { ok: false, error: 'Plain message' }.
+  The database rules (age limits, guardian details) are in supabase/schema.sql.
+  The sign-up form checks the same rules, because Supabase hides the
+  database's own error messages during sign up.
 */
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { users } from '../lib/seed.js'
+import { ref, computed } from 'vue'
+import { supabase } from '../lib/supabase.js'
 
-const STORAGE_KEY = 'kampung-user'
+const PROFILE_COLUMNS = 'id, name, block, interests, large_text, age_group, guardian_status'
 
 export const useAuthStore = defineStore('auth', () => {
-  // The logged-in person (or null). Kept in the browser so a refresh does not log you out.
-  const user = ref(JSON.parse(localStorage.getItem(STORAGE_KEY)))
+  // The logged-in person (or null)
+  const user = ref(null)
+  // True once we have checked for a saved session (see init)
+  const ready = ref(false)
 
-  // Demo login: no password, just pick who you are on the landing page.
-  function login(userId) {
-    user.value = users.find((u) => u.id === userId)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(user.value))
+  // TEMPORARY until the senior and youth pages are merged into one set:
+  // seniors start on the senior pages, everyone else on the youth pages.
+  const homePath = computed(() => (user.value?.age_group === 'senior' ? '/senior' : '/youth'))
+
+  // Logged out somewhere else (another tab, or the session expired)
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT') user.value = null
+  })
+
+  async function loadProfile(id) {
+    const { data, error } = await supabase.from('profiles').select(PROFILE_COLUMNS).eq('id', id).single()
+    // Shown in the browser console (F12) to help find the cause
+    if (error) console.error('Could not load profile:', error.code, error.message, error.details ?? '', error.hint ?? '')
+    user.value = error ? null : data
+    return !error
   }
 
-  function logout() {
+  // Supabase keeps the session in the browser, so a refresh does not log you out.
+  // The route guard (router/index.js) calls this before every page.
+  async function init() {
+    if (ready.value) return
+    const { data } = await supabase.auth.getSession()
+    if (data.session) await loadProfile(data.session.user.id)
+    ready.value = true
+  }
+
+  // birthDate is 'YYYY-MM-DD'. guardian is only needed for ages 12-17: { name, email, consent }
+  async function register({ email, password, name, block, birthDate, largeText = false, guardian = null }) {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      // These become raw_user_meta_data, which the handle_new_user trigger reads
+      options: {
+        data: {
+          name,
+          block,
+          birth_date: birthDate,
+          large_text: largeText,
+          guardian_name: guardian?.name ?? null,
+          guardian_email: guardian?.email ?? null,
+          guardian_consent: guardian?.consent ?? false,
+        },
+      },
+    })
+
+    if (error) {
+      if (error.code === 'user_already_exists') {
+        return { ok: false, error: 'An account with this email already exists. Try logging in instead.' }
+      }
+      if (error.code === 'weak_password') {
+        return { ok: false, error: 'Please choose a longer password (at least 6 characters).' }
+      }
+      if (error.code === 'email_address_invalid') {
+        return { ok: false, error: 'Please check your email address.' }
+      }
+      // Most likely the database refused the details (age or guardian rules)
+      return { ok: false, error: 'We could not create your account. Please check your details and try again.' }
+    }
+
+    // Only happens if "Confirm email" is switched on in Supabase
+    if (!data.session) {
+      return { ok: false, error: 'Please open the email we sent you to confirm your account, then log in.' }
+    }
+
+    await loadProfile(data.user.id)
+    return { ok: true }
+  }
+
+  async function login({ email, password }) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) return { ok: false, error: 'That email or password is not right.' }
+
+    if (!(await loadProfile(data.user.id))) {
+      await supabase.auth.signOut()
+      return { ok: false, error: 'We could not load your profile. Please try again.' }
+    }
+    return { ok: true }
+  }
+
+  async function logout() {
     user.value = null
-    localStorage.removeItem(STORAGE_KEY)
+    await supabase.auth.signOut()
   }
 
-  return { user, login, logout }
+  return { user, ready, homePath, init, register, login, logout }
 })

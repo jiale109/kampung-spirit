@@ -67,7 +67,7 @@ onMounted(store.load)
             data-testid="confirm" @click="confirmDone(request)">
             ✔ Yes, {{ request.helperName }} helped me
           </button>
-          <router-link v-if="request.status === 'open'" :to="`/app/requests/edit//${request.id}`"
+          <router-link v-if="request.status === 'open'" :to="`/app/requests/edit/${request.id}`"
             class="btn btn-outline-primary">Edit</router-link>
           <button v-if="request.status === 'open' || request.status === 'accepted'" class="btn btn-outline-danger"
             data-testid="cancel" @click="requestToCancel = request.id">Cancel request</button>

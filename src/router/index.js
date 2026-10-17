@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 
 import LandingView from '../views/LandingView.vue'
+import RegisterView from '../views/RegisterView.vue'
 
 import SeniorViewsLayout from '../layouts/SeniorViewsLayout.vue'
 import YouthViewsLayout from '../layouts/YouthViewsLayout.vue'
@@ -33,14 +34,15 @@ const routes = [
   // Root redirect
   { path: '/', redirect: '/landing' },
 
-  // Public route: pick Senior or Youth and "log in"
-  { path: '/landing', component: LandingView },
+  // Public routes: log in, and sign up
+  { path: '/landing', component: LandingView, meta: { guestOnly: true } },
+  { path: '/register', component: RegisterView, meta: { guestOnly: true } },
 
   // Senior routes (SeniorViewsLayout as parent)
   {
     path: '/senior',
     component: SeniorViewsLayout,
-    meta: { role: 'senior' },
+    meta: { requiresAuth: true },
     children: [
       { path: '', component: SeniorHelpBoardView },
       { path: 'create', component: SeniorCreateRequestView },
@@ -53,7 +55,7 @@ const routes = [
   {
     path: '/youth',
     component: YouthViewsLayout,
-    meta: { role: 'youth' },
+    meta: { requiresAuth: true },
     children: [
       { path: '', component: YouthHelpBoardView },
       { path: 'tasks', component: YouthMyTasksView },
@@ -72,14 +74,23 @@ const router = createRouter({
 })
 
 // router.beforeEach runs before every route change. Here it checks that the
-// person is logged in with the right role for the page, and if not, sends
-// them back to the landing page. Returning nothing allows the navigation.
-router.beforeEach((to) => {
+// person is logged in, and if not, sends them back to the landing page.
+// Anyone can ask for help and anyone can help, so there is no role check.
+// Returning nothing allows the navigation.
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
-  // Pages with meta.role (the /senior and /youth pages) need a matching login
-  if (to.meta.role && auth.user?.role !== to.meta.role) {
+  // On the first page load, wait until we know whether there is a saved session
+  await auth.init()
+
+  // Pages with meta.requiresAuth (the /senior and /youth pages) need a login
+  if (to.meta.requiresAuth && !auth.user) {
     return '/landing'
+  }
+
+  // Already logged in: skip the login and sign-up pages
+  if (to.meta.guestOnly && auth.user) {
+    return auth.homePath
   }
 })
 

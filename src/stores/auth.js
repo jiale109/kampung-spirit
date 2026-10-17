@@ -29,7 +29,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   // TEMPORARY until the senior and youth pages are merged into one set:
   // seniors start on the senior pages, everyone else on the youth pages.
-  const homePath = computed(() => (user.value?.age_group === 'senior' ? '/senior' : '/youth'))
+  const homePath = computed(() => (user.value?.age_group === 'senior' ? '/app/requests' : '/app'))
 
   // Logged out somewhere else (another tab, or the session expired)
   supabase.auth.onAuthStateChange((event) => {

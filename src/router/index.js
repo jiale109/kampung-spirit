@@ -38,30 +38,19 @@ const routes = [
   { path: '/landing', component: LandingView, meta: { guestOnly: true } },
   { path: '/register', component: RegisterView, meta: { guestOnly: true } },
 
-  // Senior routes (SeniorViewsLayout as parent)
-  {
-    path: '/senior',
-    component: SeniorViewsLayout,
-    meta: { requiresAuth: true },
-    children: [
-      { path: '', component: SeniorHelpBoardView },
-      { path: 'create', component: SeniorCreateRequestView },
-      { path: 'edit/:requestId', component: SeniorEditRequestView },
-      ...sharedChildren,
-    ],
-  },
-
-  // Youth routes (YouthViewsLayout as parent)
-  {
-    path: '/youth',
-    component: YouthViewsLayout,
-    meta: { requiresAuth: true },
-    children: [
-      { path: '', component: YouthHelpBoardView },
-      { path: 'tasks', component: YouthMyTasksView },
-      ...sharedChildren,
-    ],
-  },
+   {
+     path: '/app',
+     component: MainLayout,
+     meta: { requiresAuth: true },
+     children: [
+       { path: '', component: YouthHelpBoardView },
+       { path: 'tasks', component: YouthMyTasksView },
+       { path: 'requests', component: SeniorHelpBoardView },
+       { path: 'requests/create', component: SeniorCreateRequestView },
+       { path: 'requests/edit/:requestId', component: SeniorEditRequestView },
+       ...sharedChildren,
+     ],
+   },
 ]
 
 const router = createRouter({

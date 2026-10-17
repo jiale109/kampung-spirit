@@ -29,141 +29,107 @@
   (create/edit form), views/senior/* and views/youth/* (the pages), e2e/helpboard.spec.js.
 */
 import { defineStore } from 'pinia'
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
+import { supabase } from '../lib/supabase.js'
 import { useAuthStore } from './auth.js'
 import { usePointsStore } from './points.js'
-import { seedRequests } from '../lib/seed.js'
-import { calcPoints, MAX_ACTIVE_TASKS } from '../lib/points.js'
+import { MAX_ACTIVE_TASKS } from '../lib/points.js'
 
-const STORAGE_KEY = 'kampung-helpboard'
-// Status of a request moves like this:
-// open -> accepted -> pending_confirmation -> completed   (or cancelled)
+// One query returns the request plus the requester's and helper's names
+const COLUMNS = `id, title, description, category, difficulty, duration, points, is_physical, status,
+  requester_id, helper_id, created_at,
+  requester:profiles!requester_id(name, block),
+  helper:profiles!helper_id(name)`
+
+// Database row -> the shape the pages already use
+function fromRow(r) {
+  return {
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    category: r.category,
+    difficulty: r.difficulty,
+    duration: r.duration,
+    points: r.points,
+    isPhysical: r.is_physical,
+    status: r.status,
+    seniorId: r.requester_id,
+    seniorName: r.requester?.name ?? '',
+    block: r.requester?.block ?? '',
+    helperId: r.helper_id,
+    helperName: r.helper?.name ?? null,
+    createdAt: new Date(r.created_at).getTime(),
+  }
+}
 
 export const useHelpRequestStore = defineStore('helpRequest', () => {
   const auth = useAuthStore()
   const pointsStore = usePointsStore()
-  
-  // Load from the browser if we have saved data, otherwise start with the sample data
-  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
-  const requests = ref(saved ? saved.requests : seedRequests())
 
+  const requests = ref([])
+  const loading = ref(false)
+  const loadError = ref('')
 
-  // Save only requests to localStorage under 'kampung-helpboard'
-  watch(
-    requests,
-    () => {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ requests: requests.value }))
-    },
-    { deep: true },
-  )
+  // RLS decides which rows come back: open requests plus your own
+  async function load() {
+    loading.value = true
+    loadError.value = ''
+    const { data, error } = await supabase
+      .from('help_requests').select(COLUMNS).order('created_at', { ascending: false })
+    if (error) loadError.value = 'Could not load requests. Please try again.'
+    else requests.value = data.map(fromRow)
+    loading.value = false
+  }
 
-  // ---- What each person sees ----
-
-  // Senior: their own requests
+  // Same computed lists as before
   const myRequests = computed(() => requests.value.filter((r) => r.seniorId === auth.user?.id))
-
-  // Youth: every request that is still waiting for a helper
-  const openRequests = computed(() => requests.value.filter((r) => r.status === 'open'))
-
-  // Youth: tasks they accepted
+  const openRequests = computed(() => requests.value.filter((r) => r.status === 'open' && r.seniorId !== auth.user?.id))
   const myTasks = computed(() => requests.value.filter((r) => r.helperId === auth.user?.id))
-
-  // Active = accepted but not yet confirmed by the senior
-  const activeCount = computed(() => {
-    return myTasks.value.filter((r) => r.status === 'accepted' || r.status === 'pending_confirmation').length
-  })
+  const activeCount = computed(
+    () => myTasks.value.filter((r) => r.status === 'accepted' || r.status === 'pending_confirmation').length,
+  )
   const atLimit = computed(() => activeCount.value >= MAX_ACTIVE_TASKS)
-
-  // Delegate myPoints to pointsStore for backward compatibility
   const myPoints = computed(() => pointsStore.myPoints)
 
   function getRequestById(id) {
     return requests.value.find((r) => r.id === id) ?? null
   }
 
-  // ---- Senior actions ----
-
-  function createRequest({ title, description, category, difficulty, duration }) {
-    requests.value.unshift({
-      id: 'r' + Date.now(),
-      title,
-      description,
-      category,
-      difficulty,
-      duration,
-      points: calcPoints(difficulty, duration),
-      seniorId: auth.user.id,
-      seniorName: auth.user.name,
-      block: auth.user.block,
-      status: 'open',
-      helperId: null,
-      helperName: null,
-      createdAt: Date.now(),
-    })
-  }
-
-  function updateRequest(id, updates) {
-    const request = getRequestById(id)
-    Object.assign(request, updates, { points: calcPoints(updates.difficulty, updates.duration) })
-  }
-
-  function cancelRequest(id) {
-    getRequestById(id).status = 'cancelled'
-  }
-
-  // The senior confirms the help happened, so the helper gets the points
-  function confirmDone(id) {
-    const request = getRequestById(id)
-    if (request.status !== 'pending_confirmation') return
-    request.status = 'completed'
-     pointsStore.awardPoints(
-      request.helperId,
-      request.points,
-      `Completed help request: ${request.title}`,
-    )
-  }
-
-  // ---- Youth actions ----
-
-  function acceptRequest(id) {
-    const request = getRequestById(id)
-    if (request.status !== 'open') {
-      return { ok: false, error: 'Sorry, this request is no longer open.' }
-    }
-    if (atLimit.value) {
-      return { ok: false, error: `You can only have ${MAX_ACTIVE_TASKS} active tasks. Finish one first.` }
-    }
-    request.status = 'accepted'
-    request.helperId = auth.user.id
-    request.helperName = auth.user.name
+  // Run a database call, reload the list, return { ok } or { ok: false, error }
+  async function run(call) {
+    const { error } = await call
+    if (error) return { ok: false, error: error.message }
+    await load()
     return { ok: true }
   }
 
-  // The youth says they are done, now the senior must confirm
-  function markDone(id) {
-    getRequestById(id).status = 'pending_confirmation'
-  }
+  const createRequest = (d) =>
+    run(supabase.from('help_requests').insert({
+      title: d.title, description: d.description, category: d.category,
+      difficulty: d.difficulty, duration: d.duration,
+    }))
 
-  // The volunteer backs out of an accepted task. It goes back on the board for others.
-  function withdrawFromTask(id) {
-    const request = getRequestById(id)
-    if (request.status !== 'accepted' || request.helperId !== auth.user.id) return
-    request.status = 'open'
-    request.helperId = null
-    request.helperName = null
-  }
+  const updateRequest = (id, d) =>
+    run(supabase.from('help_requests').update({
+      title: d.title, description: d.description, category: d.category,
+      difficulty: d.difficulty, duration: d.duration,
+    }).eq('id', id))
 
-  // Put the sample data back (for demos)
-  function reset() {
-    requests.value = seedRequests()
-    pointsStore.reset()
-  }
+  const cancelRequest = (id) => run(supabase.rpc('cancel_help_request', { request_id: id }))
+  const markDone = (id) => run(supabase.rpc('mark_task_done', { request_id: id }))
+  const withdrawFromTask = (id) => run(supabase.rpc('withdraw_from_task', { request_id: id }))
+  const acceptRequest = (id, physicalOk = false) =>
+    run(supabase.rpc('accept_help_request', { request_id: id, physical_ok: physicalOk }))
+
+  // The database adds the points to points_ledger itself. Do NOT call awardPoints here,
+  // or the points are given twice.
+  const confirmDone = (id) => run(supabase.rpc('confirm_help_done', { request_id: id }))
 
   return {
-    requests,
+    requests, loading, loadError,
     myRequests, openRequests, myTasks, activeCount, atLimit, myPoints,
-    getRequestById,
+    getRequestById, load,
     createRequest, updateRequest, cancelRequest, confirmDone,
-    acceptRequest, markDone, withdrawFromTask, reset,
+    acceptRequest, markDone, withdrawFromTask,
   }
 })

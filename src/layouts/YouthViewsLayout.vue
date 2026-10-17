@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { useHelpRequestStore } from '../stores/helpRequest.js'
@@ -14,6 +14,8 @@ function logout() {
   auth.logout()
   router.push('/landing')
 }
+
+onMounted(store.load)
 </script>
 
 <template>

@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth.js'
 import { useHelpRequestStore } from '../../stores/helpRequest.js'
 import EmptyState from '../../components/EmptyState.vue'
@@ -10,16 +10,29 @@ const store = useHelpRequestStore()
 
 const requestToCancel = ref(null)
 const message = ref('')
+const error = ref('')
 
-function confirmDone(request) {
-  store.confirmDone(request.id)
-  message.value = `Thank you! ${request.helperName} earned ${request.points} points.`
+async function confirmDone(request) {
+  message.value = ''
+  error.value = ''
+  const result = await store.confirmDone(request.id)
+  if (result.ok) {
+    message.value = `Thank you! ${request.helperName} earned ${request.points} points.`
+  } else {
+    error.value = result.error
+  }
 }
 
-function doCancel() {
-  store.cancelRequest(requestToCancel.value)
+async function doCancel() {
+  const id = requestToCancel.value
   requestToCancel.value = null
+  message.value = ''
+  error.value = ''
+  const result = await store.cancelRequest(id)
+  if (!result.ok) error.value = result.error
 }
+
+onMounted(store.load)
 </script>
 
 <template>
@@ -34,6 +47,11 @@ function doCancel() {
     </div>
 
     <div v-if="message" class="alert alert-success" role="status">{{ message }}</div>
+    <div v-if="error" class="alert alert-danger" role="alert">{{ error }}</div>
+    <div v-if="store.loadError" class="alert alert-danger" role="alert">{{ store.loadError }}</div>
+
+    <!-- Loading (only while there is nothing to show yet) -->
+    <p v-if="store.loading && store.myRequests.length === 0">Loading your requests…</p>
 
     <!-- Empty state -->
     <EmptyState v-if="store.myRequests.length === 0" message="You have not asked for help yet. It is okay to ask!">

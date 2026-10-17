@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useHelpRequestStore } from '../../stores/helpRequest.js'
 import { categories, MAX_ACTIVE_TASKS } from '../../lib/points.js'
 import EmptyState from '../../components/EmptyState.vue'
@@ -12,6 +12,8 @@ const sortBy = ref('newest')
 const message = ref('')
 const error = ref('')
 
+onMounted(store.load)
+
 // Apply the category filter, then the sort order
 const filteredRequests = computed(() => {
   const list = store.openRequests.filter((r) => selectedCategory.value === '' || r.category === selectedCategory.value)
@@ -21,11 +23,18 @@ const filteredRequests = computed(() => {
   return list
 })
 
-function accept(request) {
+async function accept(request) {
   message.value = ''
   error.value = ''
 
-  const result = store.acceptRequest(request.id)
+  // Physical tasks: ask first. The database checks this again for seniors.
+  let physicalOk = false
+  if (request.isPhysical) {
+    physicalOk = window.confirm('This task needs physical effort. Are you comfortable doing it?')
+    if (!physicalOk) return
+  }
+
+  const result = await store.acceptRequest(request.id, physicalOk)
   if (result.ok) {
     message.value = `You accepted "${request.title}". Find it under My Tasks.`
   } else {
@@ -70,6 +79,8 @@ function accept(request) {
     <div v-if="store.atLimit" class="alert alert-warning">
       You have {{ MAX_ACTIVE_TASKS }} active tasks. Finish one before accepting another.
     </div>
+
+    <p v-if="store.loading && store.requests.length === 0">Loading requests…</p>
 
     <EmptyState v-if="filteredRequests.length === 0" message="No open requests here right now. Check back soon!" />
 

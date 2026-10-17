@@ -1,4 +1,5 @@
 <script setup>
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHelpRequestStore } from '../../stores/helpRequest.js'
 import RequestForm from '../../components/RequestForm.vue'
@@ -8,11 +9,21 @@ const route = useRoute()
 const router = useRouter()
 const store = useHelpRequestStore()
 
-const request = store.getRequestById(route.params.requestId)
+const loaded = ref(false)
+const error = ref('')
 
-function save(data) {
-  store.updateRequest(request.id, data)
-  router.push('/senior')
+const request = computed(() => store.getRequestById(route.params.requestId))
+
+onMounted(async () => {
+  await store.load()
+  loaded.value = true
+})
+
+async function save(data) {
+  error.value = ''
+  const result = await store.updateRequest(request.value.id, data)
+  if (result.ok) router.push('/senior')
+  else error.value = result.error
 }
 </script>
 
@@ -22,8 +33,14 @@ function save(data) {
       <h1 class="page-title">Edit your request</h1>
     </div>
 
+    <p v-if="!loaded">Loading…</p>
+
     <!-- Only open requests can be edited -->
-    <RequestForm v-if="request && request.status === 'open'" :request="request" submit-label="Save changes" @save="save" />
+    <template v-else-if="request && request.status === 'open'">
+      <p v-if="error" class="text-danger">{{ error }}</p>
+      <RequestForm :request="request" submit-label="Save changes" @save="save" />
+    </template>
+
     <EmptyState v-else message="This request can no longer be edited.">
       <router-link to="/senior" class="btn btn-primary btn-lg mt-4">Back to my requests</router-link>
     </EmptyState>

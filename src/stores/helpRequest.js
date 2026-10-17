@@ -26,7 +26,7 @@
   should call awardPoints() here (see the GUIDE in views/rewards/RewardsView.vue).
 
   Related files: components/RequestCard.vue (the card), components/RequestForm.vue
-  (create/edit form), views/senior/* and views/youth/* (the pages), e2e/helpboard.spec.js.
+  (create/edit form), views/app/* and views/app/* (the pages), e2e/helpboard.spec.js.
 */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'

@@ -5,7 +5,7 @@
   ============================================================================
   This page is a PLACEHOLDER. Replace the template with the real feature.
 
-  Route:  /senior/hangouts and /youth/hangouts (same page for both roles, see
+  Route:  /app/hangouts and /app/hangouts (same page for both roles, see
           sharedChildren in router/index.js). To show something different per
           role, read useAuthStore().user.role.
 
@@ -42,7 +42,7 @@
 
   4. Pages and components
      - List: filter by hotspot with a <select>, like the category filter in
-       views/youth/YouthHelpBoardView.vue. Show host, date, time and who is
+       views/app/YouthHelpBoardView.vue. Show host, date, time and who is
        going. Use <EmptyState> when nothing matches.
      - Card: reuse the idea in components/RequestCard.vue (title always
        visible, details on hover or tap). Make HangoutCard.vue.

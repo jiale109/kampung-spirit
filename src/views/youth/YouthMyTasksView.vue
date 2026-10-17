@@ -36,7 +36,7 @@ async function withdraw(request) {
     <p v-if="store.loading && store.myTasks.length === 0">Loading your tasks…</p>
 
     <EmptyState v-else-if="store.myTasks.length === 0" message="You have not accepted any tasks yet.">
-      <router-link to="/youth" class="btn btn-primary btn-lg mt-4">Browse requests</router-link>
+      <router-link to="/app" class="btn btn-primary btn-lg mt-4">Browse requests</router-link>
     </EmptyState>
 
     <div v-else class="request-list">

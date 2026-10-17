@@ -19,7 +19,7 @@ function logout() {
   <div class="role-senior">
     <nav class="navbar navbar-expand-xl app-navbar">
       <div class="container">
-        <router-link class="navbar-brand" to="/senior">🏘️ Kampung Spirit</router-link>
+        <router-link class="navbar-brand" to="/app/requests">🏘️ Kampung Spirit</router-link>
 
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
           aria-controls="navbarNav" aria-expanded="false" aria-label="Open menu">
@@ -29,16 +29,16 @@ function logout() {
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav me-auto">
             <li class="nav-item">
-              <router-link class="nav-link" to="/senior" exact-active-class="active">My Requests</router-link>
+              <router-link class="nav-link" to="/app/requests" exact-active-class="active">My Requests</router-link>
             </li>
             <li class="nav-item">
-              <router-link class="nav-link" to="/senior/hangouts" exact-active-class="active">Hangouts</router-link>
+              <router-link class="nav-link" to="/app/hangouts" exact-active-class="active">Hangouts</router-link>
             </li>
             <li class="nav-item">
-              <router-link class="nav-link" to="/senior/skill-swaps" exact-active-class="active">Skill Swaps</router-link>
+              <router-link class="nav-link" to="/app/skill-swaps" exact-active-class="active">Skill Swaps</router-link>
             </li>
             <li class="nav-item">
-              <router-link class="nav-link" to="/senior/rewards" exact-active-class="active">Rewards</router-link>
+              <router-link class="nav-link" to="/app/rewards" exact-active-class="active">Rewards</router-link>
             </li>
           </ul>
 
@@ -59,7 +59,7 @@ function logout() {
                 </li>
                 <li><hr class="dropdown-divider" /></li>
                 <li>
-                  <router-link class="dropdown-item" to="/senior/profile">Profile</router-link>
+                  <router-link class="dropdown-item" to="/app/profile">Profile</router-link>
                 </li>
                 <li>
                   <button class="dropdown-item text-danger" @click="logout">Log out</button>

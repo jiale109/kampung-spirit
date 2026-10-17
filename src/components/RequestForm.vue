@@ -91,7 +91,7 @@ function submit() {
       </p>
 
       <div class="form-actions">
-        <router-link to="/senior" class="btn btn-lg btn-outline-secondary">Cancel</router-link>
+        <router-link to="/app/requests" class="btn btn-lg btn-outline-secondary">Cancel</router-link>
         <button type="submit" class="btn btn-lg btn-primary">{{ submitLabel }}</button>
       </div>
     </div>

@@ -5,7 +5,7 @@
   ============================================================================
   This page is a PLACEHOLDER. Replace the template with the real feature.
 
-  Route:  /senior/rewards and /youth/rewards (same page for both roles, see
+  Route:  /app/rewards and /app/rewards (same page for both roles, see
           sharedChildren in router/index.js).
 
   WHAT THE PROPOSAL SAYS
@@ -48,7 +48,7 @@
        { id, voucherId, userId, code: 'KS-4F9Q2', redeemedAt, used: false }
      A wallet section lists the codes. A "Mark as used" button is a nice touch.
      Always confirm before spending (copy the modal in
-     views/senior/SeniorHelpBoardView.vue).
+     views/app/SeniorHelpBoardView.vue).
 
   4. Community challenge
      Total points earned by everyone this month = sum of ledger rows (amount > 0)

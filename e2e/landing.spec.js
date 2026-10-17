@@ -29,9 +29,9 @@ test('Seniors start on the senior pages, everyone else on the youth pages', asyn
 })
 
 test('Logged-out visitors are sent to the login page', async ({ page }) => {
-  await page.goto('/senior')
+  await page.goto('/app/requests')
   await expect(page).toHaveURL(/\/landing$/)
-  await page.goto('/youth/tasks')
+  await page.goto('/app/tasks')
   await expect(page).toHaveURL(/\/landing$/)
 })
 
@@ -68,7 +68,7 @@ test('Under 18s must give a parent or guardian and their consent', async ({ page
   await page.getByLabel("Parent or guardian's email").fill(uniqueEmail())
   await page.getByLabel(/agrees that I can join/).check()
   await page.getByRole('button', { name: 'Create account' }).click()
-  await expect(page).toHaveURL(/\/youth$/)
+  await expect(page).toHaveURL(/\/app$/)
 })
 
 test('Adults do not see the guardian section', async ({ page }) => {

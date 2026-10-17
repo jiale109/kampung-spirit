@@ -21,7 +21,7 @@ onMounted(store.load)
 <template>
   <nav class="navbar navbar-expand-xl app-navbar">
     <div class="container">
-      <router-link class="navbar-brand" to="/youth">🏘️ Kampung Spirit</router-link>
+      <router-link class="navbar-brand" to="/app">🏘️ Kampung Spirit</router-link>
 
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
         aria-controls="navbarNav" aria-expanded="false" aria-label="Open menu">
@@ -31,19 +31,19 @@ onMounted(store.load)
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav me-auto">
           <li class="nav-item">
-            <router-link class="nav-link" to="/youth" exact-active-class="active">Help Board</router-link>
+            <router-link class="nav-link" to="/app" exact-active-class="active">Help Board</router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/youth/tasks" exact-active-class="active">My Tasks</router-link>
+            <router-link class="nav-link" to="/app/tasks" exact-active-class="active">My Tasks</router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/youth/hangouts" exact-active-class="active">Hangouts</router-link>
+            <router-link class="nav-link" to="/app/hangouts" exact-active-class="active">Hangouts</router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/youth/skill-swaps" exact-active-class="active">Skill Swaps</router-link>
+            <router-link class="nav-link" to="/app/skill-swaps" exact-active-class="active">Skill Swaps</router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/youth/rewards" exact-active-class="active">Rewards</router-link>
+            <router-link class="nav-link" to="/app/rewards" exact-active-class="active">Rewards</router-link>
           </li>
         </ul>
 
@@ -67,7 +67,7 @@ onMounted(store.load)
               </li>
               <li><hr class="dropdown-divider" /></li>
               <li>
-                <router-link class="dropdown-item" to="/youth/profile">Profile</router-link>
+                <router-link class="dropdown-item" to="/app/profile">Profile</router-link>
               </li>
               <li>
                 <button class="dropdown-item text-danger" @click="logout">Log out</button>

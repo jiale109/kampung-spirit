@@ -11,7 +11,7 @@ const error = ref('')
 async function save(data) {
   error.value = ''
   const result = await store.createRequest(data)
-  if (result.ok) router.push('/senior')
+  if (result.ok) router.push('/app/requests')
   else error.value = result.error
 }
 </script>

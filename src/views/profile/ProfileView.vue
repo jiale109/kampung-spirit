@@ -5,7 +5,7 @@
   ============================================================================
   This page is a PLACEHOLDER. Replace the template with the real feature.
 
-  Route:  /senior/profile and /youth/profile (same page for both roles, see
+  Route:  /app/profile and /app/profile (same page for both roles, see
           sharedChildren in router/index.js). It is opened from the "Profile"
           item in the name dropdown of the navbar.
 
@@ -41,7 +41,7 @@
 
   4. Delete account
      Add a "Delete my account" button that opens a confirmation modal (copy the
-     modal in views/senior/SeniorHelpBoardView.vue), then calls auth.logout()
+     modal in views/app/SeniorHelpBoardView.vue), then calls auth.logout()
      and routes to /landing. With a real backend this is DELETE /users/me.
 
   5. Real sign up and login (Reuben)

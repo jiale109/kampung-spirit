@@ -7,12 +7,12 @@ import RegisterView from '../views/RegisterView.vue'
 import SeniorViewsLayout from '../layouts/SeniorViewsLayout.vue'
 import YouthViewsLayout from '../layouts/YouthViewsLayout.vue'
 
-import SeniorHelpBoardView from '../views/senior/SeniorHelpBoardView.vue'
-import SeniorCreateRequestView from '../views/senior/SeniorCreateRequestView.vue'
-import SeniorEditRequestView from '../views/senior/SeniorEditRequestView.vue'
+import SeniorHelpBoardView from '../views/app/SeniorHelpBoardView.vue'
+import SeniorCreateRequestView from '../views/app/SeniorCreateRequestView.vue'
+import SeniorEditRequestView from '../views/app/SeniorEditRequestView.vue'
 
-import YouthHelpBoardView from '../views/youth/YouthHelpBoardView.vue'
-import YouthMyTasksView from '../views/youth/YouthMyTasksView.vue'
+import YouthHelpBoardView from '../views/app/YouthHelpBoardView.vue'
+import YouthMyTasksView from '../views/app/YouthMyTasksView.vue'
 
 // Pages both roles can open. Each feature has its own folder under views/
 // so teammates can work on them without touching each other's files.
@@ -21,7 +21,7 @@ import SkillSwapView from '../views/skillswap/SkillSwapView.vue'
 import RewardsView from '../views/rewards/RewardsView.vue'
 import ProfileView from '../views/profile/ProfileView.vue'
 
-// Shared pages are listed once and added under both /senior and /youth, so each
+// Shared pages are listed once and added under both /senior and /app, so each
 // role sees them inside its own layout (navbar). Add new shared pages here.
 const sharedChildren = [
   { path: 'hangouts', component: HangoutsView },
@@ -72,7 +72,7 @@ router.beforeEach(async (to) => {
   // On the first page load, wait until we know whether there is a saved session
   await auth.init()
 
-  // Pages with meta.requiresAuth (the /senior and /youth pages) need a login
+  // Pages with meta.requiresAuth (the /senior and /app pages) need a login
   if (to.meta.requiresAuth && !auth.user) {
     return '/landing'
   }

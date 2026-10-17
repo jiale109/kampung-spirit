@@ -54,7 +54,7 @@ export async function loginWith(page, email, password = TEST_PASSWORD) {
 
 // role is 'Senior' or 'Youth'. The first time a name is used in a test, a new
 // account of that age group is signed up; after that, it logs in to it again.
-// Seniors land on /senior and everyone else on /youth (until the pages are merged).
+// Seniors land on /senior and everyone else on /app (until the pages are merged).
 export async function login(page, role, name) {
   const existing = accounts.get(name)
   if (existing) {
@@ -62,7 +62,7 @@ export async function login(page, role, name) {
   } else {
     accounts.set(name, await signUp(page, { name, birthYear: birthYearFor[role] }))
   }
-  await expect(page).toHaveURL(role === 'Senior' ? /\/senior$/ : /\/youth$/)
+  await expect(page).toHaveURL(role === 'Senior' ? /\/senior$/ : /\/app$/)
 }
 
 export async function logout(page) {

@@ -22,7 +22,7 @@ onMounted(async () => {
 async function save(data) {
   error.value = ''
   const result = await store.updateRequest(request.value.id, data)
-  if (result.ok) router.push('/senior')
+  if (result.ok) router.push('/app/requests')
   else error.value = result.error
 }
 </script>
@@ -42,7 +42,7 @@ async function save(data) {
     </template>
 
     <EmptyState v-else message="This request can no longer be edited.">
-      <router-link to="/senior" class="btn btn-primary btn-lg mt-4">Back to my requests</router-link>
+      <router-link to="/app/requests" class="btn btn-primary btn-lg mt-4">Back to my requests</router-link>
     </EmptyState>
   </div>
 </template>

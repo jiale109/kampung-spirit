@@ -5,7 +5,7 @@
   ============================================================================
   This page is a PLACEHOLDER. Replace the template with the real feature.
 
-  Route:  /senior/skill-swaps and /youth/skill-swaps (same page for both
+  Route:  /app/skill-swaps and /app/skill-swaps (same page for both
           roles, see sharedChildren in router/index.js).
 
   WHAT THE PROPOSAL SAYS

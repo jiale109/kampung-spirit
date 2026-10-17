@@ -43,7 +43,7 @@ onMounted(store.load)
         <p class="page-subtitle">Your help requests</p>
       </div>
       <!-- When there are no requests, the empty state below has the button instead -->
-      <router-link v-if="store.myRequests.length > 0" to="/senior/create" class="btn btn-primary btn-lg">+ Ask for Help</router-link>
+      <router-link v-if="store.myRequests.length > 0" to="/app/requests/create" class="btn btn-primary btn-lg">+ Ask for Help</router-link>
     </div>
 
     <div v-if="message" class="alert alert-success" role="status">{{ message }}</div>
@@ -55,7 +55,7 @@ onMounted(store.load)
 
     <!-- Empty state -->
     <EmptyState v-if="store.myRequests.length === 0" message="You have not asked for help yet. It is okay to ask!">
-      <router-link to="/senior/create" class="btn btn-primary btn-lg mt-4">+ Ask for Help</router-link>
+      <router-link to="/app/requests/create" class="btn btn-primary btn-lg mt-4">+ Ask for Help</router-link>
     </EmptyState>
 
     <!-- Request list -->
@@ -67,7 +67,7 @@ onMounted(store.load)
             data-testid="confirm" @click="confirmDone(request)">
             ✔ Yes, {{ request.helperName }} helped me
           </button>
-          <router-link v-if="request.status === 'open'" :to="`/senior/edit/${request.id}`"
+          <router-link v-if="request.status === 'open'" :to="`/app/requests/edit//${request.id}`"
             class="btn btn-outline-primary">Edit</router-link>
           <button v-if="request.status === 'open' || request.status === 'accepted'" class="btn btn-outline-danger"
             data-testid="cancel" @click="requestToCancel = request.id">Cancel request</button>

@@ -10,6 +10,10 @@ const store = useHelpRequestStore()
 
 const avatarInitial = computed(() => auth.user.name[0].toUpperCase())
 
+// Help Board fix (Victoria): theme.css uses .role-senior for the larger text, but only
+// the old SeniorViewsLayout added it. Seniors and anyone who chose large text get it here.
+const largeText = computed(() => auth.user.large_text || auth.user.age_group === 'senior')
+
 // Load requests once here so the active-task count is right on every page
 onMounted(store.load)
 
@@ -20,6 +24,7 @@ async function logout() {
 </script>
 
 <template>
+  <div :class="{ 'role-senior': largeText }">
   <nav class="navbar navbar-expand-xl app-navbar">
     <div class="container">
       <router-link class="navbar-brand" :to="auth.homePath">🏘️ Kampung Spirit</router-link>
@@ -90,4 +95,5 @@ async function logout() {
       <router-view />
     </div>
   </main>
+  </div>
 </template>

@@ -2,13 +2,21 @@
 import { ref, computed } from 'vue'
 import { categories, difficulties, durations, calcPoints, categoryClass } from '../lib/points.js'
 
-// "request" is only given when editing, so the form starts filled in
+
 const props = defineProps({
   request: { type: Object, default: null },
   submitLabel: { type: String, default: 'Post request' },
+  busy: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['save'])
+
+// A time in milliseconds -> 'YYYY-MM-DDTHH:mm' in local time, the format a datetime-local input uses
+function toInputValue(ms) {
+  const d = new Date(ms)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
 
 const form = ref({
   title: props.request?.title ?? '',
@@ -16,10 +24,12 @@ const form = ref({
   category: props.request?.category ?? '',
   difficulty: props.request?.difficulty ?? 'Easy',
   duration: props.request?.duration ?? 30,
+  neededAt: props.request ? toInputValue(props.request.neededAt) : '',
 })
 const errors = ref({})
 
-// Shows the senior how many points the helper will earn
+const earliest = toInputValue(Date.now())
+
 const previewPoints = computed(() => calcPoints(form.value.difficulty, form.value.duration))
 
 function submit() {
@@ -29,13 +39,19 @@ function submit() {
   if (!form.value.category) errors.value.category = 'Please choose a category.'
   if (form.value.description.trim().length < 10) errors.value.description = 'Please describe what you need (at least 10 characters).'
 
-  // Stop here if anything is wrong
+  // new Date('YYYY-MM-DDTHH:mm') reads the value as local time
+  const neededAt = new Date(form.value.neededAt).getTime()
+  if (!form.value.neededAt || Number.isNaN(neededAt)) errors.value.neededAt = 'Please choose the day and time you need help.'
+  else if (neededAt < Date.now()) errors.value.neededAt = 'This time has already passed. Please choose a later time.'
+
+
   if (Object.keys(errors.value).length > 0) return
 
   emit('save', {
     ...form.value,
     title: form.value.title.trim(),
     description: form.value.description.trim(),
+    neededAt,
   })
 }
 </script>
@@ -71,6 +87,13 @@ function submit() {
         <div class="invalid-feedback">{{ errors.description }}</div>
       </div>
 
+      <div>
+        <label for="needed-at" class="form-label">When do you need help?</label>
+        <input id="needed-at" v-model="form.neededAt" type="datetime-local" class="form-control"
+          :class="{ 'is-invalid': errors.neededAt }" :min="earliest" required />
+        <div class="invalid-feedback">{{ errors.neededAt }}</div>
+      </div>
+
       <div class="row g-3">
         <div class="col-sm-6">
           <label for="difficulty" class="form-label">How hard?</label>
@@ -92,7 +115,7 @@ function submit() {
 
       <div class="form-actions">
         <router-link to="/app/requests" class="btn btn-lg btn-outline-secondary">Cancel</router-link>
-        <button type="submit" class="btn btn-lg btn-primary">{{ submitLabel }}</button>
+        <button type="submit" class="btn btn-lg btn-primary" :disabled="busy">{{ busy ? 'Saving…' : submitLabel }}</button>
       </div>
     </div>
   </form>

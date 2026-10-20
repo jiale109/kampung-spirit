@@ -6,7 +6,7 @@ IS216 group project (G6, Team 1). A web app for one HDB estate (Eunos) where sen
 
 Built with Vue 3, Pinia, Vue Router and Bootstrap 5. Tested with Playwright. Deployed on Vercel.
 
-**Current state:** the **Help Board** works end to end (with sample data saved in the browser). Hangouts, Skill Swaps, Rewards and Profile are empty placeholder pages with a step-by-step **GUIDE** comment at the top of each file, ready for the team to build.
+**Current state:** the **Help Board** works end to end with real accounts and data in [Supabase](https://supabase.com/) (database and login). There is no Express server. Hangouts, Skill Swaps, Rewards and Profile are empty placeholder pages with a step-by-step **GUIDE** comment at the top of each file, ready for the team to build.
 
 ## Quick start
 
@@ -21,13 +21,38 @@ pnpm test:e2e       # Playwright tests (starts the dev server itself)
 
 First time running the tests? Run `npx playwright install chromium` once.
 
-There is no real login yet. On the landing page, choose **Senior** or **Youth**, pick a demo account and press **Enter**.
+Login is real (Supabase Auth): sign up on the **Create an account** page, or log in with one of the [demo accounts](#demo-accounts). Seniors (65+) start on **My Requests**, everyone else on the **Help Board**. Nothing is saved in the browser except the login session.
+
+## Supabase setup
+
+1. Copy `.env.example` to `.env` and fill in your project's URL and publishable key. Restart `pnpm dev` after changing it.
+2. **New, empty project:** in the Supabase dashboard open **SQL Editor > New query**, paste all of `supabase/schema.sql` and press **Run**. Switch off **Authentication > Email > Confirm email** while developing.
+3. **Project that already has the schema:** run each file in `supabase/migrations/` that you have not run yet, oldest first, the same way. For example `20261020120000_add_needed_at.sql` adds the "When do you need help?" time to requests.
+4. Add the demo accounts and some open requests:
+   ```bash
+   pnpm seed:demo
+   ```
+   It is safe to run again: accounts that already exist are skipped, and seniors who already have requests do not get more.
+
+The e2e tests sign up new `e2e-...@example.com` accounts every run, so point `.env` at a separate test project if you can.
+
+### Demo accounts
+
+All demo accounts use the password **`kampung-demo-123`**.
+
+| Name | Email | Age group |
+|---|---|---|
+| Mdm Tan Siew Lan | `demo.tan@example.com` | Senior |
+| Mr Lim Ah Kow | `demo.lim@example.com` | Senior |
+| Mdm Fatimah | `demo.fatimah@example.com` | Senior |
+| Wei Jie | `demo.weijie@example.com` | Youth |
+| Aisha | `demo.aisha@example.com` | Youth |
 
 ## Team and who builds what
 
 | Feature | Owner | Start here |
 |---|---|---|
-| Help Board (done, to be connected to the backend) | Victoria Soh | `stores/helpRequest.js` |
+| Help Board (done, on Supabase) | Victoria Soh | `stores/helpRequest.js` |
 | Hotspot Hangouts | Lee Jia Le | `views/hangouts/HangoutsView.vue` |
 | Skill-Swap Circles | Kelsey Wong | `views/skillswap/SkillSwapView.vue` |
 | Points, Rewards and Community Challenge | Nathaniel Low | `views/rewards/RewardsView.vue` |
@@ -45,30 +70,38 @@ src/
   styles/theme.css           All custom styling on top of Bootstrap (colours, text size, buttons, cards)
   router/index.js            All routes, the login/role guard, and sharedChildren (pages both roles see)
   stores/
-    auth.js                  Who is logged in (demo login for now)
-    helpRequest.js           Help requests and their rules (accept limit, confirm, points)
+    auth.js                  Sign up, log in and the logged-in person's profile (Supabase Auth)
+    helpRequest.js           Help requests (Supabase), the accept limit, and your points balance
   layouts/
-    SeniorViewsLayout.vue    Navbar for seniors (text is larger here)
-    YouthViewsLayout.vue     Navbar for youths (shows points)
+    MainLayout.vue           The one navbar for everyone (adds .role-senior for larger text)
+    SeniorViewsLayout.vue    NOT USED any more (replaced by MainLayout)
+    YouthViewsLayout.vue     NOT USED any more (replaced by MainLayout)
   views/
     LandingView.vue          Landing page + login
-    senior/                  Help Board pages for seniors (list, create, edit)
-    youth/                   Help Board pages for youths (board, my tasks)
+    RegisterView.vue         Sign up
+    senior/                  Help Board: My Requests (Active and Past), create, edit   /app/requests
+    youth/                   Help Board: the board and My Tasks                        /app, /app/tasks
     hangouts/                PLACEHOLDER  Hotspot Hangouts
     skillswap/               PLACEHOLDER  Skill-Swap Circles
     rewards/                 PLACEHOLDER  Points, Rewards, Community Challenge
     profile/                 PLACEHOLDER  Profile
   components/
     RequestCard.vue          A request: simple card, details on hover or tap
-    RequestForm.vue          Create/edit form with validation
+    RequestForm.vue          Create/edit form with validation (including when help is needed)
     CategoryBadge.vue  StatusBadge.vue  EmptyState.vue
   lib/
+    supabase.js              The one Supabase client (reads .env)
     points.js                Categories, difficulty, 2-task limit, points formula (placeholder)
-    seed.js                  Demo accounts and sample data
+    seed.js                  Old browser sample data (the Help Board no longer uses it)
+supabase/
+  schema.sql                 The whole database, for a new project
+  migrations/                Changes to run on a project that already has the schema
+scripts/
+  seed-demo.js               pnpm seed:demo: demo accounts and open requests
 e2e/                         Playwright tests (helpers.js + one spec per area)
 ```
 
-Pages in the navbar: seniors see **My Requests, Hangouts, Skill Swaps, Rewards** and youths see **Help Board, My Tasks, Hangouts, Skill Swaps, Rewards**. **Profile** and **Log out** are in the name menu.
+Pages in the navbar (the same for everyone, since anyone can ask for help and anyone can help): **My Requests, Help Board, My Tasks, Hangouts, Skill Swaps, Rewards**. **Profile** and **Log out** are in the name menu.
 
 ## Adding a feature (checklist)
 
@@ -84,7 +117,7 @@ Pages in the navbar: seniors see **My Requests, Hangouts, Skill Swaps, Rewards**
 
 The users are seniors, so the design is deliberately calm and large.
 
-- **Text size:** 18px on youth pages and the landing page, **22px on senior pages** (set in `styles/theme.css`, picked by the `.role-senior` wrapper in `SeniorViewsLayout.vue`). Everything is sized in `rem` so text, buttons and spacing grow together. Always use `rem`.
+- **Text size:** 18px on youth pages and the landing page, **22px on senior pages** (set in `styles/theme.css`, picked by the `.role-senior` wrapper in `MainLayout.vue`, for seniors and anyone who chose large text). Everything is sized in `rem` so text, buttons and spacing grow together. Always use `rem`.
 - **Simple by default:** request cards show only the category, status and title. The details and buttons open on mouse hover, or on tap, or with Enter on the keyboard (`components/RequestCard.vue`). Reuse this idea for other lists.
 - **Big targets:** buttons and inputs are at least 48px tall, with one main action per screen.
 - **Status in words:** colour is only a hint. States are always written ("Open", "Awaiting confirmation").
@@ -93,18 +126,20 @@ The users are seniors, so the design is deliberately calm and large.
 
 ## Demo script (Help Board)
 
-1. Landing page: choose **Senior** > Mdm Tan Siew Lan > **Enter**.
-2. **+ Ask for Help**: submit empty (validation), then post a request. Hover a card to see its details, then edit and cancel it.
-3. Log out (name menu), choose **Youth** > Wei Jie. Filter and sort the board. Accept 2 requests (the 3rd is blocked).
+Run `pnpm seed:demo` first (see [Supabase setup](#supabase-setup)).
+
+1. Log in as Mdm Tan Siew Lan (`demo.tan@example.com`). You land on **My Requests**.
+2. **+ Ask for Help**: submit empty (validation), then post a request with a time later this week. Hover a card to see its details and when help is needed, then edit and cancel it. The cancelled request moves to **Past**.
+3. Log out (name menu) and log in as Wei Jie (`demo.weijie@example.com`). Filter and sort the board. Accept 2 requests (the 3rd is blocked).
 4. **My Tasks** > **Mark as done**. Points are NOT released yet.
-5. Log out, log in as the senior who owns that request. The card is already open: **Yes, ... helped me**.
-6. Log in as Wei Jie again: the points have gone up.
+5. Log out, log in as the senior who owns that request. The card is already open: **Yes, ... helped me**. It moves to **Past**.
+6. Log in as Wei Jie again: the points in the navbar have gone up.
 
 Request status flow: `open` > `accepted` > `pending_confirmation` > `completed` (or `cancelled`).
 
 ## Deploying
 
-The repo is ready for [Vercel](https://vercel.com/): import it, keep the defaults (build command `pnpm build`, output `dist`). `vercel.json` sends every path to `index.html` so refreshing a page like `/senior/rewards` works.
+The repo is ready for [Vercel](https://vercel.com/): import it, keep the defaults (build command `pnpm build`, output `dist`). `vercel.json` sends every path to `index.html` so refreshing a page like `/app/rewards` works. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` under the project's Environment Variables.
 
 ## External APIs (planned)
 

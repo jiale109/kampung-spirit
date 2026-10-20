@@ -26,6 +26,7 @@ export const difficulties = { Easy: 1, Medium: 2, Hard: 3 }
 export const durations = [15, 30, 45, 60, 90, 120]
 
 // A youth can only have this many active tasks at once
+// Must match the limit in accept_help_request() in supabase/schema.sql
 export const MAX_ACTIVE_TASKS = 2
 
 // points = 10 x difficulty x (minutes / 30)

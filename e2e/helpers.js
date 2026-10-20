@@ -18,7 +18,9 @@ export function uniqueEmail() {
   return `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@${EMAIL_DOMAIN}`
 }
 
-// Start every test from a clean browser, logged out, with the sample data
+// Start every test logged out. Supabase keeps the session in localStorage, so
+// clearing it logs out. There is no sample data any more: the data lives in
+// Supabase, so each test creates what it needs (see postRequest below).
 export async function resetApp(page) {
   accounts.clear()
   await page.goto('/landing')
@@ -54,7 +56,7 @@ export async function loginWith(page, email, password = TEST_PASSWORD) {
 
 // role is 'Senior' or 'Youth'. The first time a name is used in a test, a new
 // account of that age group is signed up; after that, it logs in to it again.
-// Seniors land on /senior and everyone else on /app (until the pages are merged).
+// Seniors land on My Requests (/app/requests) and everyone else on the Help Board (/app).
 export async function login(page, role, name) {
   const existing = accounts.get(name)
   if (existing) {
@@ -62,7 +64,7 @@ export async function login(page, role, name) {
   } else {
     accounts.set(name, await signUp(page, { name, birthYear: birthYearFor[role] }))
   }
-  await expect(page).toHaveURL(role === 'Senior' ? /\/senior$/ : /\/app$/)
+  await expect(page).toHaveURL(role === 'Senior' ? /\/app\/requests$/ : /\/app$/)
 }
 
 export async function logout(page) {
@@ -76,10 +78,48 @@ export function card(page, title) {
   return page.locator('.request-card', { hasText: title })
 }
 
-// Request cards only show their buttons when the mouse is over them (or after
-// a tap), so hover first. Use this before clicking a button inside a card.
+// Request cards only show their buttons after a click or tap on the title, so
+// open it first. Use this before clicking a button inside a card. A card that is
+// already open is left open (clicking again would close it).
 export async function openCard(page, title) {
   const found = card(page, title)
-  await found.hover()
+  const toggle = found.locator('.request-toggle')
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
   return found
+}
+
+// A title no other test (or earlier run) has used, so cards are easy to find
+// even though everyone shares the same Supabase data
+export function uniqueTitle(text) {
+  return `${text} ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+}
+
+// A local time daysFromNow days ahead, in the format the "When" input takes: 'YYYY-MM-DDTHH:mm'
+export function futureTime(daysFromNow = 2, hour = 15) {
+  const d = new Date()
+  d.setDate(d.getDate() + daysFromNow)
+  d.setHours(hour, 0, 0, 0)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`
+}
+
+// Fill in the request form (does not press the button)
+export async function fillRequest(page, { title, category = 'Tech', details = 'Please help me with this, thank you.',
+  difficulty = 'Easy', duration = '30 min', neededAt = futureTime() }) {
+  await page.getByLabel('Short title').fill(title)
+  await page.getByRole('button', { name: new RegExp(category) }).click()
+  await page.getByLabel('Details').fill(details)
+  await page.getByLabel('When do you need help?').fill(neededAt)
+  await page.getByLabel('How hard?').selectOption(difficulty)
+  await page.getByLabel('How long?').selectOption({ label: duration })
+}
+
+// Post a request as the logged-in person, through the form. Ends on My Requests.
+export async function postRequest(page, request) {
+  await page.goto('/app/requests/create')
+  await fillRequest(page, request)
+  await page.getByRole('button', { name: 'Post request' }).click()
+  await expect(page).toHaveURL(/\/app\/requests$/)
+  await expect(card(page, request.title)).toBeVisible()
 }

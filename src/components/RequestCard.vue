@@ -3,6 +3,7 @@ import { ref, computed, useId } from 'vue'
 import CategoryBadge from './CategoryBadge.vue'
 import StatusBadge from './StatusBadge.vue'
 import { categoryClass } from '../lib/points.js'
+import { formatNeededAt } from '../stores/helpRequest.js'
 
 const props = defineProps({
   request: { type: Object, required: true },
@@ -16,27 +17,23 @@ const props = defineProps({
   open: { type: Boolean, default: false },
 })
 
-// ---- Simple by default, details on demand ----
-// A closed card shows only the category, the status and the title.
-// It opens when the mouse is over it (hovering), or when it is tapped or
-// activated with the keyboard (pinned). Tapping again closes it.
-const hovering = ref(false)
-const pinned = ref(false)
-const expanded = computed(() => props.open || hovering.value || pinned.value)
 
-// Links the title button to the details it shows (for screen readers)
+const pinned = ref(false)
+const expanded = computed(() => props.open || pinned.value)
+
 const detailsId = useId()
 
-// The progress line shown while a task is being done
+
 const steps = ['Posted', 'Accepted', 'Done', 'Confirmed']
 const stepNumbers = { open: 0, accepted: 1, pending_confirmation: 2, completed: 3 }
 const currentStep = computed(() => stepNumbers[props.request.status])
 const inProgress = computed(() => ['accepted', 'pending_confirmation'].includes(props.request.status))
+
+const neededAtText = computed(() => formatNeededAt(props.request.neededAt))
 </script>
 
 <template>
-  <article class="card request-card" :class="[categoryClass(request.category), { 'is-expanded': expanded }]"
-    @mouseenter="hovering = true" @mouseleave="hovering = false">
+  <article class="card request-card" :class="[categoryClass(request.category), { 'is-expanded': expanded }]">
     <div class="card-body">
 
       <!-- Always visible -->
@@ -46,10 +43,18 @@ const inProgress = computed(() => ['accepted', 'pending_confirmation'].includes(
       </div>
 
       <h2 class="request-title">
-        <!-- The button is stretched over the whole card (see theme.css), so the whole card can be tapped -->
         <button type="button" class="request-toggle" :aria-expanded="expanded" :aria-controls="detailsId"
           @click="pinned = !pinned">{{ request.title }}</button>
       </h2>
+
+      <p class="request-summary" data-testid="card-summary">
+        <span data-testid="needed-at">{{ neededAtText }}</span>
+        <span v-if="showRequester && request.block"> · {{ request.block }}</span>
+      </p>
+
+      <div v-if="$slots.notice" class="request-notice">
+        <slot name="notice" />
+      </div>
       <span v-if="!open" class="request-hint" aria-hidden="true">{{ expanded ? 'Hide details ▴' : 'Show details ▾' }}</span>
 
       <!-- Only visible when the card is open -->
@@ -77,7 +82,6 @@ const inProgress = computed(() => ['accepted', 'pending_confirmation'].includes(
             <span v-if="showHelper && request.helperName">Helper: <strong>{{ request.helperName }}</strong></span>
           </p>
 
-          <!-- Progress (only while in progress) -->
           <ol v-if="inProgress" class="progress-steps" aria-label="Progress">
             <li v-for="(step, i) in steps" :key="step"
               :class="{ 'is-done': i <= currentStep, 'is-current': i === currentStep }"
@@ -86,7 +90,6 @@ const inProgress = computed(() => ['accepted', 'pending_confirmation'].includes(
             </li>
           </ol>
 
-          <!-- Buttons are filled in by each page -->
           <div class="request-actions">
             <slot name="actions" />
           </div>
@@ -96,3 +99,34 @@ const inProgress = computed(() => ['accepted', 'pending_confirmation'].includes(
     </div>
   </article>
 </template>
+
+<style scoped>
+
+.request-card:hover,
+.request-card:focus-within {
+  border-color: var(--ks-line-strong);
+  border-left-color: var(--cat);
+  box-shadow: 0 6px 18px rgba(10, 60, 60, 0.14);
+}
+
+.request-summary {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* Sits above the stretched title button, so its buttons can be pressed */
+.request-notice {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid #d3ad45;
+  border-radius: 0.75rem;
+  background: var(--ks-amber-bg);
+  color: var(--ks-amber-ink);
+  font-weight: 600;
+}
+</style>

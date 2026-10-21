@@ -9,6 +9,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
+import BrandMark from '../components/BrandMark.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -122,7 +123,7 @@ async function submit() {
       <!-- Tagline -->
       <div class="col-lg-6 landing-hero">
         <!-- add better icon here beside kampung spirit?  -->
-        <p class="landing-brand"> Kampung Spirit</p> 
+        <p class="landing-brand"><BrandMark :size="128" />Kampung Spirit</p> 
         <h1 class="landing-tagline">Neighbours helping neighbours, one small favour at a time.</h1>
       </div>
 

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-labelledby="title desc">
+  <title id="title">Pixel-art village</title>
+  <desc id="desc">A tiny retro game village with two cottages, trees, grass, and a winding path.</desc>
+  <!-- Palette: ink #26364a, roof #a94742, timber #e9c77b, wall #f3e3b6, leaf #4f9a58 -->
+  <!-- distant clouds -->
+  <g fill="#f3e3b6">
+    <rect x="10" y="9" width="8" height="2"/><rect x="8" y="11" width="12" height="2"/>
+    <rect x="43" y="7" width="6" height="2"/><rect x="41" y="9" width="10" height="2"/>
+  </g>
+  <!-- far hills -->
+  <path fill="#78bd72" d="M0 33h8v-4h6v-4h6v4h5v4h7v-5h5v-5h6v-4h5v4h5v5h5v5h6v13H0z"/>
+  <!-- ground -->
+  <path fill="#4f9a58" d="M0 38h64v26H0z"/>
+  <path fill="#36784d" d="M0 58h64v6H0z"/>
+  <!-- path winding through village -->
+  <path fill="#d9b978" d="M27 37h12v5h-5v5h7v5h-5v5h8v7H18v-6h8v-5h-5v-5h7v-5h-4z"/>
+  <path fill="#ecd49b" d="M30 40h5v5h-4v5h6v5h-5v5h8v2H21v-1h7v-7h-4v-2h6v-7h-2z"/>
+  <!-- cottage left: dark stepped outline -->
+  <path fill="#26364a" d="M4 29h4v-4h4v-4h4v-4h4v4h4v4h4v4h4v20H4z"/>
+  <path fill="#a94742" d="M8 29v-4h4v-4h4v-4h4v4h4v4h4v4h4v3H8z"/>
+  <path fill="#d56b50" d="M12 25v-4h4v-4h4v5h4v4h4v4H12z"/>
+  <path fill="#f3e3b6" d="M8 32h20v15H8z"/>
+  <path fill="#e9c77b" d="M10 34h7v7h-7z"/>
+  <path fill="#26364a" d="M12 35h3v5h-3zM20 37h5v10h-5z"/>
+  <path fill="#fff0c7" d="M11 35h2v2h-2zM20 37h2v2h-2z"/>
+  <!-- cottage right, slightly smaller -->
+  <path fill="#26364a" d="M35 31h4v-4h4v-4h4v-4h4v4h4v4h4v4h3v18H35z"/>
+  <path fill="#a94742" d="M39 31v-4h4v-4h4v-4h4v4h4v4h4v4h3v3H39z"/>
+  <path fill="#d56b50" d="M43 27v-4h4v-4h4v5h4v4h4v3H43z"/>
+  <path fill="#f3e3b6" d="M39 34h19v13H39z"/>
+  <path fill="#e9c77b" d="M41 36h6v6h-6z"/>
+  <path fill="#26364a" d="M43 37h2v4h-2zM51 38h4v9h-4z"/>
+  <!-- pixel trees -->
+  <path fill="#26364a" d="M2 34h4v-4h-2v-4h3v-5h4v5h3v4h-2v4h3v8H2zM51 35h4v-4h-2v-4h3v-5h4v5h2v4h-2v4h3v8H51z"/>
+  <path fill="#4f9a58" d="M4 34v-4h2v-4h3v-5h2v5h2v4h-2v4h2v6H4zM53 35v-4h2v-4h3v-5h2v5h2v4h-2v4h2v6H53z"/>
+  <path fill="#78bd72" d="M9 23h2v3H9zM58 23h2v3h-2z"/>
+  <!-- little flowers -->
+  <path fill="#f3e3b6" d="M5 50h2v2H5zM57 51h2v2h-2zM14 55h2v2h-2z"/>
+  <path fill="#d56b50" d="M6 52h2v2H6zM56 53h2v2h-2z"/>
+</svg>

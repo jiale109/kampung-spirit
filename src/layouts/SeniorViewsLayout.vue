@@ -19,7 +19,8 @@ function logout() {
   <div class="role-senior">
     <nav class="navbar navbar-expand-xl app-navbar">
       <div class="container">
-        <router-link class="navbar-brand" to="/app/requests">🏘️ Kampung Spirit</router-link>
+        <!-- better icon before kampung spirit ? -->
+        <router-link class="navbar-brand" to="/app/requests"> Kampung Spirit</router-link>
 
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
           aria-controls="navbarNav" aria-expanded="false" aria-label="Open menu">

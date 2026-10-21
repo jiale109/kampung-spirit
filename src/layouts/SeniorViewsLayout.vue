@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
+import BrandMark from '../components/BrandMark.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -20,7 +21,7 @@ function logout() {
     <nav class="navbar navbar-expand-xl app-navbar">
       <div class="container">
         <!-- better icon before kampung spirit ? -->
-        <router-link class="navbar-brand" to="/app/requests"> Kampung Spirit</router-link>
+        <router-link class="navbar-brand" to="/app/requests"><BrandMark />Kampung Spirit</router-link>
 
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
           aria-controls="navbarNav" aria-expanded="false" aria-label="Open menu">

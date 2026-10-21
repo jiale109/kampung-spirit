@@ -106,10 +106,35 @@ export const useAuthStore = defineStore('auth', () => {
     return { ok: true }
   }
 
+  // Change your own profile. The database only grants UPDATE on name, block,
+  // interests and large_text (supabase/schema.sql, section 2), so anything
+  // else is refused there even if it were sent. Fields left out are not
+  // touched. Reloads the profile afterwards so the whole app sees the change.
+  async function updateProfile({ name, block, interests, largeText }) {
+    if (!user.value) return { ok: false, error: 'Please log in again.' }
+
+    const changes = {}
+    if (name !== undefined) changes.name = name
+    if (block !== undefined) changes.block = block
+    if (interests !== undefined) changes.interests = interests
+    if (largeText !== undefined) changes.large_text = largeText
+
+    const { error } = await supabase.from('profiles').update(changes).eq('id', user.value.id)
+
+    // Shown in the browser console (F12) to help find the cause
+    if (error) {
+      console.error('Could not save profile:', error.code, error.message, error.details ?? '', error.hint ?? '')
+      return { ok: false, error: 'We could not save your changes. Please try again.' }
+    }
+
+    await loadProfile(user.value.id)
+    return { ok: true }
+  }
+
   async function logout() {
     user.value = null
     await supabase.auth.signOut()
   }
 
-  return { user, ready, homePath, init, register, login, logout }
+  return { user, ready, homePath, init, register, login, updateProfile, logout }
 })

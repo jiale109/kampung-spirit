@@ -1,8 +1,9 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { useHelpRequestStore } from '../stores/helpRequest.js'
+import { applyLargeText } from '../lib/profile.js'
 import BrandMark from '../components/BrandMark.vue'
 
 const router = useRouter()
@@ -10,6 +11,12 @@ const auth = useAuthStore()
 const store = useHelpRequestStore()
 
 const avatarInitial = computed(() => auth.user.name[0].toUpperCase())
+
+// "Use large text" from the profile page (see lib/profile.js). Applied when a
+// logged-in page opens, and taken off again when this layout closes, so the
+// landing page is never left with it.
+onMounted(() => applyLargeText(auth.user?.large_text))
+onUnmounted(() => applyLargeText(false))
 
 // Load requests once here so the active-task count is right on every page
 onMounted(store.load)

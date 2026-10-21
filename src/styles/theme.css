@@ -57,6 +57,15 @@
 html {
   font-size: 137.5%;
 }
+
+/* "Use large text" from the profile page. Everyone already gets 22px above,
+   so this only ever makes the text BIGGER, never smaller. It has to sit on
+   <html> because every size in this file is in rem, and rem is measured from
+   the html font-size. MainLayout.vue puts the class here and takes it off
+   again, following auth.user.large_text. */
+html.large-text {
+  font-size: 168.75%;
+}
 body {
   background-color: var(--ks-bg);
   color: var(--ks-ink);

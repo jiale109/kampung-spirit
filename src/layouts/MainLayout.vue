@@ -22,7 +22,8 @@ async function logout() {
 <template>
   <nav class="navbar navbar-expand-xl app-navbar">
     <div class="container">
-      <router-link class="navbar-brand" :to="auth.homePath">🏘️ Kampung Spirit</router-link>
+      <!-- add better icon beside kampung spirit ? -->
+      <router-link class="navbar-brand" :to="auth.homePath"> Kampung Spirit</router-link>
 
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
         aria-controls="navbarNav" aria-expanded="false" aria-label="Open menu">

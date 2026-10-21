@@ -2,31 +2,40 @@
   ============================================================================
   GUIDE: Help Board store                                 Owner: Victoria Soh
   ============================================================================
-  Today the requests live in the browser (localStorage). To move to Express +
-  MongoDB, keep every function name and replace the body with an axios call.
-  The pages do not need to change if the return values stay the same.
+  STATUS: working, backed by Supabase (table help_requests in supabase/schema.sql).
 
-    createRequest(data)    ->  POST   /requests
-    updateRequest(id, d)   ->  PATCH  /requests/:id          (only while status is open)
-    cancelRequest(id)      ->  PATCH  /requests/:id/cancel   (open or accepted)
-    acceptRequest(id)      ->  POST   /requests/:id/accept   (error if not open, or 2 active)
-    markDone(id)           ->  POST   /requests/:id/done     (helper only)
-    confirmDone(id)        ->  POST   /requests/:id/confirm  (requesting senior only, awards points)
-    loading the lists      ->  GET    /requests              (add a load() action, call it onMounted)
+  How it talks to the database
+    load()                    select from help_requests. RLS returns open requests
+                              plus the ones you asked for or are helping with.
+    createRequest(data)       insert       (only title, description, category,
+    updateRequest(id, d)      update        difficulty, duration may be written)
+    cancelRequest(id)         rpc cancel_help_request   (requester, open or accepted)
+    acceptRequest(id, ok)     rpc accept_help_request   (not your own, max 2 active,
+                                                         under 18s need a verified guardian,
+                                                         seniors confirm physical tasks)
+    withdrawFromTask(id)      rpc withdraw_from_task    (helper, back to open)
+    markDone(id)              rpc mark_task_done        (helper)
+    confirmDone(id)           rpc confirm_help_done     (requester, adds the points)
 
-  The server MUST re-check the rules (status order, the 2-active-task limit,
-  who is allowed to do what). The checks here only make the page friendlier.
+  Every action returns { ok: true } or { ok: false, error }. error is the plain
+  sentence from `raise exception` in the database function. After a successful
+  action the list is loaded again, so the pages always show the database state.
 
-  Mongoose model: HelpRequest { title, description, category, difficulty,
-  duration, points, seniorId, helperId, status, createdAt }. status is one of
-  open | accepted | pending_confirmation | completed | cancelled.
-  Use _id instead of id when the data comes from MongoDB.
+  The database is the source of truth for the rules: it re-checks the status
+  order, the 2-task limit and who may do what, and it calculates `points` and
+  `is_physical` itself (trigger help_requests_fill_in). Checks in the pages are
+  only there to give a friendlier message first.
 
-  Remember: confirmDone() adds points. When Rewards builds stores/points.js it
-  should call awardPoints() here (see the GUIDE in views/rewards/RewardsView.vue).
+  Status flow: open > accepted > pending_confirmation > completed (or cancelled).
+  Anyone can ask and anyone can help; "senior" and "youth" pages are just the
+  two sides of the same board (seniorId = the requester, helperId = the helper).
+
+  Points: confirm_help_done writes to points_ledger in the database. Do NOT
+  also call pointsStore.awardPoints(), or the points are counted twice.
 
   Related files: components/RequestCard.vue (the card), components/RequestForm.vue
-  (create/edit form), views/app/* and views/app/* (the pages), e2e/helpboard.spec.js.
+  (create/edit form), views/senior/* (asking for help), views/youth/* (helping),
+  layouts/MainLayout.vue (loads the list once for the navbar), e2e/helpboard.spec.js.
 */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'

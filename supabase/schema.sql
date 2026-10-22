@@ -29,6 +29,19 @@
 -- ============================================================================
 -- 1. Age groups
 -- ============================================================================
+-- Whole years old today, using Singapore's date (the database clock is UTC).
+-- Always compare this number, never age() against an interval: Postgres counts
+-- a month as 30 days when comparing intervals, so "64 years 11 mons 30 days"
+-- (the day before some 65th birthdays) counts as 65 years.
+create function public.age_in_years(birth_date date)
+returns int
+language sql
+stable
+set search_path = ''
+as $$
+  select extract(year from age((now() at time zone 'Asia/Singapore')::date, birth_date))::int
+$$;
+
 create function public.age_group_for(birth_date date)
 returns text
 language sql
@@ -37,9 +50,9 @@ set search_path = ''
 as $$
   select case
     when birth_date is null then null
-    when age(birth_date) < interval '12 years' then null   -- too young
-    when age(birth_date) < interval '22 years' then 'youth'
-    when age(birth_date) < interval '65 years' then 'adult'
+    when public.age_in_years(birth_date) < 12 then null   -- too young
+    when public.age_in_years(birth_date) < 22 then 'youth'
+    when public.age_in_years(birth_date) < 65 then 'adult'
     else 'senior'
   end
 $$;
@@ -117,7 +130,7 @@ security definer
 set search_path = ''
 as $$
   select case
-    when age(pp.birth_date) >= interval '18 years' then 'not_needed'
+    when public.age_in_years(pp.birth_date) >= 18 then 'not_needed'
     when pp.guardian_verified_at is not null then 'verified'
     else 'pending'
   end
@@ -153,7 +166,7 @@ begin
     raise exception 'You must be at least 12 years old to sign up.';
   end if;
 
-  is_minor := age(dob) < interval '18 years';
+  is_minor := public.age_in_years(dob) < 18;
 
   if is_minor and (
        coalesce(trim(meta ->> 'guardian_name'), '') = ''
@@ -330,7 +343,7 @@ begin
   end if;
 
   select * into mine from public.profile_private where id = me;
-  if age(mine.birth_date) < interval '18 years' and mine.guardian_verified_at is null then
+  if public.age_in_years(mine.birth_date) < 18 and mine.guardian_verified_at is null then
     raise exception 'Your parent or guardian needs to confirm your account before you can help.';
   end if;
 
@@ -461,7 +474,8 @@ to authenticated;
 grant execute on function
   public.calc_points(text, int),
   public.is_physical_category(text),
-  public.age_group_for(date)
+  public.age_group_for(date),
+  public.age_in_years(date)
 to authenticated;
 
 

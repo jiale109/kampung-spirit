@@ -73,7 +73,7 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth.js'
 import { usePointsStore } from '../../stores/points.js'
-import { interests as interestOptions, applyLargeText } from '../../lib/profile.js'
+import { interests as interestOptions } from '../../lib/profile.js'
 
 const auth = useAuthStore()
 const points = usePointsStore()
@@ -98,6 +98,16 @@ const guardianNote = computed(() => {
   }
   return ''
 })
+
+// A pixel sprite for the age group, shown beside the details. The files live
+// in public/images, so the path starts from the site root. age_group comes
+// from the database, so an unknown value just shows no picture.
+const ageIcons = {
+  youth: '/images/youth-icon.svg',
+  adult: '/images/adult-icon.svg',
+  senior: '/images/senior-icon.svg',
+}
+const ageIcon = computed(() => ageIcons[auth.user.age_group] ?? '')
 
 // interests can be null on an older row, so fall back to an empty list
 const myInterests = computed(() => auth.user.interests ?? [])
@@ -169,8 +179,6 @@ async function save() {
   if (result.ok) {
     editing.value = false
     message.value = 'Your profile is saved.'
-    // Show the new text size at once, without waiting for a page reload
-    applyLargeText(form.value.largeText)
   } else {
     saveError.value = result.error
   }
@@ -195,24 +203,41 @@ async function save() {
     <div v-if="!editing" class="d-grid gap-4">
 
       <div class="card">
-        <div class="card-body p-4">
+        <!-- Details on the left, the age-group sprite in the space on the right -->
+        <div class="card-body p-4 d-flex align-items-center">
+          <div>
           <h2 class="page-title fs-4">Your details</h2>
           <dl class="row mb-0 mt-3">
-            <dt class="col-sm-4">Name</dt>
-            <dd class="col-sm-8" data-testid="profile-name">{{ auth.user.name }}</dd>
+            <dt class="col-sm-5">Name</dt>
+            <dd class="col-sm-7" data-testid="profile-name">{{ auth.user.name }}</dd>
 
-            <dt class="col-sm-4">Block and street</dt>
-            <dd class="col-sm-8" data-testid="profile-block">{{ auth.user.block }}</dd>
+            <dt class="col-sm-5">Block and street</dt>
+            <dd class="col-sm-7" data-testid="profile-block">{{ auth.user.block }}</dd>
 
-            <dt class="col-sm-4">Age group</dt>
-            <dd class="col-sm-8" data-testid="profile-age-group">{{ ageGroupLabel }}</dd>
+            <dt class="col-sm-5">Age group</dt>
+            <dd class="col-sm-7" data-testid="profile-age-group">{{ ageGroupLabel }}</dd>
 
-            <dt class="col-sm-4">Large text</dt>
-            <dd class="col-sm-8 mb-0" data-testid="profile-large-text">{{ auth.user.large_text ? 'On' : 'Off' }}</dd>
+            <dt class="col-sm-5">Large text</dt>
+            <dd class="col-sm-7 mb-0" data-testid="profile-large-text">{{ auth.user.large_text ? 'On' : 'Off' }}</dd>
           </dl>
 
           <!-- Guardian status in words, not a colour or a tick -->
           <p v-if="guardianNote" class="points-note mt-4" data-testid="guardian-note">{{ guardianNote }}</p>
+          </div>
+
+          <!--
+            The sprite sits in its own quarter-width column and is centred in it,
+            so it sits in the middle of the empty space rather than against the
+            card edge. Shown from the md breakpoint up: below that the column is
+            too narrow for the artwork, so it is hidden and the details take the
+            full width. 144x240 is exactly 6x the 24x40 artwork, which keeps the
+            pixel art sharp - stick to multiples of 24x40 if you resize it.
+            Decorative: the age group is written out in the list above, so alt
+            is empty and a screen reader does not say it twice.
+          -->
+          <div class="w-25 d-none d-md-flex justify-content-center flex-shrink-0">
+            <img v-if="ageIcon" :src="ageIcon" alt="" width="144" height="240" data-testid="age-icon" />
+          </div>
         </div>
       </div>
 

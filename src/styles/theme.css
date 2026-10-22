@@ -361,9 +361,23 @@ body {
 .app-navbar > .container {
   flex-wrap: wrap;
   row-gap: 0.25rem;
+  /* Use the whole screen width. Bootstrap's .container stops at 1320px, which
+     left the menu squeezed into a band in the middle of wide screens. */
+  max-width: none;
+  padding-left: clamp(1rem, 3vw, 2.5rem);
+  padding-right: clamp(1rem, 3vw, 2.5rem);
 }
 
 @media (min-width: 1200px) {
+  /* When the menu drops to its own row, keep it inside the navbar: it may shrink
+     to the row's width, and the points + name group then wraps under the links
+     instead of running off the right edge (which made the page scroll sideways). */
+  .app-navbar .navbar-collapse {
+    min-width: 0;
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+
   .app-navbar .navbar-nav.me-auto {
     flex: none;
   }

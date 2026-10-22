@@ -463,3 +463,224 @@ grant execute on function
   public.is_physical_category(text),
   public.age_group_for(date)
 to authenticated;
+
+
+-- ============================================================================
+-- 7. Hotspot hangouts
+-- ============================================================================
+-- Hotspot ids come from src/lib/hotspots.js. They are plain text, not a table,
+-- because hotspots almost never change.
+
+-- Same rule as pointsForHangout() in lib/points.js: 20 points for an hour.
+-- If you change one, change BOTH or the preview will not match what is paid.
+create function public.calc_hangout_points(duration int)
+returns int
+language sql
+immutable
+set search_path = ''
+as $$
+  select round(20 * (duration / 60.0))::int
+$$;
+
+create table public.hangouts (
+  id uuid primary key default gen_random_uuid(),
+  host_id uuid not null default auth.uid() references public.profiles(id) on delete cascade,
+  title text not null check (length(trim(title)) >= 5),
+  description text not null check (length(trim(description)) >= 10),
+  hotspot_id text not null check (length(trim(hotspot_id)) > 0),
+  hangout_date date not null,
+  hangout_time time not null,
+  duration int not null check (duration in (30, 60, 90, 120)),
+  status text not null default 'open'
+    check (status in ('open', 'completed', 'cancelled')),
+  created_at timestamptz not null default now()
+);
+
+create index on public.hangouts (status);
+create index on public.hangouts (host_id);
+create index on public.hangouts (hotspot_id);
+
+create table public.hangout_attendees (
+  hangout_id uuid not null references public.hangouts(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (hangout_id, user_id)
+);
+
+create index on public.hangout_attendees (user_id);
+
+-- The host is always counted as attending, so nobody has to remember to join
+-- their own hangout.
+create function public.hangouts_add_host()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.hangout_attendees (hangout_id, user_id)
+  values (new.id, new.host_id);
+  return new;
+end;
+$$;
+
+revoke execute on function public.hangouts_add_host() from public, anon, authenticated;
+
+create trigger hangouts_add_host
+  after insert on public.hangouts
+  for each row execute procedure public.hangouts_add_host();
+
+alter table public.hangouts enable row level security;
+
+create policy "See open hangouts and your own"
+  on public.hangouts for select to authenticated
+  using (status = 'open' or host_id = (select auth.uid()));
+
+create policy "Propose your own hangout"
+  on public.hangouts for insert to authenticated
+  with check (host_id = (select auth.uid()) and status = 'open');
+
+-- Status changes go through the functions below, which check the rules.
+revoke insert, update, delete on public.hangouts from anon, authenticated;
+grant insert (title, description, hotspot_id, hangout_date, hangout_time, duration)
+  on public.hangouts to authenticated;
+
+alter table public.hangout_attendees enable row level security;
+
+create policy "See who is going"
+  on public.hangout_attendees for select to authenticated
+  using (true);
+
+-- Joining and leaving go through join_hangout() and leave_hangout()
+revoke insert, update, delete on public.hangout_attendees from anon, authenticated;
+
+
+-- ----------------------------------------------------------------------------
+-- Hangout actions, called with supabase.rpc('name', { hangout_id: ... })
+-- When a rule fails, error.message is the plain sentence in raise exception.
+-- ----------------------------------------------------------------------------
+
+create function public.join_hangout(hangout_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  me uuid := auth.uid();
+  h public.hangouts;
+begin
+  select * into h from public.hangouts where id = hangout_id for update;
+  if not found or h.status <> 'open' then
+    raise exception 'Sorry, this hangout is no longer open.';
+  end if;
+
+  if exists (select 1 from public.hangout_attendees
+             where hangout_attendees.hangout_id = h.id and user_id = me) then
+    raise exception 'You are already going to this hangout.';
+  end if;
+
+  insert into public.hangout_attendees (hangout_id, user_id) values (h.id, me);
+end;
+$$;
+
+create function public.leave_hangout(hangout_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  me uuid := auth.uid();
+  h public.hangouts;
+begin
+  select * into h from public.hangouts where id = hangout_id;
+  if not found then
+    raise exception 'We could not find that hangout.';
+  end if;
+
+  if h.host_id = me then
+    raise exception 'You are hosting this hangout. Cancel it instead.';
+  end if;
+
+  delete from public.hangout_attendees
+  where hangout_attendees.hangout_id = h.id and user_id = me;
+  if not found then
+    raise exception 'You are not going to this hangout.';
+  end if;
+end;
+$$;
+
+create function public.cancel_hangout(hangout_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update public.hangouts
+  set status = 'cancelled'
+  where id = hangout_id and host_id = auth.uid() and status = 'open';
+  if not found then
+    raise exception 'Only the host can cancel this hangout, and only while it is open.';
+  end if;
+end;
+$$;
+
+-- Host marks it done. Everyone who went, the host included, is paid once.
+create function public.complete_hangout(hangout_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  h public.hangouts;
+  pay int;
+begin
+  update public.hangouts
+  set status = 'completed'
+  where id = hangout_id and host_id = auth.uid() and status = 'open'
+  returning * into h;
+  if not found then
+    raise exception 'Only the host can complete this hangout, and only while it is open.';
+  end if;
+
+  pay := public.calc_hangout_points(h.duration);
+
+  insert into public.points_ledger (user_id, amount, reason)
+  select a.user_id, pay, 'Hangout: ' || h.title
+  from public.hangout_attendees a
+  where a.hangout_id = h.id;
+end;
+$$;
+
+revoke execute on function
+  public.join_hangout(uuid),
+  public.leave_hangout(uuid),
+  public.cancel_hangout(uuid),
+  public.complete_hangout(uuid)
+from public, anon;
+
+grant execute on function
+  public.join_hangout(uuid),
+  public.leave_hangout(uuid),
+  public.cancel_hangout(uuid),
+  public.complete_hangout(uuid),
+  public.calc_hangout_points(int)
+to authenticated;
+
+-- Section 6 only grants select on the older tables, so add the new ones here
+grant select on public.hangouts, public.hangout_attendees to authenticated;
+
+-- Sample hangouts so the page is not empty. Optional: delete this block once
+-- residents have made their own. The host is whoever signed up first, so no
+-- user ids are hard-coded.
+insert into public.hangouts (host_id, title, description, hotspot_id, hangout_date, hangout_time, duration)
+select p.id, v.title, v.description, v.hotspot_id, current_date + v.days, v.at, v.duration
+from (select id from public.profiles order by created_at limit 1) p,
+(values
+  ('Morning walk at the park', 'A gentle walk and a chat. We stop whenever anyone needs a rest.', 'eunos-park', 1, time '07:30', 60),
+  ('Kopi and newspapers', 'Read the papers together over kopi. Come and go as you like.', 'eunos-crescent-market', 2, time '09:00', 60),
+  ('Herb garden morning', 'Watering and weeding together. Gloves provided.', 'eunos-community-garden', 3, time '08:00', 90)
+) as v(title, description, hotspot_id, days, at, duration);

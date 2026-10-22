@@ -73,7 +73,7 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth.js'
 import { usePointsStore } from '../../stores/points.js'
-import { interests as interestOptions } from '../../lib/profile.js'
+import { interests as interestOptions, applyLargeText } from '../../lib/profile.js'
 
 const auth = useAuthStore()
 const points = usePointsStore()
@@ -179,6 +179,10 @@ async function save() {
   if (result.ok) {
     editing.value = false
     message.value = 'Your profile is saved.'
+    // Show the new text size at once. MainLayout only applies it when it
+    // mounts, and it stays mounted while you move around /app, so without
+    // this the change would not appear until a full page reload.
+    applyLargeText(form.value.largeText)
   } else {
     saveError.value = result.error
   }

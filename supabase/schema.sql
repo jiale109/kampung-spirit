@@ -717,3 +717,299 @@ $$;
 
 revoke execute on function public.community_points_this_month() from public, anon;
 grant execute on function public.community_points_this_month() to authenticated, anon;
+
+-------------------------------------------------------------------------------
+-- 8.1 Small helper functions
+-- ----------------------------------------------------------------------------
+ 
+-- Same rule as pointsForSkillSwap() in lib/points.js: 30 points per 60 minutes
+create function public.skill_swap_points(duration int)
+returns int
+language sql
+immutable
+set search_path = ''
+as $$
+  select round(30 * (duration / 60.0))::int
+$$;
+ 
+-- The moment a session starts, in Singapore time
+create function public.skill_session_start(d date, t time)
+returns timestamptz
+language sql
+immutable
+set search_path = ''
+as $$
+  select (d + t) at time zone 'Asia/Singapore'
+$$;
+ 
+-- True for an under 18 whose guardian has not been verified yet
+create function public.is_unverified_minor(uid uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(public.age_in_years(pp.birth_date) < 18 and pp.guardian_verified_at is null, false)
+  from public.profile_private pp
+  where pp.id = uid
+$$;
+ 
+revoke execute on function public.is_unverified_minor(uuid) from public, anon;
+grant execute on function public.is_unverified_minor(uuid) to authenticated;
+ 
+ 
+-- ----------------------------------------------------------------------------
+-- 8.2 Tables
+-- ----------------------------------------------------------------------------
+ 
+create table public.skill_sessions (
+  id uuid primary key default gen_random_uuid(),
+  host_id uuid not null default auth.uid() references public.profiles(id) on delete cascade,
+  title text not null check (length(trim(title)) >= 5),
+  description text not null check (length(trim(description)) >= 1),
+  category text not null check (category in
+    ('Tech', 'Cooking', 'Crafts', 'Health & fitness', 'Arts & music', 'Languages', 'Other')),
+  venue text not null check (length(trim(venue)) >= 3),
+  session_date date not null,
+  session_time time not null,
+  duration int not null check (duration in (30, 60, 90, 120, 150, 180)),
+  capacity int not null check (capacity between 1 and 10),
+  status text not null default 'open' check (status in ('open', 'completed', 'cancelled')),
+  created_at timestamptz not null default now()
+);
+ 
+create index on public.skill_sessions (status, session_date);
+create index on public.skill_sessions (host_id);
+ 
+-- Who has a place. The primary key stops anyone joining the same session twice.
+create table public.skill_session_attendees (
+  session_id uuid not null references public.skill_sessions(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  joined_at timestamptz not null default now(),
+  primary key (session_id, user_id)
+);
+ 
+create index on public.skill_session_attendees (user_id);
+ 
+-- Checks a new session before it is saved
+create function public.skill_sessions_check()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if public.skill_session_start(new.session_date, new.session_time) < now() then
+    raise exception 'That day and time have already passed.';
+  end if;
+ 
+  if public.is_unverified_minor(new.host_id) then
+    raise exception 'Your parent or guardian needs to confirm your account before you can host.';
+  end if;
+ 
+  return new;
+end;
+$$;
+ 
+revoke execute on function public.skill_sessions_check() from public, anon, authenticated;
+ 
+create trigger skill_sessions_check
+  before insert on public.skill_sessions
+  for each row execute procedure public.skill_sessions_check();
+ 
+ 
+-- ----------------------------------------------------------------------------
+-- 8.3 Who can see and change what (Row Level Security)
+-- ----------------------------------------------------------------------------
+ 
+alter table public.skill_sessions enable row level security;
+alter table public.skill_session_attendees enable row level security;
+ 
+create policy "See open sessions and your own"
+  on public.skill_sessions for select to authenticated
+  using (status = 'open' or host_id = (select auth.uid()));
+ 
+create policy "Host your own session"
+  on public.skill_sessions for insert to authenticated
+  with check (host_id = (select auth.uid()) and status = 'open');
+ 
+-- Everyone can see who has a place (so the spots left are right). Names still
+-- come from profiles, which logged-in users can already read.
+create policy "See who has a place"
+  on public.skill_session_attendees for select to authenticated
+  using (true);
+ 
+-- The browser may only add a session with these columns. Joining, leaving,
+-- cancelling and completing go through the functions in 8.4.
+revoke insert, update, delete on public.skill_sessions from anon, authenticated;
+grant insert (title, description, category, venue, session_date, session_time, duration, capacity)
+  on public.skill_sessions to authenticated;
+ 
+revoke insert, update, delete on public.skill_session_attendees from anon, authenticated;
+ 
+-- "Automatically expose new tables" is off, so reading must be granted here too.
+-- RLS still decides which rows each person sees.
+grant select on public.skill_sessions, public.skill_session_attendees to authenticated;
+ 
+ 
+-- ----------------------------------------------------------------------------
+-- 8.4 Skill swap actions, called with supabase.rpc('name', { swap_id: ... })
+-- ----------------------------------------------------------------------------
+-- When a rule fails, error.message is the plain sentence in raise exception.
+ 
+-- Join a session
+create function public.join_skill_session(swap_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  me uuid := auth.uid();
+  s public.skill_sessions;
+  taken int;
+begin
+  -- Lock the row, so two people cannot both take the last spot
+  select * into s from public.skill_sessions where id = swap_id for update;
+  if not found or s.status <> 'open' then
+    raise exception 'This session is no longer open.';
+  end if;
+ 
+  if s.host_id = me then
+    raise exception 'You are hosting this session, so you already have a place.';
+  end if;
+ 
+  if public.skill_session_start(s.session_date, s.session_time) < now() then
+    raise exception 'This session has already started.';
+  end if;
+ 
+  if public.is_unverified_minor(me) then
+    raise exception 'Your parent or guardian needs to confirm your account before you can join.';
+  end if;
+ 
+  if exists (select 1 from public.skill_session_attendees a where a.session_id = s.id and a.user_id = me) then
+    raise exception 'You already have a place in this session.';
+  end if;
+ 
+  select count(*) into taken from public.skill_session_attendees a where a.session_id = s.id;
+  if taken >= s.capacity then
+    raise exception 'Sorry, this session is full.';
+  end if;
+ 
+  insert into public.skill_session_attendees (session_id, user_id) values (s.id, me);
+end;
+$$;
+ 
+-- Give up your place
+create function public.leave_skill_session(swap_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  delete from public.skill_session_attendees a
+  using public.skill_sessions s
+  where a.session_id = swap_id
+    and a.user_id = auth.uid()
+    and s.id = a.session_id
+    and s.status = 'open';
+  if not found then
+    raise exception 'You do not have a place in this session.';
+  end if;
+end;
+$$;
+ 
+-- The host cancels
+create function public.cancel_skill_session(swap_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update public.skill_sessions
+  set status = 'cancelled'
+  where id = swap_id and host_id = auth.uid() and status = 'open';
+  if not found then
+    raise exception 'This session can no longer be cancelled.';
+  end if;
+end;
+$$;
+ 
+-- The host says it happened: the host and everyone with a place earn points
+create function public.complete_skill_session(swap_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  s public.skill_sessions;
+  pts int;
+begin
+  select * into s from public.skill_sessions
+  where id = swap_id and host_id = auth.uid() and status = 'open'
+  for update;
+  if not found then
+    raise exception 'This session cannot be marked as completed.';
+  end if;
+ 
+  -- Turn this on later so a session cannot be completed before it starts.
+  -- Left off so the demo can complete a sample session straight away.
+  -- if public.skill_session_start(s.session_date, s.session_time) > now() then
+  --   raise exception 'You can mark a session as completed once it has started.';
+  -- end if;
+ 
+  update public.skill_sessions set status = 'completed' where id = s.id;
+ 
+  pts := public.skill_swap_points(s.duration);
+ 
+  insert into public.points_ledger (user_id, amount, reason)
+  values (s.host_id, pts, 'Hosted skill swap: ' || s.title);
+ 
+  insert into public.points_ledger (user_id, amount, reason)
+  select a.user_id, pts, 'Joined skill swap: ' || s.title
+  from public.skill_session_attendees a
+  where a.session_id = s.id;
+end;
+$$;
+ 
+revoke execute on function
+  public.join_skill_session(uuid),
+  public.leave_skill_session(uuid),
+  public.cancel_skill_session(uuid),
+  public.complete_skill_session(uuid)
+from public, anon;
+ 
+grant execute on function
+  public.join_skill_session(uuid),
+  public.leave_skill_session(uuid),
+  public.cancel_skill_session(uuid),
+  public.complete_skill_session(uuid)
+to authenticated;
+ 
+grant execute on function public.skill_swap_points(int) to authenticated;
+ 
+ 
+-- Sample sessions so the page is not empty. Optional: delete this block once
+-- residents have made their own. The host is the first adult who signed up, so no
+-- user ids are hard-coded. (If there is no adult account yet, nothing is inserted.)
+insert into public.skill_sessions
+  (host_id, title, description, category, venue, session_date, session_time, duration, capacity)
+select p.id, v.title, v.description, v.category, v.venue, current_date + v.days, v.at, v.duration, v.capacity
+from (select pr.id from public.profiles pr
+      join public.profile_private pp on pp.id = pr.id
+      where public.age_in_years(pp.birth_date) >= 18
+      order by pr.created_at limit 1) p,
+(values
+  ('Crochet for beginners', 'Learn the basic stitches and make your first coaster. Wool and hooks are provided.',
+   'Crafts', 'Void deck, Blk 412 Eunos Cres', 4, time '10:00', 90, 8),
+  ('Staying safe with digital banking', 'Learn how to spot scam messages and use your banking app with confidence.',
+   'Tech', 'Eunos CC, Level 2', 3, time '15:00', 60, 6),
+  ('Traditional kueh making', 'Make kueh dadar from a family recipe, then taste it together.',
+   'Cooking', 'Eunos CC kitchen', 6, time '11:00', 120, 6)
+) as v(title, description, category, venue, days, at, duration, capacity);
+ 
+-- Make the new tables and functions visible to the API straight away
+notify pgrst, 'reload schema';

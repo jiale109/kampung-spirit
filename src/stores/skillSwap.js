@@ -45,7 +45,7 @@ export const useSkillSwapStore = defineStore('skillSwap', () => {
 
     async function run(call) {
     const { error } = await call
-    if (error) return { ok: false, error: error.message }
+    if (error) return { ok: false, error: error.message, code: error.code }
     await load()
     return { ok: true }
   }
@@ -100,7 +100,7 @@ export const useSkillSwapStore = defineStore('skillSwap', () => {
       return { ok: false, error: 'That day and time have already passed.' }
     }
  
-    return run(
+    const result = await run(
       supabase.from('skill_sessions').insert({
         title,
         description,
@@ -112,6 +112,9 @@ export const useSkillSwapStore = defineStore('skillSwap', () => {
         capacity,
       }),
     )
+    // A check-constraint error means the category is not one the database accepts
+    if (result.code === '23514') return { ok: false, error: 'Please choose a type of session from the list.' }
+    return result
   }
  
   async function rsvp(id) {

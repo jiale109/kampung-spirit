@@ -151,6 +151,10 @@ export const useSkillSwapStore = defineStore('skillSwap', () => {
     const s = find(id)
     if (!s) return notFound()
     if (!isHost(s)) return { ok: false, error: 'Only the host can complete this session.' }
+    if (sessionStart(s.date, s.time) > new Date()) {
+      return { ok: false, error: 'You can mark a session as completed once it has started.' }
+    }
+    // Other refusals (e.g. nobody joined) come back from the database as plain sentences
     const points = pointsForSkillSwap(s.duration)
     const result = await run(supabase.rpc('complete_skill_session', { swap_id: id }))
     if (!result.ok) return result

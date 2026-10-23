@@ -64,17 +64,26 @@ test('A request waiting for the senior to confirm stays open', async ({ page }) 
   await expect(card(page, title).getByTestId('confirm')).toBeVisible()
 })
 
-// MainLayout adds .role-senior for seniors (and anyone who chose large text).
-// NOTE: theme.css currently sets 22px for everyone (commit a841805 removed the
-// html:has(.role-senior) rule), so this checks the wrapper, not the pixel size.
-// When that rule is back, add: senior root font size 22, youth 18.
-test('Senior pages get the larger-text wrapper, youth pages do not', async ({ page }) => {
-  await login(page, 'Senior', 'Mdm Tan')
-  await expect(page.locator('.role-senior')).toHaveCount(1)
+test('Large text from the profile makes every page bigger, and is removed on log out', async ({ page }) => {
+  const html = page.locator('html')
+  const rootFontSize = () => page.evaluate(() => getComputedStyle(document.documentElement).fontSize)
 
-  await logout(page)
+  // Sign up leaves large text off: 22px for everyone
   await login(page, 'Youth', 'Wei Jie')
-  await expect(page.locator('.role-senior')).toHaveCount(0)
+  await expect(html).not.toHaveClass(/\blarge-text\b/)
+  await expect.poll(rootFontSize).toBe('22px')
+
+  // Turn it on from the profile page
+  await page.goto('/app/profile')
+  await page.getByRole('button', { name: 'Edit profile' }).click()
+  await page.getByLabel('Use large text').check()
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(html).toHaveClass(/\blarge-text\b/)
+  await expect.poll(rootFontSize).toBe('27px')
+
+  // Logging out takes it off again on the landing page
+  await logout(page)
+  await expect(html).not.toHaveClass(/\blarge-text\b/)
 })
 
 for (const role of ['Senior', 'Youth']) {

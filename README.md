@@ -74,7 +74,7 @@ src/
     helpRequest.js           Help requests (Supabase) and the accept limit
     points.js                Your points balance (Supabase + browser-only voucher spending); the navbar reads it here
   layouts/
-    MainLayout.vue           The one navbar for everyone (adds .role-senior for larger text)
+    MainLayout.vue           The one navbar for everyone (applies "Use large text" to <html>)
     SeniorViewsLayout.vue    NOT USED any more (replaced by MainLayout)
     YouthViewsLayout.vue     NOT USED any more (replaced by MainLayout)
   views/
@@ -118,7 +118,7 @@ Pages in the navbar (the same for everyone, since anyone can ask for help and an
 
 The users are seniors, so the design is deliberately calm and large.
 
-- **Text size:** 18px on youth pages and the landing page, **22px on senior pages** (set in `styles/theme.css`, picked by the `.role-senior` wrapper in `MainLayout.vue`, for seniors and anyone who chose large text). Everything is sized in `rem` so text, buttons and spacing grow together. Always use `rem`.
+- **Text size:** **22px for everyone**, and **27px when "Use large text" is on** (chosen at sign up or on the Profile page). The larger size is the `html.large-text` rule in `styles/theme.css`, applied by `MainLayout.vue` and `lib/profile.js`. Everything is sized in `rem` so text, buttons and spacing grow together. Always use `rem`.
 - **Simple by default:** request cards show only the category, status and title. The details and buttons open on mouse hover, or on tap, or with Enter on the keyboard (`components/RequestCard.vue`). Reuse this idea for other lists.
 - **Big targets:** buttons and inputs are at least 48px tall, with one main action per screen.
 - **Status in words:** colour is only a hint. States are always written ("Open", "Awaiting confirmation").

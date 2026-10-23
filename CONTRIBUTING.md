@@ -65,7 +65,7 @@ If you get a merge conflict, do not guess: ask the person who owns the file.
 
 ## 5. Senior-friendly rules (every page must follow these)
 
-1. Senior pages use **22px** text, everyone else 18px. Everything is sized in `rem`, so use `rem` too, never `px` for text, padding or button size.
+1. Text is **22px** for everyone, and **27px** when "Use large text" is on (sign up or Profile page; `html.large-text` in `theme.css`, applied by `MainLayout.vue` and `lib/profile.js`). Everything is sized in `rem`, so use `rem` too, never `px` for text, padding or button size.
 2. Buttons and inputs are at least 48px tall. One clear main action per screen.
 3. Never show a state by colour alone. Write it ("Open", "Full", "Awaiting confirmation").
 4. Keep screens calm: show the title and status first, and put details behind hover or tap (see `components/RequestCard.vue`).

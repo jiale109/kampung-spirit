@@ -10,7 +10,7 @@
 import { ref, computed } from 'vue'
 import { useHangoutStore } from '../stores/hangout.js'
 import { hotspotName, findHotspot } from '../lib/hotspots.js'
-import { formatDate, formatTime, formatDuration } from '../lib/skillSwapFormat.js'
+import { formatDate, formatTime, formatDuration, sessionStart } from '../lib/skillSwapFormat.js'
 
 const props = defineProps({
   hangout: { type: Object, required: true },
@@ -22,6 +22,10 @@ const store = useHangoutStore()
 const isHost = computed(() => store.isHost(props.hangout))
 const isGoing = computed(() => store.isGoing(props.hangout))
 const canJoin = computed(() => !isHost.value && !isGoing.value)
+
+// The host can only mark it done once it has started (the database checks this too).
+// A plain function, not computed, so it is checked again each time the card redraws.
+const hasStarted = () => sessionStart(props.hangout.date, props.hangout.time) <= new Date()
 
 const hotspot = computed(() => findHotspot(props.hangout.hotspotId))
 
@@ -121,8 +125,9 @@ const detailsId = computed(() => `hangout-details-${props.hangout.id}`)
               @click="emit('leave', hangout)">I cannot make it</button>
 
             <template v-if="isHost">
-              <button type="button" class="btn btn-primary btn-lg" data-testid="complete"
+              <button v-if="hasStarted()" type="button" class="btn btn-primary btn-lg" data-testid="complete"
                 @click="emit('complete', hangout)">Mark as done</button>
+              <p v-else class="request-note mb-0" data-testid="complete-later">You can mark this as done once it has started.</p>
               <button type="button" class="btn btn-outline-danger" data-testid="cancel"
                 @click="emit('cancel', hangout)">Cancel this hangout</button>
             </template>

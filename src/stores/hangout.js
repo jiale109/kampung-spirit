@@ -171,6 +171,10 @@ export const useHangoutStore = defineStore('hangout', () => {
     const h = find(id)
     if (!h) return notFound()
     if (!isHost(h)) return { ok: false, error: 'Only the host can complete this hangout.' }
+    if (sessionStart(h.date, h.time) > new Date()) {
+      return { ok: false, error: 'You can mark a hangout as done once it has started.' }
+    }
+    // Other refusals (e.g. nobody else joined) come back from the database as plain sentences
     const result = await run(supabase.rpc('complete_hangout', { hangout_id: id }))
     if (!result.ok) return result
     // complete_hangout() adds points_ledger rows, so refresh the balance in the navbar

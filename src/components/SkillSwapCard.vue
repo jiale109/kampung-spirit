@@ -6,6 +6,7 @@ import {
   formatTime,
   formatDuration,
   categoryClass,
+  sessionStart,
 } from '../lib/skillSwapFormat'
  
 const props = defineProps({
@@ -21,6 +22,10 @@ const isJoined = computed(() => store.isAttending(props.session))
 const spots = computed(() => store.spotsLeft(props.session))
 const isFull = computed(() => spots.value <= 0 && !isHost.value && !isJoined.value)
 const canJoin = computed(() => !isHost.value && !isJoined.value && !isFull.value)
+
+// The host can only mark it done once it has started (the database checks this too).
+// A plain function, not computed, so it is checked again each time the card redraws.
+const hasStarted = () => sessionStart(props.session.date, props.session.time) <= new Date()
  
 // Status is always words (the pill also has a dot), never colour alone.
 const status = computed(() => {
@@ -134,9 +139,12 @@ const detailsId = computed(() => `swap-details-${props.session.id}`)
             </button>
  
             <template v-if="isHost">
-              <button type="button" class="btn btn-primary btn-lg" @click="emit('complete', session)">
+              <button v-if="hasStarted()" type="button" class="btn btn-primary btn-lg" @click="emit('complete', session)">
                 Mark as completed
               </button>
+              <p v-else class="request-note mb-0" data-testid="complete-later">
+                You can mark this as done once it has started.
+              </p>
               <button type="button" class="btn btn-outline-danger" @click="emit('cancel', session)">
                 Cancel this session
               </button>

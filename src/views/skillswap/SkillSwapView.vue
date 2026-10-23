@@ -106,10 +106,8 @@ const filter = ref('all') // all | hosting | going
 const query = ref('')
 const sortBy = ref('date-asc')
 const selectedCategory = ref('') // e.g. ['Tech', 'Crafts']
-const hostFilter = ref('any') // any | senior | youth
 const whenFilter = ref('any') // any | week | weekend
 const onlyOpen = ref(false) // only sessions with spots left
-const showFilters = ref(false) // phones: filters are hidden until "Filters" is pressed
 const notice = ref(null) // { kind: 'ok' | 'error', text }
 
 //to allow user to filter all events, going, hosting 
@@ -148,14 +146,13 @@ function matchesSearch(s) {
         s.venue, 
         s.category,
         formatDate(s.date),
-        `${s.hostType} host`,
+  
     ].join(' ').toLowerCase()
     return words.value.every((w) => text.includes(w))
 }
 //filter function
 function passesFilters(s) {
     if (selectedCategory.value && s.category !== selectedCategory.value) return false
-    if (hostFilter.value !== 'any' && s.hostType !== hostFilter.value) return false 
     if (whenFilter.value === 'week' && s.date > dateFromToday(7)) return false 
     if (whenFilter.value === 'weekend' && !isWeekend(s.date)) return false 
     if (onlyOpen.value && store.spotsLeft(s) <= 0 && !store.isHost(s) && !store.isAttending(s)) return false //basically if u hosted/joined the session, even if it's full it still display
@@ -183,7 +180,7 @@ const shown = computed(() =>
 //other helpers for display screen 
 function clearFilters() {
   selectedCategory.value = ''
-  hostFilter.value = 'any'
+
   whenFilter.value = 'any'
   onlyOpen.value = false
 }
@@ -191,7 +188,6 @@ function clearFilters() {
 const activeFilterCount = computed(
   () =>
     (selectedCategory.value ? 1 : 0) +
-    (hostFilter.value !== 'any' ? 1 : 0) +
     (whenFilter.value !== 'any' ? 1 : 0) +
     (onlyOpen.value ? 1 : 0),
 )

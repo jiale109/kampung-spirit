@@ -239,6 +239,7 @@ create table public.help_requests (
   difficulty text not null check (difficulty in ('Easy', 'Medium', 'Hard')),
   duration int not null check (duration in (15, 30, 45, 60, 90, 120)),
   is_physical boolean not null default false,
+  needed_at timestamptz not null,        -- when the requester needs the help
   points int not null default 0,
   status text not null default 'open'
     check (status in ('open', 'accepted', 'pending_confirmation', 'completed', 'cancelled')),
@@ -291,8 +292,8 @@ create policy "Edit your own request while it is open"
 -- The browser may only write these columns. Status changes go through the
 -- functions in section 5, which check the rules.
 revoke insert, update, delete on public.help_requests from anon, authenticated;
-grant insert (title, description, category, difficulty, duration, is_physical) on public.help_requests to authenticated;
-grant update (title, description, category, difficulty, duration, is_physical) on public.help_requests to authenticated;
+grant insert (title, description, category, difficulty, duration, is_physical, needed_at) on public.help_requests to authenticated;
+grant update (title, description, category, difficulty, duration, is_physical, needed_at) on public.help_requests to authenticated;
 
 create table public.points_ledger (
   id uuid primary key default gen_random_uuid(),
@@ -349,7 +350,7 @@ begin
 
   select count(*) into active_count from public.help_requests
   where helper_id = me and status in ('accepted', 'pending_confirmation');
-  if active_count >= 2 then
+  if active_count >= 2 then   -- Must match MAX_ACTIVE_TASKS in src/lib/points.js
     raise exception 'You can only have 2 active tasks. Finish one first.';
   end if;
 

@@ -74,10 +74,6 @@ const detailsId = computed(() => `swap-details-${props.session.id}`)
   >
     <div class="card-body">
       <div class="request-top">
-        <span class="category-label">
-          <span class="category-icon" aria-hidden="true">{{ categoryIcon(session.category) }}</span>
-          {{ session.category }}
-        </span>
         <span class="status-pill" :class="status.cls">{{ status.label }}</span>
       </div>
  

@@ -60,6 +60,11 @@ export function sessionStart(dateISO, hhmm) {
   return new Date(y, mo - 1, d, h, mi)
 }
 
+//when it finishes: the start plus its length in minutes
+export function sessionEnd(dateISO, hhmm, minutes) {
+  return new Date(sessionStart(dateISO, hhmm).getTime() + minutes * 60 * 1000)
+}
+
 //session categories
 // Must match the check constraint on skill_sessions.category in
 // supabase/schema.sql (section 8.2) word for word, or inserts are refused.

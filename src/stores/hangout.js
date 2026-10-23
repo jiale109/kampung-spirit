@@ -16,7 +16,7 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from './auth.js'
 import { usePointsStore } from './points.js'
 import { findHotspot } from '../lib/hotspots.js'
-import { sessionStart } from '../lib/skillSwapFormat.js'
+import { sessionStart, sessionEnd } from '../lib/skillSwapFormat.js'
 import { supabase } from '../lib/supabase.js'
 
 // Must match the duration check in supabase/schema.sql section 7. Change one,
@@ -82,6 +82,16 @@ export const useHangoutStore = defineStore('hangout', () => {
   const isGoing = (hangout) => !!me.value && hangout.attendeeIds.includes(me.value.id)
   const goingCount = (hangout) => hangout.attendeeIds.length
 
+  // The time now, updated every minute so past items drop off without a reload.
+  // Pinia stores live for the whole app, so the interval is never cleared.
+  const now = ref(new Date())
+  setInterval(() => { now.value = new Date() }, 60 * 1000)
+
+  const hasStarted = (item) => sessionStart(item.date, item.time) <= now.value
+  const hasEnded = (item) => sessionEnd(item.date, item.time, item.duration) <= now.value
+  // Ended items stay for their host only, until they mark them done or cancel
+  const stillShown = (item) => !hasEnded(item) || isHost(item)
+
   const needSignIn = () => ({ ok: false, error: 'Please sign in first.' })
   const notFound = () => ({ ok: false, error: 'We could not find that hangout.' })
 
@@ -89,9 +99,9 @@ export const useHangoutStore = defineStore('hangout', () => {
 
   const byStart = (a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)
 
-  /** Hangouts people can still join, soonest first. */
+  /** Open hangouts that have not ended (or that I host), soonest first. */
   const openHangouts = computed(() =>
-    hangouts.value.filter((h) => h.status === 'open').sort(byStart),
+    hangouts.value.filter((h) => h.status === 'open' && stillShown(h)).sort(byStart),
   )
   /** Open hangouts the signed-in person is hosting. */
   const myHangouts = computed(() => openHangouts.value.filter((h) => isHost(h)))
@@ -145,6 +155,7 @@ export const useHangoutStore = defineStore('hangout', () => {
     if (h.status !== 'open') return { ok: false, error: 'This hangout is no longer open.' }
     if (isHost(h)) return { ok: false, error: 'You are hosting this hangout, so you are already going.' }
     if (isGoing(h)) return { ok: false, error: 'You are already going to this hangout.' }
+    if (hasStarted(h)) return { ok: false, error: 'This has already started, so it is too late to join.' }
     return run(supabase.rpc('join_hangout', { hangout_id: id }))
   }
 
@@ -194,6 +205,8 @@ export const useHangoutStore = defineStore('hangout', () => {
     isHost,
     isGoing,
     goingCount,
+    hasStarted,
+    hasEnded,
     createHangout,
     joinHangout,
     leaveHangout,

@@ -6,7 +6,6 @@ import {
   formatTime,
   formatDuration,
   categoryClass,
-  sessionStart,
 } from '../lib/skillSwapFormat'
  
 const props = defineProps({
@@ -21,14 +20,15 @@ const isHost = computed(() => store.isHost(props.session))
 const isJoined = computed(() => store.isAttending(props.session))
 const spots = computed(() => store.spotsLeft(props.session))
 const isFull = computed(() => spots.value <= 0 && !isHost.value && !isJoined.value)
-const canJoin = computed(() => !isHost.value && !isJoined.value && !isFull.value)
-
-// The host can only mark it done once it has started (the database checks this too).
-// A plain function, not computed, so it is checked again each time the card redraws.
-const hasStarted = () => sessionStart(props.session.date, props.session.time) <= new Date()
+// Too late to join once it has started; the host can only mark it done after that
+// (the database checks this too). The store's clock updates every minute.
+const hasStarted = computed(() => store.hasStarted(props.session))
+const hasEnded = computed(() => store.hasEnded(props.session))
+const canJoin = computed(() => !isHost.value && !isJoined.value && !isFull.value && !hasStarted.value)
  
 // Status is always words (the pill also has a dot), never colour alone.
 const status = computed(() => {
+  if (isHost.value && hasEnded.value) return { label: 'Waiting for you to mark as done', cls: 'status-pending' }
   if (isHost.value) return { label: 'You are hosting', cls: 'status-accepted' }
   if (isJoined.value) return { label: 'You are going', cls: 'status-open' }
   if (isFull.value) return { label: 'Full', cls: 'status-pending' }
@@ -139,7 +139,7 @@ const detailsId = computed(() => `swap-details-${props.session.id}`)
             </button>
  
             <template v-if="isHost">
-              <button v-if="hasStarted()" type="button" class="btn btn-primary btn-lg" @click="emit('complete', session)">
+              <button v-if="hasStarted" type="button" class="btn btn-primary btn-lg" @click="emit('complete', session)">
                 Mark as completed
               </button>
               <p v-else class="request-note mb-0" data-testid="complete-later">

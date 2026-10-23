@@ -20,11 +20,13 @@ import SkillSwapView from '../views/skillswap/SkillSwapView.vue'
 import SkillSwapCreateView from '../views/skillswap/SkillSwapCreateView.vue'
 import RewardsView from '../views/rewards/RewardsView.vue'
 import ProfileView from '../views/profile/ProfileView.vue'
+import HangoutCreateView from '../views/hangouts/HangoutCreateView.vue'
 
 // Shared pages are listed once and added under both /senior and /app, so each
 // role sees them inside its own layout (navbar). Add new shared pages here.
 const sharedChildren = [
   { path: 'hangouts', component: HangoutsView },
+  { path: 'hangouts/new', component: HangoutCreateView },
   { path: 'skill-swaps', component: SkillSwapView },
   { path: 'skill-swaps/new', component: SkillSwapCreateView },
   { path: 'rewards', component: RewardsView },

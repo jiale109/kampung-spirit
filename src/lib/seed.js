@@ -1,6 +1,11 @@
-// GUIDE: demo accounts and sample data live here. When you add a feature, add its
-// sample data as a seedXxx() function in this file (see seedRequests below), so
-// "Reset" and the tests always start from the same data.
+// GUIDE: browser-only sample data from before the move to Supabase.
+// Accounts, help requests and earned points now live in Supabase, so `users`,
+// seedPoints() and seedRequests() are no longer used by the app. Their ids
+// ('s1', 'y1', ...) are not real Supabase user ids.
+// Only seedLedger() is still used: stores/points.js starts its browser-only
+// ledger (voucher spending and challenge bonuses) from it.
+// New features: put sample data in Supabase (a SQL insert or a seed script),
+// not here, so every teammate and every test sees the same rows.
 import { calcPoints } from './points.js'
 
 // Demo "accounts". There is no real login, you just pick one on the landing page.

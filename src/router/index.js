@@ -17,6 +17,7 @@ import YouthMyTasksView from '../views/youth/YouthMyTasksView.vue'
 // so teammates can work on them without touching each other's files.
 import HangoutsView from '../views/hangouts/HangoutsView.vue'
 import SkillSwapView from '../views/skillswap/SkillSwapView.vue'
+import SkillSwapCreateView from '../views/skillswap/SkillSwapCreateView.vue'
 import RewardsView from '../views/rewards/RewardsView.vue'
 import ProfileView from '../views/profile/ProfileView.vue'
 
@@ -25,6 +26,7 @@ import ProfileView from '../views/profile/ProfileView.vue'
 const sharedChildren = [
   { path: 'hangouts', component: HangoutsView },
   { path: 'skill-swaps', component: SkillSwapView },
+  { path: 'skill-swaps/new', component: SkillSwapCreateView },
   { path: 'rewards', component: RewardsView },
   { path: 'profile', component: ProfileView },
 ]

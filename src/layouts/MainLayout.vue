@@ -1,14 +1,22 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { useHelpRequestStore } from '../stores/helpRequest.js'
+import { applyLargeText } from '../lib/profile.js'
+import BrandMark from '../components/BrandMark.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
 const store = useHelpRequestStore()
 
 const avatarInitial = computed(() => auth.user.name[0].toUpperCase())
+
+// "Use large text" from the profile page (see lib/profile.js). Applied when a
+// logged-in page opens, and taken off again when this layout closes, so the
+// landing page is never left with it.
+onMounted(() => applyLargeText(auth.user?.large_text))
+onUnmounted(() => applyLargeText(false))
 
 // Load requests once here so the active-task count is right on every page
 onMounted(store.load)
@@ -22,7 +30,8 @@ async function logout() {
 <template>
   <nav class="navbar navbar-expand-xl app-navbar">
     <div class="container">
-      <router-link class="navbar-brand" :to="auth.homePath">🏘️ Kampung Spirit</router-link>
+      <!-- add better icon beside kampung spirit ? -->
+      <router-link class="navbar-brand" :to="auth.homePath"><BrandMark />Kampung Spirit</router-link>
 
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
         aria-controls="navbarNav" aria-expanded="false" aria-label="Open menu">

@@ -3,6 +3,7 @@ import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { useHelpRequestStore } from '../stores/helpRequest.js'
+import BrandMark from '../components/BrandMark.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -21,7 +22,8 @@ onMounted(store.load)
 <template>
   <nav class="navbar navbar-expand-xl app-navbar">
     <div class="container">
-      <router-link class="navbar-brand" to="/app">🏘️ Kampung Spirit</router-link>
+      <!-- add an icon beside kampung spirit ? -->
+      <router-link class="navbar-brand" to="/app"><BrandMark />Kampung Spirit</router-link>
 
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
         aria-controls="navbarNav" aria-expanded="false" aria-label="Open menu">

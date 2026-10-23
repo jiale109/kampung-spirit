@@ -3,10 +3,10 @@
   ============================================================================
   GUIDE: Skill-Swap Circles                                Owner: Kelsey Wong
   ============================================================================
-  This page is a PLACEHOLDER. Replace the template with the real feature.
+  STATUS: list page and store built (Supabase). The host form and the
+  database tables are not in the repo yet.
 
-  Route:  /app/skill-swaps and /app/skill-swaps (same page for both
-          roles, see sharedChildren in router/index.js).
+  Route: /app/skill-swaps (in sharedChildren in router/index.js).
 
   WHAT THE PROPOSAL SAYS
   Seniors and youths host small sessions to share what they know: a youth
@@ -16,58 +16,72 @@
   generations can teach, seniors become contributors and not just recipients
   of help.
 
-  STEP BY STEP (build in this order, each step works on its own)
+  WHAT EXISTS ALREADY
+  - stores/skillSwap.js: load(), openSessions, mySessions (hosting),
+    myRsvps (attending), spotsLeft(), isHost(), isAttending(), and the
+    actions createSession(), rsvp(), cancelRsvp(), cancelSession(),
+    completeSession(). Each returns { ok, error }.
+  - lib/skillSwapFormat.js: date/time/duration formatting, CATEGORIES,
+    SORT_OPTIONS, WHEN_FILTERS and the option lists for the host form
+    (DURATION_OPTIONS, TIME_OPTIONS, dateOptions(), CAPACITY_OPTIONS).
+  - components/SkillSwapCard.vue: one session (details on hover or tap).
+  - This page: tabs (all / hosting / going), search, filters and sort.
 
-  1. Sample data (src/lib/seed.js)
-     Add seedSessions() next to seedRequests(). A session could look like:
-       { id, title, description, hostId, hostName, date: '2026-10-20',
-         time: '15:00', duration: 60, capacity: 6, attendeeIds: [],
-         status: 'open', createdAt: Date.now() }
-     Include one session that is already full, to test the full state.
-     Status flow: open > completed (or cancelled).
+  WHAT IS LEFT TO DO (in this order)
 
-  2. Store (src/stores/skillSwap.js, new file)
-     Copy the pattern of stores/helpRequest.js: a setup store, a ref loaded
-     from localStorage (use a NEW storage key) and a watch() that saves it.
-     Actions (return { ok, error } for anything that can fail):
-       createSession(data)        host a session
-       rsvp(id)                   fails with a clear message if full or already joined
-       cancelRsvp(id)
-       cancelSession(id)          host only
-       completeSession(id)        host only, this is when points are awarded
-     Computeds: spotsLeft(session), mySessions (hosting) and myRsvps (attending).
-     Rules: the host cannot RSVP to their own session; capacity is never exceeded.
+  1. Fix SkillSwapCard.vue: the template calls categoryIcon(), which is not
+     defined or imported, so the page breaks as soon as a session is shown.
+
+  2. Database (add a new numbered section to supabase/schema.sql)
+     The store already uses these names, but they are not in schema.sql:
+       skill_sessions (id, host_id default auth.uid(), title, description,
+         category, venue, session_date, session_time, duration, capacity,
+         status 'open' | 'completed' | 'cancelled', created_at)
+       skill_session_attendees (session id, user_id)
+       functions: join_skill_session(swap_id), leave_skill_session(swap_id),
+         cancel_skill_session(swap_id), complete_skill_session(swap_id)
+     If they were made in the Supabase dashboard, copy the SQL into
+     schema.sql so teammates' projects match. Like help_requests: enable RLS,
+     add policies AND grant lines (section 6), and re-check the rules in the
+     functions (host cannot join their own session, capacity is never
+     exceeded, only the host can cancel or complete).
+     Add a few sample sessions with SQL inserts, including one that is full.
 
   3. Host a session (components/SkillSwapForm.vue, new)
      Model it on components/RequestForm.vue: a form ref, an errors ref, and
-     validation on submit. Fields: title, description, date, time, duration
-     (use a <select>, like durations in lib/points.js), capacity (1 to 10).
-     Validation ideas: date cannot be in the past, capacity must be a whole
-     number, title at least 5 characters. Give it its own page, e.g.
-     views/skillswap/SkillSwapCreateView.vue, and add the route to
-     sharedChildren in router/index.js.
+     validation on submit. Fields: title, description, category, venue, date,
+     time, duration, capacity (use the option lists in lib/skillSwapFormat.js).
+     createSession() already checks: title at least 5 letters, date not in
+     the past, capacity 1 to 10. Put it on views/skillswap/SkillSwapCreateView.vue
+     and add ONE line to sharedChildren in router/index.js:
+       { path: 'skill-swaps/new', component: SkillSwapCreateView }
+     The "Host a session" button already links to /app/skill-swaps/new. After
+     saving, go back with ?created=1 so this page shows the success message.
 
-  4. Session list and RSVP
-     Show sessions as cards. Reuse the idea in components/RequestCard.vue
-     (title always visible, details on hover or tap). The RSVP button turns
-     into "Cancel my place" once joined, and into a disabled "Session full"
-     when there are no spots left (write the reason as text, not only colour).
+  4. Small fixes on this page
+     - hostType is used by the search and hostFilter but never set. Either
+       add it in fromRow() (from the host's age_group) or remove it.
+     - showFilters and the counts in categoryOptions are not shown yet.
+     - onCancel uses window.confirm(); a modal like the one in
+       views/senior/SeniorHelpBoardView.vue is easier for seniors to read.
 
   5. Points
-     Hosting and attending a completed session earns points. Do not write
-     points yourself: agree with the Rewards owner on one function, e.g.
-     awardPoints(userId, amount, reason).
+     Hosting and attending a completed session earns points. Points can only
+     be added by database functions, so complete_skill_session() must insert
+     the points_ledger rows itself, using the same rule as pointsForSkillSwap()
+     in lib/points.js. After completing, call usePointsStore().load() so the
+     navbar shows the new total.
 
   6. Tests (e2e/skillswap.spec.js, copy the style of e2e/helpboard.spec.js)
      Host a session, RSVP until full, the full state blocks the next RSVP, and
      cancelling a place frees a spot.
 
-  SENIOR-FRIENDLY RULES (also in README.md)
+  SENIOR-FRIENDLY RULES (also in README.md and CONTRIBUTING.md)
   Plain short sentences, big buttons, one main action per screen, never use
   colour alone to show a state. Date and time pickers are hard for some
-  seniors: consider <select> lists for time (e.g. every 30 minutes) and show
+  seniors: use <select> lists for time (e.g. every 30 minutes) and show
   the date as words ("Saturday, 17 October") on the cards.
-  Senior pages are already 22px text, so check your layout at that size.
+  Check your layout at 22px text and on a phone.
 */
 
 import { ref, computed, onMounted } from 'vue'

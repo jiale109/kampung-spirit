@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
+import { supabase } from '../lib/supabase.js'
 import { useAuthStore } from './auth.js'
 import { seedLedger } from '../lib/seed.js'
 import { COMMUNITY_TARGET, COMMUNITY_BONUS } from '../lib/points.js'
@@ -14,7 +15,8 @@ export const usePointsStore = defineStore('points', () => {
   const ledger = ref(saved ? saved.ledger : seedLedger())
   // Flag to ensure the bonus is paid only once per calendar month (e.g. '2026-10')
   const bonusPaidForMonth = ref(saved ? saved.bonusPaidForMonth : null)
-
+  const dbLedger = ref([]) // stores points fetched from Supabase
+  const communityTotal = ref(0) // Real estate-wide total from Supabase RPC
   // 2. Persist to localStorage
   watch(
     [ledger, bonusPaidForMonth],
@@ -29,6 +31,46 @@ export const usePointsStore = defineStore('points', () => {
     },
     { deep: true },
   )
+
+  // Load real points from Supabase database
+  async function load() {
+    // 1. Load user's personal points
+    if (auth.user?.id) {
+      const { data, error } = await supabase
+        .from('points_ledger')
+        .select('id, user_id, amount, reason, created_at')
+        .order('created_at', { ascending: false })
+
+      if (!error && data) {
+        dbLedger.value = data.map((row) => ({
+          id: row.id,
+          userId: row.user_id,
+          amount: row.amount,
+          reason: row.reason,
+          createdAt: new Date(row.created_at).getTime(),
+        }))
+      }
+    }
+
+    // 2. Load estate-wide community total via security definer RPC
+    const { data: total, error: totalErr } = await supabase.rpc('community_points_this_month')
+    if (!totalErr && total !== null) {
+      communityTotal.value = Number(total)
+    }
+  }
+
+  // Automatically fetch points from Supabase whenever user logs in or out
+  watch(
+    () => auth.user?.id,
+    (newId) => {
+      load()
+      if (!newId) dbLedger.value = []
+    },
+    { immediate: true },
+  )
+
+  // Combines Supabase database points + local voucher redemptions & bonuses
+  const allLedger = computed(() => [...dbLedger.value, ...ledger.value])
 
   // Helper: check if a timestamp occurred in the current month
   function isCurrentMonth(timestamp) {
@@ -49,7 +91,7 @@ export const usePointsStore = defineStore('points', () => {
   // 3. User Balance
   function getBalance(userId) {
     if (!userId) return 0
-    return ledger.value
+    return allLedger.value
       .filter((entry) => entry.userId === userId)
       .reduce((sum, entry) => sum + entry.amount, 0)
   }
@@ -58,16 +100,11 @@ export const usePointsStore = defineStore('points', () => {
 
   const myLedger = computed(() => {
     if (!auth.user?.id) return []
-    return ledger.value.filter((entry) => entry.userId === auth.user.id)
+    return allLedger.value.filter((entry) => entry.userId === auth.user.id)
   })
-
   // 4. Community Challenge Metrics
-  // Sum of all points earned by everyone this month (amount > 0)
-  const communityPointsThisMonth = computed(() => {
-    return ledger.value
-      .filter((entry) => entry.amount > 0 && isCurrentMonth(entry.createdAt))
-      .reduce((sum, entry) => sum + entry.amount, 0)
-  })
+  // Sum of all points earned by everyone this month (amount > 0) (from supabase)
+  const communityPointsThisMonth = computed(() => communityTotal.value)
 
   // Progress percentage (0 to 100)
   const communityProgress = computed(() => {
@@ -87,7 +124,7 @@ export const usePointsStore = defineStore('points', () => {
       // Unique contributors who earned points this month (excluding bonuses)
       const contributors = [
         ...new Set(
-          ledger.value
+          allLedger.value
             .filter((entry) => entry.amount > 0 && isCurrentMonth(entry.createdAt) && !entry.isBonus)
             .map((entry) => entry.userId),
         ),
@@ -147,7 +184,7 @@ export const usePointsStore = defineStore('points', () => {
   }
 
   return {
-    ledger,
+    ledger: allLedger,
     myPoints,
     myLedger,
     COMMUNITY_TARGET,
@@ -159,6 +196,7 @@ export const usePointsStore = defineStore('points', () => {
     getBalance,
     awardPoints,
     spendPoints,
+    load,
     reset,
   }
 })

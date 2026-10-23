@@ -1,0 +1,172 @@
+import { defineStore } from 'pinia'
+import { ref, computed, watch } from 'vue'
+import { useAuthStore } from './auth.js'
+import { pointsForSkillSwap } from '../lib/points.js'
+import { sessionStart, CATEGORIES, MIN_CAPACITY, MAX_CAPACITY } from '../lib/skillSwapFormat.js'
+//import { seedSessions } from '../lib/seed'
+import { supabase } from '../lib/supabase.js'
+
+const COLUMNS = `id, title, description, category, venue, session_date, session_time, duration, capacity, status, host_id, created_at, host:profiles!host_id(name), attendees:skill_session_attendees(user_id)`
+
+function fromRow(r) {
+  return {
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    category: r.category,
+    venue: r.venue,
+    date: r.session_date,
+    time: String(r.session_time).slice(0,5),
+    duration: r.duration,
+    capacity: r.capacity,
+    status: r.status,
+    hostId: r.host_id,
+    hostName: r.host?.name ?? '',
+    attendeeIds: (r.attendees ?? []).map((a) => a.user_id),
+    createdAt: new Date(r.created_at).getTime(),
+  }
+}
+
+export const useSkillSwapStore = defineStore('skillSwap', () => {
+    const auth = useAuthStore()
+    const sessions = ref([])
+    const loading = ref('')
+    const loadError = ref(false)
+ 
+    async function load() {
+    loading.value = true
+    loadError.value = ''
+    const { data, error } = await supabase
+      .from('skill_sessions').select(COLUMNS).order('session_date', { ascending: true })
+    if (error) loadError.value = 'Could not load sessions. Please try again.'
+    else sessions.value = data.map(fromRow)
+    loading.value = false
+  }
+
+    async function run(call) {
+    const { error } = await call
+    if (error) return { ok: false, error: error.message }
+    await load()
+    return { ok: true }
+  }
+ 
+  // ---- helpers ----
+ 
+  const me = computed(() => auth.user || null)
+ 
+  const find = (id) => sessions.value.find((s) => s.id === id)
+  const spotsLeft = (session) => Math.max(0, session.capacity - session.attendeeIds.length)
+  const isHost = (session) => !!me.value && session.hostId === me.value.id
+  const isAttending = (session) => !!me.value && session.attendeeIds.includes(me.value.id)
+ 
+  const needSignIn = () => ({ ok: false, error: 'Please sign in first.' })
+  const notFound = () => ({ ok: false, error: 'We could not find that session.' })
+ 
+  // ---- computeds ----
+ 
+  const byStart = (a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)
+ 
+  /** Sessions people can still join or see, soonest first. */
+  const openSessions = computed(() =>
+    sessions.value.filter((s) => s.status === 'open').sort(byStart),
+  )
+  /** Open sessions the signed-in person is hosting. */
+  const mySessions = computed(() => openSessions.value.filter((s) => isHost(s)))
+  /** Open sessions the signed-in person has a place in. */
+  const myRsvps = computed(() => openSessions.value.filter((s) => isAttending(s)))
+ 
+  // ---- actions (each returns { ok, error }) ----
+ 
+  async function createSession(data) {
+    if (!me.value) return needSignIn()
+ 
+    const title = String(data.title || '').trim()
+    const description = String(data.description || '').trim()
+    const venue = String(data.venue || '').trim()
+    const capacity = Number(data.capacity)
+    const duration = Number(data.duration)
+ 
+    if (title.length < 5) return { ok: false, error: 'The name needs at least 5 letters.' }
+    if (!description) return { ok: false, error: 'Please say what people will learn.' }
+    if (!CATEGORIES.includes(data.category)) {
+      return { ok: false, error: 'Please choose a type of session.' }
+    }
+    if (venue.length < 3) return { ok: false, error: 'Please say where the session will be.' }
+    if (!Number.isInteger(capacity) || capacity < MIN_CAPACITY || capacity > MAX_CAPACITY) {
+      return { ok: false, error: `Choose between ${MIN_CAPACITY} and ${MAX_CAPACITY} people.` }
+    }
+    if (!data.date || !data.time) return { ok: false, error: 'Please choose a day and a time.' }
+    if (sessionStart(data.date, data.time) < new Date()) {
+      return { ok: false, error: 'That day and time have already passed.' }
+    }
+ 
+    return run(
+      supabase.from('skill_sessions').insert({
+        title,
+        description,
+        category: data.category,
+        venue,
+        session_date: data.date,
+        session_time: data.time,
+        duration,
+        capacity,
+      }),
+    )
+  }
+ 
+  async function rsvp(id) {
+    if (!me.value) return needSignIn()
+    const s = find(id)
+    if (!s) return notFound()
+    if (s.status !== 'open') return { ok: false, error: 'This session is no longer open.' }
+    if (isHost(s)) return { ok: false, error: 'You are hosting this session, so you already have a place.' }
+    if (isAttending(s)) return { ok: false, error: 'You already have a place in this session.' }
+    if (spotsLeft(s) <= 0) return { ok: false, error: 'Sorry, this session is full.' }
+    return run(supabase.rpc('join_skill_session', { swap_id: id }))
+  }
+ 
+  async function cancelRsvp(id) {
+    if (!me.value) return needSignIn()
+    const s = find(id)
+    if (!s) return notFound()
+    if (!isAttending(s)) return { ok: false, error: 'You do not have a place in this session.' }
+    return run(supabase.rpc('leave_skill_session', { swap_id: id }))
+  }
+ 
+  async function cancelSession(id) {
+    if (!me.value) return needSignIn()
+    const s = find(id)
+    if (!s) return notFound()
+    if (!isHost(s)) return { ok: false, error: 'Only the host can cancel this session.' }
+    return run(supabase.rpc('cancel_skill_session', { swap_id: id }))
+  }
+ 
+  // for display msg
+  async function completeSession(id) {
+    if (!me.value) return needSignIn()
+    const s = find(id)
+    if (!s) return notFound()
+    if (!isHost(s)) return { ok: false, error: 'Only the host can complete this session.' }
+    const points = pointsForSkillSwap(s.duration)
+    const result = await run(supabase.rpc('complete_skill_session', { swap_id: id }))
+    return result.ok ? { ok: true, points } : result
+  }
+ 
+  return {
+    sessions,
+    loading,
+    loadError,
+    load,
+    openSessions,
+    mySessions,
+    myRsvps,
+    spotsLeft,
+    isHost,
+    isAttending,
+    createSession,
+    rsvp,
+    cancelRsvp,
+    cancelSession,
+    completeSession,
+  }
+})

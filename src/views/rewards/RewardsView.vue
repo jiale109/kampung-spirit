@@ -3,73 +3,61 @@
   ============================================================================
   GUIDE: Kampung Points, Rewards and Community Challenge   Owner: Nathaniel Low
   ============================================================================
-  This page is a PLACEHOLDER. Replace the template with the real feature.
+  STATUS: built. Points earned come from Supabase; spending, the wallet and
+  the challenge bonus are still saved only in the browser (localStorage).
 
-  Route:  /app/rewards and /app/rewards (same page for both roles, see
-          sharedChildren in router/index.js).
+  Route: /app/rewards (in sharedChildren in router/index.js).
 
   WHAT THE PROPOSAL SAYS
   Every completed task, hangout and skill-swap earns points based on
-  difficulty and duration, so harder and longer help earns more. Users redeem
-  points for vouchers from local Eunos merchants (hawker, kopitiam,
-  supermarket, pharmacy) and keep them in a personal wallet. A monthly
-  estate-wide challenge (e.g. 10,000 points) shows a live progress bar, and
-  all contributors receive bonus points when the target is reached.
-  Vouchers are SIMULATED for this prototype.
+  difficulty and duration. Users redeem points for vouchers from local Eunos
+  merchants (hawker, kopitiam, supermarket, pharmacy) and keep them in a
+  personal wallet. A monthly estate-wide challenge (e.g. 10,000 points) shows
+  a live progress bar, and all contributors receive bonus points when the
+  target is reached. Vouchers are SIMULATED for this prototype.
 
-  WHAT EXISTS ALREADY
-  - lib/points.js has calcPoints(difficulty, duration) for help requests.
-  - stores/helpRequest.js holds a `points` map { userId: total } and adds to
-    it in confirmDone(). The youth navbar shows the youth's points from there.
+  HOW IT WORKS TODAY
+  - stores/points.js
+      dbLedger   rows from points_ledger in Supabase (loaded on login). These
+                 are added by database functions, e.g. confirm_help_done.
+      ledger     browser-only rows: voucher spending, challenge bonuses and the
+                 sample rows from seedLedger() in lib/seed.js.
+      myPoints, myLedger, getBalance(), communityPointsThisMonth,
+      communityProgress, isCommunityTargetReached, awardPoints(), spendPoints()
+  - stores/wallet.js   redeem(voucherId), markAsUsed(id), myWallet, unusedCount
+                       (localStorage key 'kampung-wallet')
+  - lib/vouchers.js    voucher catalogue and the type filter pills
+  - lib/points.js      COMMUNITY_TARGET, COMMUNITY_BONUS and the points rules
+  - components/VoucherCard.vue   one voucher in the shop
 
-  STEP BY STEP (build in this order, each step works on its own)
-
-  1. One place for points (src/stores/points.js, new file)
-     Move the points out of helpRequest.js into their own setup store (copy
-     the pattern: ref loaded from localStorage, watch() to save, NEW key).
-     Keep a ledger so the page can show history:
-       ledger = [{ id, userId, amount, reason, createdAt }]
-     Actions: awardPoints(userId, amount, reason) and spendPoints(userId, amount, reason).
-     balance for a user = sum of their ledger rows.
-     Then change helpRequest.js confirmDone() to call awardPoints(), and read
-     the balance in layouts/YouthViewsLayout.vue (store.myPoints today).
-     The Hangouts and Skill Swaps owners call awardPoints(), so do this FIRST
-     and tell them the function name. Add rules for their points in lib/points.js
-     (e.g. pointsForHangout, pointsForSkillSwap).
-
-  2. Voucher shop (lib/vouchers.js, new, plus the page)
-     A plain array: { id, merchant, type: 'Hawker', title: '$2 off any meal', cost: 50 }.
-     Use real types from the proposal: hawker, kopitiam, supermarket, pharmacy.
-     Show them as cards (reuse the idea in components/RequestCard.vue).
-
-  3. Redeem and wallet (stores/wallet.js, new)
-     redeem(voucherId): fail with a plain message if the user does not have
-     enough points; otherwise spendPoints() and add to the wallet:
-       { id, voucherId, userId, code: 'KS-4F9Q2', redeemedAt, used: false }
-     A wallet section lists the codes. A "Mark as used" button is a nice touch.
-     Always confirm before spending (copy the modal in
-     views/app/SeniorHelpBoardView.vue).
-
-  4. Community challenge
-     Total points earned by everyone this month = sum of ledger rows (amount > 0)
-     in the current month. Show a Bootstrap progress bar towards a target
-     (start with 10000 in lib/points.js as COMMUNITY_TARGET). Show the numbers
-     as text too ("6,420 of 10,000 points"), not only as a bar.
-     Bonus: when the total passes the target, give each contributor a bonus
-     ONCE (keep a flag, e.g. bonusPaidForMonth: '2026-10').
-
-  5. Seniors earn points too
-     Seniors earn from hangouts and skill swaps. Make sure the page works for a
-     user with zero points and an empty wallet (use <EmptyState>).
+  WHAT IS LEFT TO DO
+  1. Community total. RLS on points_ledger only lets each person read their
+     own rows, so the "estate-wide" total is really "my points + the sample
+     rows". Add a database function (security definer) that returns the sum
+     of positive amounts this month, call it with supabase.rpc(), and stop
+     counting the seedLedger() rows.
+  2. Spending and wallet in Supabase. Today points spent and vouchers live in
+     one browser only: another device shows the old balance and no vouchers.
+     Add a wallet table and a redeem_voucher(voucher_id) function that checks
+     the balance and inserts a negative points_ledger row in one step
+     (the browser cannot write to points_ledger itself).
+  3. Challenge bonus. checkCommunityBonus() runs in the browser, so each
+     browser decides on its own. Move it into the database too, with a
+     "paid for this month" record, so it is paid exactly once.
+  4. awardPoints() only saves in the browser. Hangouts and Skill Swaps must
+     award points in their own database functions (like confirm_help_done),
+     not by calling awardPoints(). After an action that earns points, call
+     usePointsStore().load() so the navbar updates.
+  5. Empty states: make sure the page works for someone with zero points and
+     an empty wallet (<EmptyState> is already used).
 
   6. Tests (e2e/rewards.spec.js, copy the style of e2e/helpboard.spec.js)
      Redeem a voucher, points go down, the code is in the wallet, and
      redeeming with too few points is refused.
 
-  SENIOR-FRIENDLY RULES (also in README.md)
+  SENIOR-FRIENDLY RULES (also in README.md and CONTRIBUTING.md)
   Plain short sentences, big buttons, one main action per screen, never use
-  colour alone to show a state. Senior pages are already 22px text, so check
-  your layout at that size.
+  colour alone to show a state. Check your layout at 22px text and on a phone.
 */
 
 import { ref, computed } from 'vue'

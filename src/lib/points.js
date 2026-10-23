@@ -1,8 +1,16 @@
 /*
-  GUIDE (Owner: Nathaniel Low): this file holds the settings and the PLACEHOLDER
-  points rule for help requests. Change calcPoints() here when the team agrees
-  the real formula. Add rules for hangouts and skill swaps below it, and the
-  COMMUNITY_TARGET for the monthly challenge. See views/rewards/RewardsView.vue.
+  GUIDE (Owner: Nathaniel Low): shared settings and points rules.
+
+  - categories, difficulties, durations, MAX_ACTIVE_TASKS: Help Board settings.
+  - calcPoints(): help request points. The database has its own copy
+    (public.calc_points in supabase/schema.sql) and that one decides the real
+    points. The copy here is only for the preview in RequestForm.vue. If you
+    change the formula, change BOTH, or the preview will not match.
+  - pointsForHangout() and pointsForSkillSwap(): rules for the other features.
+    Points can only be added to points_ledger by a database function, so the
+    Hangouts and Skill Swaps functions must use the same formula in SQL.
+  - COMMUNITY_TARGET and COMMUNITY_BONUS: the monthly challenge
+    (used by stores/points.js and views/rewards/RewardsView.vue).
 */
 // Settings for help requests, and the (placeholder) points rule.
 

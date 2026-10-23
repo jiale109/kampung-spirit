@@ -71,7 +71,8 @@ src/
   router/index.js            All routes, the login/role guard, and sharedChildren (pages both roles see)
   stores/
     auth.js                  Sign up, log in and the logged-in person's profile (Supabase Auth)
-    helpRequest.js           Help requests (Supabase), the accept limit, and your points balance
+    helpRequest.js           Help requests (Supabase) and the accept limit
+    points.js                Your points balance (Supabase + browser-only voucher spending); the navbar reads it here
   layouts/
     MainLayout.vue           The one navbar for everyone (adds .role-senior for larger text)
     SeniorViewsLayout.vue    NOT USED any more (replaced by MainLayout)

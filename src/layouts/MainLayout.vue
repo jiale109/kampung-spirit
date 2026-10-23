@@ -3,12 +3,15 @@ import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { useHelpRequestStore } from '../stores/helpRequest.js'
+import { usePointsStore } from '../stores/points.js'
 import { applyLargeText } from '../lib/profile.js'
 import BrandMark from '../components/BrandMark.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
 const store = useHelpRequestStore()
+// The navbar balance comes from the points store, the same one Rewards and Profile use
+const points = usePointsStore()
 
 const avatarInitial = computed(() => auth.user.name[0].toUpperCase())
 
@@ -65,7 +68,7 @@ async function logout() {
         <!-- Points + name dropdown -->
         <ul class="navbar-nav ms-auto align-items-lg-center gap-2 gap-lg-3">
           <li class="nav-item">
-            <span class="points-pill" data-testid="points">⭐ {{ store.myPoints }} pts</span>
+            <span class="points-pill" data-testid="points">⭐ {{ points.myPoints }} pts</span>
           </li>
           <li class="nav-item dropdown">
             <a class="nav-link user-toggle dropdown-toggle d-flex align-items-center gap-2" href="#" role="button"

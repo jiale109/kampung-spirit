@@ -60,15 +60,17 @@ export function sessionStart(dateISO, hhmm) {
   return new Date(y, mo - 1, d, h, mi)
 }
 
-//session categories 
+//session categories
+// Must match the check constraint on skill_sessions.category in
+// supabase/schema.sql (section 8.2) word for word, or inserts are refused.
 export const CATEGORIES = [
   'Tech',
   'Cooking',
   'Crafts',
-  'Health & Fitness',
-  'Arts & Music',
+  'Health & fitness',
+  'Arts & music',
   'Languages',
-  'Others',
+  'Other',
 ]
 
 //for weekends-only filter 

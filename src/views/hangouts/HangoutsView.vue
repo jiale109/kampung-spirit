@@ -95,8 +95,9 @@
      Points can only be added by database functions (the browser is not
      allowed to write to points_ledger). Award them in complete_hangout(),
      using the same rule as pointsForHangout() in lib/points.js. Do not call
-     pointsStore.awardPoints(): it only saves in the browser. After completing,
-     call usePointsStore().load() so the navbar shows the new total.
+     pointsStore.awardPoints(): it only saves in the browser. (Done:
+     completeHangout() in stores/hangout.js reloads the points store afterwards,
+     so the navbar shows the new total.)
 
   8. Tests (e2e/hangouts.spec.js, copy the style of e2e/helpboard.spec.js)
      Propose a hangout, join it, and the rain warning (use page.route() to

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { useAuthStore } from './auth.js'
+import { usePointsStore } from './points.js'
 import { pointsForSkillSwap } from '../lib/points.js'
 import { sessionStart, CATEGORIES, MIN_CAPACITY, MAX_CAPACITY } from '../lib/skillSwapFormat.js'
 //import { seedSessions } from '../lib/seed'
@@ -152,7 +153,10 @@ export const useSkillSwapStore = defineStore('skillSwap', () => {
     if (!isHost(s)) return { ok: false, error: 'Only the host can complete this session.' }
     const points = pointsForSkillSwap(s.duration)
     const result = await run(supabase.rpc('complete_skill_session', { swap_id: id }))
-    return result.ok ? { ok: true, points } : result
+    if (!result.ok) return result
+    // complete_skill_session() adds points_ledger rows, so refresh the balance in the navbar
+    await usePointsStore().load()
+    return { ok: true, points }
   }
  
   return {

@@ -69,8 +69,8 @@
      Hosting and attending a completed session earns points. Points can only
      be added by database functions, so complete_skill_session() must insert
      the points_ledger rows itself, using the same rule as pointsForSkillSwap()
-     in lib/points.js. After completing, call usePointsStore().load() so the
-     navbar shows the new total.
+     in lib/points.js. (Done: completeSession() in stores/skillSwap.js reloads
+     the points store afterwards, so the navbar shows the new total.)
 
   6. Tests (e2e/skillswap.spec.js, copy the style of e2e/helpboard.spec.js)
      Host a session, RSVP until full, the full state blocks the next RSVP, and

@@ -698,3 +698,22 @@ from (select id from public.profiles order by created_at limit 1) p,
   ('Kopi and newspapers', 'Read the papers together over kopi. Come and go as you like.', 'eunos-crescent-market', 2, time '09:00', 60),
   ('Herb garden morning', 'Watering and weeding together. Gloves provided.', 'eunos-community-garden', 3, time '08:00', 90)
 ) as v(title, description, hotspot_id, days, at, duration);
+
+
+
+-- Estate-wide community challenge total for the current month.
+-- Uses security definer to bypass RLS and sum across all residents.
+create or replace function public.community_points_this_month()
+returns int
+language sql
+security definer
+set search_path = ''
+as $$
+  select coalesce(sum(amount), 0)::int
+  from public.points_ledger
+  where amount > 0
+    and date_trunc('month', created_at) = date_trunc('month', now());
+$$;
+
+revoke execute on function public.community_points_this_month() from public, anon;
+grant execute on function public.community_points_this_month() to authenticated, anon;

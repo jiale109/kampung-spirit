@@ -1,13 +1,4 @@
-/*
-  Demo data for the Help Board                           Owner: Victoria Soh
-  Run: pnpm seed:demo   (reads VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY from .env)
 
-  Signs up 3 demo seniors and 2 demo youths (the same details the sign-up page
-  sends), then logs in as each senior and posts a few open requests.
-  Safe to run again: accounts that already exist are skipped, and a senior who
-  already has requests does not get more.
-  Needs "Confirm email" switched off in Supabase (Authentication -> Email).
-*/
 import { createClient } from '@supabase/supabase-js'
 
 try {

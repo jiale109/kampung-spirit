@@ -1,44 +1,70 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useHelpRequestStore } from '../../stores/helpRequest.js'
+import { ref, computed, onMounted, nextTick } from 'vue'
+import { useHelpRequestStore, isPastTime } from '../../stores/helpRequest.js'
 import { categories, MAX_ACTIVE_TASKS } from '../../lib/points.js'
 import EmptyState from '../../components/EmptyState.vue'
 import RequestCard from '../../components/RequestCard.vue'
+import ConfirmModal from '../../components/ConfirmModal.vue'
 
 const store = useHelpRequestStore()
 
 const selectedCategory = ref('')
 const sortBy = ref('newest')
-const message = ref('')
+const acceptedTitle = ref('')   
 const error = ref('')
+
+const successAlert = ref(null)
+const errorAlert = ref(null)
+
+
+const physicalRequest = ref(null)
+
+const busyId = ref(null)
 
 onMounted(store.load)
 
-// Apply the category filter, then the sort order
 const filteredRequests = computed(() => {
-  const list = store.openRequests.filter((r) => selectedCategory.value === '' || r.category === selectedCategory.value)
+  const list = store.openRequests.filter((r) =>
+    !isPastTime(r) && (selectedCategory.value === '' || r.category === selectedCategory.value))
 
   if (sortBy.value === 'points') return [...list].sort((a, b) => b.points - a.points)
   if (sortBy.value === 'shortest') return [...list].sort((a, b) => a.duration - b.duration)
+  if (sortBy.value === 'soonest') return [...list].sort((a, b) => a.neededAt - b.neededAt)
   return list
 })
 
-async function accept(request) {
-  message.value = ''
+const firstLoad = computed(() => store.loading && store.openRequests.length === 0)
+const countText = computed(() => `${filteredRequests.value.length} request${filteredRequests.value.length === 1 ? '' : 's'}`)
+
+function accept(request) {
+  acceptedTitle.value = ''
   error.value = ''
 
-  // Physical tasks: ask first. The database checks this again for seniors.
-  let physicalOk = false
-  if (request.isPhysical) {
-    physicalOk = window.confirm('This task needs physical effort. Are you comfortable doing it?')
-    if (!physicalOk) return
-  }
+  if (request.isPhysical) physicalRequest.value = request
+  else doAccept(request, false)
+}
 
-  const result = await store.acceptRequest(request.id, physicalOk)
-  if (result.ok) {
-    message.value = `You accepted "${request.title}". Find it under My Tasks.`
-  } else {
-    error.value = result.error
+function confirmPhysical() {
+  const request = physicalRequest.value
+  physicalRequest.value = null
+  doAccept(request, true)
+}
+
+async function doAccept(request, physicalOk) {
+  busyId.value = request.id
+  try {
+    const result = await store.acceptRequest(request.id, physicalOk)
+    if (result.ok) {
+      acceptedTitle.value = request.title
+    } else {
+      error.value = result.error
+    }
+ 
+    await nextTick()
+    const alert = result.ok ? successAlert.value : errorAlert.value
+    alert?.focus()
+  } finally {
+    busyId.value = null
   }
 }
 </script>
@@ -55,8 +81,7 @@ async function accept(request) {
       </span>
     </div>
 
-    <!-- Filter & Sort (not a .card, so it is not counted as a request) -->
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-2">
       <div class="col-sm-6">
         <label for="category-filter" class="form-label">Filter by category</label>
         <select id="category-filter" v-model="selectedCategory" class="form-select">
@@ -70,28 +95,81 @@ async function accept(request) {
           <option value="newest">Newest first</option>
           <option value="points">Most points</option>
           <option value="shortest">Shortest time</option>
+          <option value="soonest">Soonest first</option>
         </select>
       </div>
     </div>
+    <p class="request-count" aria-live="polite" data-testid="request-count">
+      <template v-if="!firstLoad && !store.loadError">{{ countText }}</template>
+    </p>
 
-    <div v-if="message" class="alert alert-success" role="status">{{ message }}</div>
-    <div v-if="error" class="alert alert-danger" role="alert">{{ error }}</div>
+    <div v-if="acceptedTitle" ref="successAlert" class="alert alert-success accept-alert" role="status"
+      tabindex="-1" data-testid="accept-success">
+      <span>You accepted "{{ acceptedTitle }}". It is now in My Tasks.</span>
+      <router-link to="/app/tasks" class="btn btn-primary">View My Tasks</router-link>
+    </div>
+    <div v-if="error" ref="errorAlert" class="alert alert-danger" role="alert" tabindex="-1">{{ error }}</div>
     <div v-if="store.atLimit" class="alert alert-warning">
       You have {{ MAX_ACTIVE_TASKS }} active tasks. Finish one before accepting another.
     </div>
 
-    <p v-if="store.loading && store.requests.length === 0">Loading requests…</p>
+    <p v-if="firstLoad">Loading requests…</p>
 
-    <EmptyState v-if="filteredRequests.length === 0" message="No open requests here right now. Check back soon!" />
+    <div v-else-if="store.loadError" class="alert alert-danger load-error" role="alert">
+      {{ store.loadError }}
+      <button type="button" class="btn btn-outline-danger" @click="store.load()">Try again</button>
+    </div>
+
+    <EmptyState v-else-if="filteredRequests.length === 0 && selectedCategory" message="No requests in this category right now.">
+      <button type="button" class="btn btn-primary btn-lg mt-4" @click="selectedCategory = ''">Show all categories</button>
+    </EmptyState>
+
+    <EmptyState v-else-if="filteredRequests.length === 0" message="No open requests here right now. Check back soon!" />
 
     <div v-else class="request-list">
       <RequestCard v-for="request in filteredRequests" :key="request.id" :request="request" hide-status>
         <template #actions>
-          <button class="btn btn-primary btn-lg" data-testid="accept" :disabled="store.atLimit" @click="accept(request)">
-            I can help
+          <button class="btn btn-primary btn-lg" data-testid="accept" :disabled="store.atLimit || busyId !== null"
+            @click="accept(request)">
+            {{ busyId === request.id ? 'Saving…' : 'I can help' }}
           </button>
         </template>
       </RequestCard>
     </div>
+
+    <ConfirmModal v-if="physicalRequest" title="Physical task"
+      message="This task needs physical effort. Are you comfortable doing it?"
+      confirm-label="Yes, I can do it" cancel-label="Not this time" testid="confirm-physical"
+      @confirm="confirmPhysical" @cancel="physicalRequest = null" />
   </div>
 </template>
+
+<style scoped>
+.request-count {
+  min-height: 1.5em;               
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  color: var(--ks-muted);
+}
+
+.accept-alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.alert[tabindex='-1']:focus {
+  outline: 3px solid var(--ks-teal-dark);
+  outline-offset: 3px;
+}
+
+.load-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+</style>

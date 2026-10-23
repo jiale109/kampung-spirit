@@ -11,6 +11,7 @@ const store = useHelpRequestStore()
 
 const loaded = ref(false)
 const error = ref('')
+const busy = ref(false)
 
 const request = computed(() => store.getRequestById(route.params.requestId))
 
@@ -21,9 +22,14 @@ onMounted(async () => {
 
 async function save(data) {
   error.value = ''
-  const result = await store.updateRequest(request.value.id, data)
-  if (result.ok) router.push('/app/requests')
-  else error.value = result.error
+  busy.value = true
+  try {
+    const result = await store.updateRequest(request.value.id, data)
+    if (result.ok) router.push('/app/requests')
+    else error.value = result.error
+  } finally {
+    busy.value = false
+  }
 }
 </script>
 
@@ -38,7 +44,7 @@ async function save(data) {
     <!-- Only open requests can be edited -->
     <template v-else-if="request && request.status === 'open'">
       <p v-if="error" class="text-danger">{{ error }}</p>
-      <RequestForm :request="request" submit-label="Save changes" @save="save" />
+      <RequestForm :request="request" submit-label="Save changes" :busy="busy" @save="save" />
     </template>
 
     <EmptyState v-else message="This request can no longer be edited.">

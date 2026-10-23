@@ -32,16 +32,27 @@ export const usePointsStore = defineStore('points', () => {
     { deep: true },
   )
 
-  // Load real points from Supabase database
-  async function load() {
+  // The load that is running right now, or null when none is
+  let loadPromise = null
+
+  // Load real points from Supabase. The help request store calls this every time
+  // requests load, so if a load is already running, share it instead of fetching twice.
+  function load() {
+    if (!loadPromise) loadPromise = fetchPoints().finally(() => { loadPromise = null })
+    return loadPromise
+  }
+
+  async function fetchPoints() {
     // 1. Load user's personal points
-    if (auth.user?.id) {
+    const userId = auth.user?.id
+    if (userId) {
       const { data, error } = await supabase
         .from('points_ledger')
         .select('id, user_id, amount, reason, created_at')
         .order('created_at', { ascending: false })
 
-      if (!error && data) {
+      // Skip the result if someone else logged in (or out) while it was loading
+      if (!error && data && auth.user?.id === userId) {
         dbLedger.value = data.map((row) => ({
           id: row.id,
           userId: row.user_id,
@@ -62,9 +73,12 @@ export const usePointsStore = defineStore('points', () => {
   // Automatically fetch points from Supabase whenever user logs in or out
   watch(
     () => auth.user?.id,
-    (newId) => {
-      load()
+    async (newId) => {
       if (!newId) dbLedger.value = []
+      // A load started before the login would not fetch this person's rows, so
+      // wait for it to finish and then start a fresh one
+      if (loadPromise) await loadPromise.catch(() => {})
+      load()
     },
     { immediate: true },
   )

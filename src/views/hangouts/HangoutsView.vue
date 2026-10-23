@@ -114,6 +114,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useHangoutStore } from '../../stores/hangout.js'
 import { hotspots, findHotspot } from '../../lib/hotspots.js'
 import { loadForecasts, weatherWarning } from '../../lib/weather.js'
+import { sessionStart } from '../../lib/skillSwapFormat.js'
 import EmptyState from '../../components/EmptyState.vue'
 import HangoutCard from '../../components/HangoutCard.vue'
 import HotspotMap from '../../components/HotspotMap.vue'
@@ -139,7 +140,7 @@ onMounted(async () => {
 const shownHangouts = computed(() =>
   store.atHotspot(selectedHotspot.value).map((h) => ({
     ...h,
-    weatherWarning: weatherWarning(findHotspot(h.hotspotId), forecasts.value),
+    weatherWarning: weatherWarning(findHotspot(h.hotspotId), forecasts.value, sessionStart(h.date, h.time)),
   })),
 )
 

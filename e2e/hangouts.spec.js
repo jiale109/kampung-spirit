@@ -27,14 +27,37 @@ async function fakeWeather(page, area, text) {
   )
 }
 
-// Fill in and submit the propose-a-hangout form
-async function proposeHangout(page, { title, hotspotId = 'eunos-cc', description }) {
+// Fill in and submit the propose-a-hangout form. dayIndex 0 is today, 1 is
+// tomorrow. time is an 'HH:MM' slot; left out, the form keeps its default.
+async function proposeHangout(page, { title, hotspotId = 'eunos-cc', description, dayIndex = 1, time }) {
   await page.getByRole('link', { name: 'Propose a hangout' }).first().click()
   await page.getByLabel('Short name').fill(title)
   await page.getByLabel('Where shall we meet?').selectOption(hotspotId)
   await page.getByLabel('What will you do?').fill(description)
-  await page.getByLabel('Which day?').selectOption({ index: 1 }) // tomorrow
+  await page.getByLabel('Which day?').selectOption({ index: dayIndex })
+  if (time) await page.getByLabel('What time?').selectOption(time)
   await page.getByRole('button', { name: 'Propose hangout' }).click()
+}
+
+// The rain warning only covers the next 2 hours (FORECAST_HOURS in
+// lib/weather.js). The form offers 08:00 to 20:00 in half hours, so find the
+// first slot today that has not started and is within 2 hours. Returns null
+// late at night or early in the morning, when no slot fits.
+function slotWithinForecast() {
+  const now = new Date()
+  const latest = now.getTime() + 2 * 60 * 60 * 1000
+  for (let h = 8; h <= 20; h++) {
+    for (const m of [0, 30]) {
+      if (h === 20 && m === 30) continue
+      const slot = new Date(now)
+      slot.setHours(h, m, 0, 0)
+      // A minute's margin so the slot has not passed by the time the form is sent
+      if (slot.getTime() > now.getTime() + 60 * 1000 && slot.getTime() <= latest) {
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+      }
+    }
+  }
+  return null
 }
 
 test.beforeEach(async ({ page }) => {
@@ -89,6 +112,12 @@ test('A neighbour can say they are coming, and change their mind', async ({ page
 })
 
 test('An outdoor hangout warns about rain, an indoor one does not', async ({ page }) => {
+  // The warning needs a hangout starting within 2 hours, and the form only has
+  // slots from 08:00 to 20:00. Before about 06:00 or after about 19:59 no slot
+  // fits, so the test cannot set itself up and is skipped.
+  const time = slotWithinForecast()
+  test.skip(!time, 'No hangout time today is within the 2-hour forecast window')
+
   // Geylang is the forecast area for the garden and the park in lib/hotspots.js
   await fakeWeather(page, 'Geylang', 'Thundery Showers')
 
@@ -100,6 +129,8 @@ test('An outdoor hangout warns about rain, an indoor one does not', async ({ pag
     title: outdoor,
     hotspotId: 'eunos-park', // outdoor: true
     description: 'A gentle walk around the park.',
+    dayIndex: 0,
+    time,
   })
   await (await openCard(page, outdoor))
   await expect(card(page, outdoor).getByTestId('weather-warning')).toContainText('Bring an umbrella')
@@ -109,9 +140,21 @@ test('An outdoor hangout warns about rain, an indoor one does not', async ({ pag
     title: indoor,
     hotspotId: 'eunos-cc', // outdoor: false
     description: 'Kopi and a chat indoors, rain or shine.',
+    dayIndex: 0,
+    time,
   })
   await (await openCard(page, indoor))
   await expect(card(page, indoor).getByTestId('weather-warning')).toHaveCount(0)
+
+  // An outdoor hangout tomorrow is outside the 2-hour forecast, so no warning
+  const later = `Park walk tomorrow ${stamp()}`
+  await proposeHangout(page, {
+    title: later,
+    hotspotId: 'eunos-park',
+    description: 'Another walk around the park, tomorrow.',
+  })
+  await (await openCard(page, later))
+  await expect(card(page, later).getByTestId('weather-warning')).toHaveCount(0)
 })
 
 test('The weather API being down does not break the page', async ({ page }) => {

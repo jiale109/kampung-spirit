@@ -118,6 +118,9 @@ export const useHangoutStore = defineStore('hangout', () => {
 
   async function createHangout(data) {
     if (!me.value) return needSignIn()
+    if (me.value.guardian_status === 'pending') {
+      return { ok: false, error: 'Your parent or guardian needs to confirm your account before you can host.' }
+    }
 
     const title = String(data.title || '').trim()
     const description = String(data.description || '').trim()
@@ -156,6 +159,9 @@ export const useHangoutStore = defineStore('hangout', () => {
     if (isHost(h)) return { ok: false, error: 'You are hosting this hangout, so you are already going.' }
     if (isGoing(h)) return { ok: false, error: 'You are already going to this hangout.' }
     if (hasStarted(h)) return { ok: false, error: 'This has already started, so it is too late to join.' }
+    if (me.value.guardian_status === 'pending') {
+      return { ok: false, error: 'Your parent or guardian needs to confirm your account before you can join.' }
+    }
     return run(supabase.rpc('join_hangout', { hangout_id: id }))
   }
 

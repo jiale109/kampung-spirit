@@ -57,6 +57,15 @@
 html {
   font-size: 137.5%;
 }
+
+/* "Use large text" from the profile page. Everyone already gets 22px above,
+   so this only ever makes the text BIGGER, never smaller. It has to sit on
+   <html> because every size in this file is in rem, and rem is measured from
+   the html font-size. MainLayout.vue puts the class here and takes it off
+   again, following auth.user.large_text. */
+html.large-text {
+  font-size: 168.75%;
+}
 body {
   background-color: var(--ks-bg);
   color: var(--ks-ink);
@@ -352,9 +361,23 @@ body {
 .app-navbar > .container {
   flex-wrap: wrap;
   row-gap: 0.25rem;
+  /* Use the whole screen width. Bootstrap's .container stops at 1320px, which
+     left the menu squeezed into a band in the middle of wide screens. */
+  max-width: none;
+  padding-left: clamp(1rem, 3vw, 2.5rem);
+  padding-right: clamp(1rem, 3vw, 2.5rem);
 }
 
 @media (min-width: 1200px) {
+  /* When the menu drops to its own row, keep it inside the navbar: it may shrink
+     to the row's width, and the points + name group then wraps under the links
+     instead of running off the right edge (which made the page scroll sideways). */
+  .app-navbar .navbar-collapse {
+    min-width: 0;
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+
   .app-navbar .navbar-nav.me-auto {
     flex: none;
   }
@@ -839,10 +862,14 @@ body {
 }
 
 .landing-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   margin: 0;
   font-family: var(--ks-font-display);
-  font-size: 1.5rem;
+  font-size: clamp(1.75rem, 1rem + 3vw, 3.25rem);
   font-weight: 700;
+  line-height: 1.1;
 }
 
 .landing-tagline {

@@ -3,8 +3,8 @@
    Loaded after Bootstrap (see main.js), so these rules override its defaults.
 
    1. Colours and fonts      5. Navbar
-   2. Base text (18px, 22px  6. Page layout
-      for seniors)           7. Request card (simple, opens on hover/tap)
+   2. Base text (22px, 27px  6. Page layout
+      with large text)       7. Request card (simple, opens on hover/tap)
    3. Buttons                8. Badges, alerts, empty state, modal
    4. Forms                  9. Landing page
    ========================================================================== */
@@ -53,7 +53,7 @@
 /* 2. Base text
    -------------------------------------------------------------------------- */
 
-/* 112.5% of the browser default = 18px, and it still follows the user's own text-size setting */
+/* 137.5% of the browser default = 22px, and it still follows the user's own text-size setting */
 html {
   font-size: 137.5%;
 }

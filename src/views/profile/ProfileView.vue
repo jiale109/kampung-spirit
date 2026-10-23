@@ -49,11 +49,10 @@
      RequestForm.vue (errors ref).
 
   4. Large text setting
-     large_text is chosen at sign up and saved, but nothing uses it yet.
-     Today theme.css makes the text 22px for everyone (html font-size 137.5%).
-     Agree with the team: either keep 22px for all, or use 18px by default and
-     add a class (e.g. .large-text) on MainLayout when auth.user.large_text
-     is true. Then add the switch here.
+     Done. Text is 22px for everyone (html font-size 137.5% in theme.css).
+     When large_text is on, html.large-text makes it 27px. MainLayout.vue
+     applies it on mount and this page applies it right after saving the
+     switch (applyLargeText() in lib/profile.js).
 
   5. Delete account
      A "Delete my account" button that opens a confirmation modal (copy the

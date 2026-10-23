@@ -14,6 +14,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useAuthStore } from './auth.js'
+import { usePointsStore } from './points.js'
 import { findHotspot } from '../lib/hotspots.js'
 import { sessionStart } from '../lib/skillSwapFormat.js'
 import { supabase } from '../lib/supabase.js'
@@ -170,7 +171,11 @@ export const useHangoutStore = defineStore('hangout', () => {
     const h = find(id)
     if (!h) return notFound()
     if (!isHost(h)) return { ok: false, error: 'Only the host can complete this hangout.' }
-    return run(supabase.rpc('complete_hangout', { hangout_id: id }))
+    const result = await run(supabase.rpc('complete_hangout', { hangout_id: id }))
+    if (!result.ok) return result
+    // complete_hangout() adds points_ledger rows, so refresh the balance in the navbar
+    await usePointsStore().load()
+    return { ok: true }
   }
 
   return {

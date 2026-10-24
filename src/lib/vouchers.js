@@ -1,27 +1,10 @@
 // Category filter pills
 export const voucherTypes = [
   { name: 'All' },
-  { name: 'Hawker' },
   { name: 'Kopitiam' },
   { name: 'Supermarket'},
   { name: 'Pharmacy' },
 ]
-// export const voucherTypes = [
-//   { name: 'All', icon: '✨' },
-//   { name: 'Hawker', icon: '🍜' },
-//   { name: 'Kopitiam', icon: '☕' },
-//   { name: 'Supermarket', icon: '🛒' },
-//   { name: 'Pharmacy', icon: '💊' },
-// ]
-export function voucherTypeClass(type) {
-  const match = voucherTypes.find((t) => t.name.toLowerCase() === type.toLowerCase())
-  return match ? match.colorClass : 'cat-tech'
-}
-
-export function voucherTypeIcon(type) {
-  const match = voucherTypes.find((t) => t.name.toLowerCase() === type.toLowerCase())
-  return match ? match.icon : '🎟️'
-}
 
 // Catalog of vouchers 
 export const vouchers = [
@@ -85,18 +68,6 @@ export const vouchers = [
     description: 'Save $5 on vitamins, daily health supplies, or over-the-counter medication.',
     terms: 'Show digital voucher at counter before payment.',
   },
-//   {
-//     id: 'v6',
-//     merchant: 'Eunos Food Centre',
-//     branch: 'Blk 4A Eunos Crescent',
-//     type: 'Hawker',
-//     title: '$2 off any hawker meal',
-//     cost: 50,
-//     logo: '/images/merchants/hawker.png',
-//     bg: '#b45309',
-//     description: 'Enjoy $2 off any cooked food or drink stall at Blk 4A Hawker Centre.',
-//     terms: 'Valid for one-time use per stall. Min spend $3.50.',
-//   },
   {
     id: 'v7',
     merchant: 'Guardian',

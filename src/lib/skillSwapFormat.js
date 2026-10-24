@@ -30,12 +30,6 @@ export function formatDate(iso) {
   return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`
 }
 
-//format date to display as dd-mm-yyyy
-export function formatDateShort(iso) {
-  const [y, m, d] = iso.split('-')
-  return `${d}-${m}-${y}`
-}
-
 //to change to 12-hour clock from 24-hour clock
 export function formatTime(hhmm) {
   const [h, m] = hhmm.split(':').map(Number)

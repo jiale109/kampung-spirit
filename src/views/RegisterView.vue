@@ -5,11 +5,17 @@
   name and email, and tick that the guardian agrees (this acts as the waiver).
   These checks are repeated in the database (supabase/schema.sql), but are
   done here first so the person sees a clear message.
+
+  Passwords: typed twice (both must match) and must pass every rule in
+  passwordRules. Supabase checks the same rules again on its side
+  (Authentication -> Sign In / Providers -> Email -> password requirements),
+  so keep the two in step if you change them.
 */
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import BrandMark from '../components/BrandMark.vue'
+import PasswordInput from '../components/PasswordInput.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -27,6 +33,7 @@ const form = ref({
   name: '',
   email: '',
   password: '',
+  passwordAgain: '',
   block: '',
   day: '',
   month: '',
@@ -66,13 +73,33 @@ const isMinor = computed(() => age.value !== null && age.value >= MIN_AGE && age
 
 const looksLikeEmail = (text) => /^\S+@\S+\.\S+$/.test(text.trim())
 
+// Every rule must pass. Shown as a checklist under the password box, ticked
+// off as the person types, so they can see what is still missing.
+const passwordRules = [
+  { key: 'length', text: 'At least 8 characters', test: (p) => p.length >= 8 },
+  { key: 'upper', text: 'A capital letter (A to Z)', test: (p) => /[A-Z]/.test(p) },
+  { key: 'lower', text: 'A small letter (a to z)', test: (p) => /[a-z]/.test(p) },
+  { key: 'number', text: 'A number (0 to 9)', test: (p) => /[0-9]/.test(p) },
+  { key: 'special', text: 'A special character, like ! @ # or $', test: (p) => /[^A-Za-z0-9\s]/.test(p) },
+]
+const passwordChecks = computed(() =>
+  passwordRules.map((rule) => ({ ...rule, met: rule.test(form.value.password) })),
+)
+const passwordStrong = computed(() => passwordChecks.value.every((c) => c.met))
+
+// Only say whether they match once something has been typed in the second box
+const passwordsMatch = computed(() => form.value.password === form.value.passwordAgain)
+const showMatch = computed(() => form.value.passwordAgain.length > 0)
+
 function validate() {
   const f = form.value
   const e = {}
 
   if (f.name.trim().length < 2) e.name = 'Please write your name.'
   if (!looksLikeEmail(f.email)) e.email = 'Please write your email, like name@example.com.'
-  if (f.password.length < 6) e.password = 'Use at least 6 characters.'
+  if (!passwordStrong.value) e.password = 'Your password does not meet all the rules below yet.'
+  if (!f.passwordAgain) e.passwordAgain = 'Please type your password again.'
+  else if (!passwordsMatch.value) e.passwordAgain = 'The two passwords are different. Please type them again.'
   if (f.block.trim().length < 3) e.block = 'Please write your block and street, like Blk 412 Eunos Cres.'
 
   if (!birthDate.value) e.birthDate = 'Please choose your day, month and year of birth.'
@@ -152,11 +179,31 @@ async function submit() {
 
             <div>
               <label for="password" class="form-label">Password</label>
-              <input id="password" v-model="form.password" type="password" class="form-control"
-                autocomplete="new-password" aria-describedby="password-hint"
-                :class="{ 'is-invalid': errors.password }" />
-              <div id="password-hint" class="form-text">At least 6 characters.</div>
-              <div class="invalid-feedback">{{ errors.password }}</div>
+              <PasswordInput id="password" v-model="form.password" autocomplete="new-password"
+                aria-describedby="password-rules" :invalid="!!errors.password" />
+              <div v-if="errors.password" class="invalid-feedback d-block">{{ errors.password }}</div>
+
+              <!-- Ticked off as they type. The words say done / not yet, not only the colour. -->
+              <p class="form-text mb-1 mt-2">Your password needs:</p>
+              <ul id="password-rules" class="password-rules" data-testid="password-rules">
+                <li v-for="c in passwordChecks" :key="c.key" :class="{ 'is-met': c.met }">
+                  <span class="rule-mark" aria-hidden="true">{{ c.met ? '✓' : '○' }}</span>
+                  {{ c.text }}
+                  <span class="visually-hidden">{{ c.met ? '(done)' : '(not yet)' }}</span>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <label for="password-again" class="form-label">Type your password again</label>
+              <PasswordInput id="password-again" v-model="form.passwordAgain" autocomplete="new-password"
+                aria-describedby="password-match" :invalid="!!errors.passwordAgain" />
+              <div v-if="errors.passwordAgain" class="invalid-feedback d-block">{{ errors.passwordAgain }}</div>
+              <p v-else-if="showMatch" id="password-match" class="form-text password-match"
+                :class="{ 'is-met': passwordsMatch }" aria-live="polite">
+                <span aria-hidden="true">{{ passwordsMatch ? '✓' : '○' }}</span>
+                {{ passwordsMatch ? 'The passwords match.' : 'The passwords do not match yet.' }}
+              </p>
             </div>
 
             <div>
@@ -254,6 +301,33 @@ fieldset legend {
   background: var(--ks-surface);
   border: 2px solid var(--ks-line);
   border-radius: 0.75rem;
+}
+
+/* Password checklist: a tick and darker words once a rule is met */
+.password-rules {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ks-muted);
+}
+
+.password-rules li,
+.password-match {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.rule-mark {
+  flex: none;
+  width: 1.1em;
+  text-align: center;
+}
+
+.password-rules li.is-met,
+.password-match.is-met {
+  color: var(--ks-teal-dark);
+  font-weight: 600;
 }
 
 /* Bootstrap's checkboxes are small; make them easier to tap */

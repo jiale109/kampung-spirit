@@ -6,7 +6,7 @@ IS216 group project (G6, Team 1). A web app for one HDB estate (Eunos) where sen
 
 Built with Vue 3, Pinia, Vue Router and Bootstrap 5. Tested with Playwright. Deployed on Vercel.
 
-**Current state:** the **Help Board** works end to end with real accounts and data in [Supabase](https://supabase.com/) (database and login). There is no Express server. Hangouts, Skill Swaps, Rewards and Profile are empty placeholder pages with a step-by-step **GUIDE** comment at the top of each file, ready for the team to build.
+**Current state:** every page works with real accounts and data in [Supabase](https://supabase.com/) (database and login): the **Help Board**, **Hotspot Hangouts** (with a OneMap map and a rain warning), **Skill-Swap Circles**, **Rewards** (vouchers, wallet and the monthly community challenge) and **Profile**. There is no Express server. Each feature's main file starts with a **GUIDE** comment saying how it works and what is still left.
 
 ## Quick start
 
@@ -74,26 +74,32 @@ src/
     helpRequest.js           Help requests (Supabase) and the accept limit
     points.js                Your points balance and the community total (Supabase); the navbar reads it here
     wallet.js                Your redeemed vouchers (Supabase)
+    hangout.js               Hotspot hangouts (Supabase)
+    skillSwap.js             Skill-swap sessions (Supabase)
   layouts/
     MainLayout.vue           The one navbar for everyone (applies "Use large text" to <html>)
-    SeniorViewsLayout.vue    NOT USED any more (replaced by MainLayout)
-    YouthViewsLayout.vue     NOT USED any more (replaced by MainLayout)
   views/
     LandingView.vue          Landing page + login
     RegisterView.vue         Sign up
     senior/                  Help Board: My Requests (Active and Past), create, edit   /app/requests
     youth/                   Help Board: the board and My Tasks                        /app, /app/tasks
-    hangouts/                PLACEHOLDER  Hotspot Hangouts
-    skillswap/               PLACEHOLDER  Skill-Swap Circles
-    rewards/                 PLACEHOLDER  Points, Rewards, Community Challenge
-    profile/                 PLACEHOLDER  Profile
+    hangouts/                Hotspot Hangouts: list, map, rain warning, propose     /app/hangouts
+    skillswap/               Skill-Swap Circles: list, tabs, filters, host          /app/skill-swaps
+    rewards/                 Vouchers, wallet and the community challenge           /app/rewards
+    profile/                 Your details, interests and "Use large text"           /app/profile
   components/
     RequestCard.vue          A request: simple card, details on hover or tap
     RequestForm.vue          Create/edit form with validation (including when help is needed)
-    CategoryBadge.vue  StatusBadge.vue  EmptyState.vue
+    HangoutCard.vue  HangoutForm.vue  HotspotMap.vue (+ locationSearch.vue)
+    SkillSwapCard.vue  SkillSwapForm.vue  VoucherCard.vue
+    CategoryBadge.vue  StatusBadge.vue  EmptyState.vue  ConfirmModal.vue  BrandMark.vue
   lib/
     supabase.js              The one Supabase client (reads .env)
-    points.js                Categories, difficulty, 2-task limit, points formula (placeholder)
+    points.js                Help Board settings, points rules and the community challenge numbers
+    vouchers.js              Voucher catalogue (costs must match public.vouchers)
+    hotspots.js  onemap.js  weather.js   Hangout places, the OneMap API and the rain forecast
+    skillSwapFormat.js       Date/time formatting and skill-swap option lists
+    profile.js               Interests list and "Use large text"
 supabase/
   schema.sql                 The whole database, for a new project
   migrations/                Changes to run on a project that already has the schema
@@ -106,7 +112,7 @@ Pages in the navbar (the same for everyone, since anyone can ask for help and an
 
 ## Adding a feature (checklist)
 
-1. Read the GUIDE comment at the top of your placeholder view.
+1. Read the GUIDE comment at the top of your feature's view.
 2. Put sample data in Supabase (add it to `scripts/seed-demo.js`), so every teammate sees the same rows.
 3. Make a store in `stores/` by copying the pattern in `stores/helpRequest.js`.
 4. Build the page in your feature's folder under `views/`, and shared pieces in `components/`.

@@ -3,71 +3,18 @@
   ============================================================================
   GUIDE: Profile                           Owners: Clarence Tay (page), Reuben Tham (data)
   ============================================================================
-  STATUS: PLACEHOLDER. Replace the template with the real feature.
+  Route: /app/profile (the "Profile" item in the name menu in MainLayout.vue).
+  Shows name, block, age group, guardian status (under 18s) and points, and
+  lets the person edit name, block, interests and "Use large text".
 
-  Route: /app/profile (in sharedChildren in router/index.js). It is opened
-  from the "Profile" item in the name dropdown in layouts/MainLayout.vue.
+  Uses: stores/auth.js (user, updateProfile()), stores/points.js (myPoints),
+  lib/profile.js (the fixed interests list and applyLargeText()). The
+  database only lets a user change name, block, interests and large_text on
+  their own row (supabase/schema.sql section 2).
 
-  WHAT THE PROPOSAL SAYS
-  Profiles show the user's block, interests and points. The whole app uses
-  large text and buttons, high contrast and a fully responsive layout, so it
-  works as well on a senior's phone as on a desktop.
-
-  WHAT EXISTS ALREADY
-  - Real sign up and login with Supabase Auth (stores/auth.js,
-    views/LandingView.vue, views/RegisterView.vue).
-  - useAuthStore().user is the row from the profiles table:
-      { id, name, block, interests, large_text, age_group, guardian_status }
-    age_group is 'youth' (12-21), 'adult' (22-64) or 'senior' (65+), worked
-    out from the birth date. There is no "role" any more: everyone can ask
-    for help and everyone can help, on the same set of pages.
-    guardian_status is 'not_needed', 'pending' or 'verified' (under 18s).
-  - The database lets a user change ONLY name, block, interests and
-    large_text on their own row (supabase/schema.sql, section 2). The birth
-    date and guardian details are in profile_private and cannot be edited
-    from the app.
-  - Points: usePointsStore().myPoints.
-
-  STEP BY STEP (build in this order, each step works on its own)
-
-  1. Read (this page)
-     Show name, block, age group and points. Use a Bootstrap card and the
-     .page-header / .page-title classes, like the other pages. For under 18s,
-     explain the guardian status in words ("Waiting for your parent or
-     guardian to confirm" when it is 'pending').
-
-  2. Interests
-     Offer a fixed list to choose from (a constant in lib/profile.js, new
-     file) shown as big toggle buttons, like the category tiles in
-     components/RequestForm.vue (.choice-tile). A fixed list avoids typos.
-     interests is a text[] column, so save an array of strings.
-
-  3. Update (auth store, Reuben)
-     In stores/auth.js add updateProfile({ name, block, interests, largeText })
-     that runs supabase.from('profiles').update({...}).eq('id', user.id),
-     then reloads the profile. Return { ok, error }. Validate on submit like
-     RequestForm.vue (errors ref).
-
-  4. Large text setting
-     Done. Text is 22px for everyone (html font-size 137.5% in theme.css).
-     When large_text is on, html.large-text makes it 27px. MainLayout.vue
-     applies it on mount and this page applies it right after saving the
-     switch (applyLargeText() in lib/profile.js).
-
-  5. Delete account
-     A "Delete my account" button that opens a confirmation modal (copy the
-     modal in views/senior/SeniorHelpBoardView.vue). The browser cannot delete
-     a Supabase Auth user by itself, so this needs a database function
-     (security definer) or an Edge Function. Talk to Reuben first. After it
-     succeeds, call auth.logout() and go to /landing.
-
-  6. Tests (e2e/profile.spec.js, copy the style of e2e/landing.spec.js)
-     The profile shows the right name and block, editing interests persists
-     after a reload, and a senior and a youth both reach /app/profile.
-
-  SENIOR-FRIENDLY RULES (also in README.md and CONTRIBUTING.md)
-  Plain short sentences, big buttons, one main action per screen, never use
-  colour alone to show a state. Check your layout at 22px text and on a phone.
+  STILL LEFT: "Delete my account" (the browser cannot delete a Supabase Auth
+  user, so it needs a security definer function or an Edge Function; talk to
+  Reuben first), and an e2e test for editing the profile.
 */
 import { ref, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth.js'

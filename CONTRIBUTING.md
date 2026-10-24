@@ -42,7 +42,7 @@ Stay inside your own feature folder when you can. That way we rarely edit the sa
 | Accounts and login (backend) | Reuben Tham | `stores/auth.js`, `views/LandingView.vue` |
 | Profile pages, layout and theme | Clarence Tay | `views/profile/*`, `layouts/*`, `styles/theme.css` |
 
-Each placeholder page starts with a **GUIDE** comment that explains what to build and in what order. Read it first.
+Each feature's main page starts with a **GUIDE** comment that explains how it works and what is still left. Read it first.
 
 ### Files everyone touches (be careful)
 

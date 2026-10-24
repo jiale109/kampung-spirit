@@ -12,6 +12,10 @@
 import { ref } from 'vue'
 import { searchAddress } from '../lib/onemap.js'
 
+defineProps({
+  label: { type: String, default: 'Find a place' },
+})
+
 const emit = defineEmits(['select'])
 
 const query = ref('')
@@ -37,7 +41,7 @@ function choose(place) {
 
 <template>
   <div>
-    <label for="place-search" class="form-label">Find a place</label>
+    <label for="place-search" class="form-label">{{ label }}</label>
     <div class="row g-2">
       <div class="col">
         <input id="place-search" v-model="query" type="text" class="form-control"

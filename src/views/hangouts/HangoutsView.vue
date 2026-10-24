@@ -18,8 +18,7 @@
 */
 import { ref, computed, onMounted } from 'vue'
 import { useHangoutStore } from '../../stores/hangout.js'
-import { hotspots, findHotspot } from '../../lib/hotspots.js'
-import { loadForecasts, weatherWarning } from '../../lib/weather.js'
+import { loadForecast, weatherWarning } from '../../lib/weather.js'
 import { sessionStart } from '../../lib/skillSwapFormat.js'
 import EmptyState from '../../components/EmptyState.vue'
 import HangoutCard from '../../components/HangoutCard.vue'
@@ -27,28 +26,46 @@ import HotspotMap from '../../components/HotspotMap.vue'
 
 const store = useHangoutStore()
 
-const selectedHotspot = ref('')
+const selectedPlace = ref('')
 const message = ref('')
 const error = ref('')
 
 // { 'Geylang': 'Partly Cloudy (Day)', ... }. Stays empty if the forecast
 // cannot be read, which simply switches the warnings off.
-const forecasts = ref({})
+const forecast = ref({ areas: [], byArea: {} })
+
+// The map is only mounted once the hangouts are in, so every marker is known
+// when it is built and none has to be added afterwards.
+const ready = ref(false)
 
 onMounted(async () => {
   await store.load()
-  forecasts.value = await loadForecasts()
+  forecast.value = await loadForecast()
+  ready.value = true
 })
 
 // Open hangouts at the chosen place, or all of them when nothing is chosen.
 // weatherWarning is added here rather than in the store, because it comes
 // from an outside API and the card only has to show it.
 const shownHangouts = computed(() =>
-  store.atHotspot(selectedHotspot.value).map((h) => ({
+  store.atPlace(selectedPlace.value).map((h) => ({
     ...h,
-    weatherWarning: weatherWarning(findHotspot(h.hotspotId), forecasts.value, sessionStart(h.date, h.time)),
+    weatherWarning: weatherWarning(h, forecast.value, sessionStart(h.date, h.time)),
   })),
 )
+
+// One marker per place that has a hangout on it. Two hangouts at the same
+// place only produce one marker.
+const mapPlaces = computed(() => {
+  const places = []
+  const seen = new Set()
+  for (const h of store.openHangouts) {
+    if (seen.has(h.placeName)) continue
+    seen.add(h.placeName)
+    places.push({ name: h.placeName, latitude: h.latitude, longitude: h.longitude })
+  }
+  return places
+})
 
 async function join(hangout) {
   message.value = ''
@@ -94,15 +111,20 @@ async function complete(hangout) {
         class="btn btn-primary btn-lg">Propose a hangout</router-link>
     </div>
 
-    <HotspotMap />
+    <div v-if="ready" class="card mb-4">
+      <div class="card-body p-4 vstack gap-3">
+        <h2 class="page-title fs-4">Where we meet</h2>
+        <HotspotMap :places="mapPlaces" />
+      </div>
+    </div>
 
     <!-- Filter by place (not a .card, so it is not mistaken for a hangout) -->
     <div class="row g-3 mb-4">
       <div class="col-sm-6">
-        <label for="hotspot-filter" class="form-label">Filter by place</label>
-        <select id="hotspot-filter" v-model="selectedHotspot" class="form-select" data-testid="hotspot-filter">
+        <label for="place-filter" class="form-label">Filter by place</label>
+        <select id="place-filter" v-model="selectedPlace" class="form-select" data-testid="place-filter">
           <option value="">All places</option>
-          <option v-for="h in hotspots" :key="h.id" :value="h.id">{{ h.name }}</option>
+          <option v-for="name in store.placeNames" :key="name" :value="name">{{ name }}</option>
         </select>
       </div>
     </div>

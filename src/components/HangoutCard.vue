@@ -9,7 +9,6 @@
 */
 import { ref, computed } from 'vue'
 import { useHangoutStore } from '../stores/hangout.js'
-import { hotspotName, findHotspot } from '../lib/hotspots.js'
 import { formatDate, formatTime, formatDuration } from '../lib/skillSwapFormat.js'
 
 const props = defineProps({
@@ -26,8 +25,6 @@ const isGoing = computed(() => store.isGoing(props.hangout))
 const hasStarted = computed(() => store.hasStarted(props.hangout))
 const hasEnded = computed(() => store.hasEnded(props.hangout))
 const canJoin = computed(() => !isHost.value && !isGoing.value && !hasStarted.value)
-
-const hotspot = computed(() => findHotspot(props.hangout.hotspotId))
 
 // Always words, never colour on its own (the pill has a dot as well)
 const status = computed(() => {
@@ -72,7 +69,7 @@ const detailsId = computed(() => `hangout-details-${props.hangout.id}`)
     @pointerenter="onEnter" @pointerleave="onLeave">
     <div class="card-body">
       <div class="request-top">
-        <span class="category-label">{{ hotspotName(hangout.hotspotId) }}</span>
+        <span class="category-label">{{ hangout.placeName }}</span>
         <span class="status-pill" :class="status.cls">{{ status.label }}</span>
       </div>
 
@@ -106,7 +103,7 @@ const detailsId = computed(() => `hangout-details-${props.hangout.id}`)
             </div>
             <div>
               <dt>Where</dt>
-              <dd>{{ hotspotName(hangout.hotspotId) }}<template v-if="hotspot?.outdoor"> (outdoors)</template></dd>
+              <dd>{{ hangout.placeName }}<template v-if="hangout.outdoor"> (outdoors)</template></dd>
             </div>
             <div>
               <dt>Going</dt>

@@ -15,7 +15,6 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useAuthStore } from './auth.js'
 import { usePointsStore } from './points.js'
-import { findHotspot } from '../lib/hotspots.js'
 import { sessionStart, sessionEnd } from '../lib/skillSwapFormat.js'
 import { supabase } from '../lib/supabase.js'
 
@@ -23,7 +22,7 @@ import { supabase } from '../lib/supabase.js'
 // change the other, or the insert is refused by the database.
 export const HANGOUT_DURATIONS = [30, 60, 90, 120]
 
-const COLUMNS = `id, title, description, hotspot_id, hangout_date, hangout_time, duration, status, host_id, created_at, host:profiles!host_id(name), attendees:hangout_attendees(user_id)`
+const COLUMNS = `id, title, description, hotspot_id, place_name, latitude, longitude, outdoor, hangout_date, hangout_time, duration, status, host_id, created_at, host:profiles!host_id(name), attendees:hangout_attendees(user_id)`
 
 function fromRow(r) {
   return {
@@ -31,6 +30,13 @@ function fromRow(r) {
     title: r.title,
     description: r.description,
     hotspotId: r.hotspot_id,
+    // Every hangout carries its own place, so the card and the map never have
+    // to look anything up. hotspotId is only a tag for the filter, and is null
+    // for a place someone searched for on OneMap.
+    placeName: r.place_name,
+    latitude: Number(r.latitude),
+    longitude: Number(r.longitude),
+    outdoor: r.outdoor === true,
     date: r.hangout_date,
     time: String(r.hangout_time).slice(0, 5),
     duration: r.duration,
@@ -108,11 +114,17 @@ export const useHangoutStore = defineStore('hangout', () => {
   /** Open hangouts the signed-in person is going to. */
   const myJoined = computed(() => openHangouts.value.filter((h) => isGoing(h)))
 
-  /** Open hangouts at one hotspot, or all of them when id is '' . */
-  function atHotspot(hotspotId) {
-    if (!hotspotId) return openHangouts.value
-    return openHangouts.value.filter((h) => h.hotspotId === hotspotId)
+  /** Open hangouts at one place, or all of them when name is ''. */
+  function atPlace(placeName) {
+    if (!placeName) return openHangouts.value
+    return openHangouts.value.filter((h) => h.placeName === placeName)
   }
+
+  /** Every place that has a hangout on it, A to Z, for the filter dropdown. */
+  const placeNames = computed(() => {
+    const names = [...new Set(openHangouts.value.map((h) => h.placeName))]
+    return names.sort((a, b) => a.localeCompare(b))
+  })
 
   // ---- actions (each returns { ok, error }) ----
 
@@ -125,12 +137,23 @@ export const useHangoutStore = defineStore('hangout', () => {
     const title = String(data.title || '').trim()
     const description = String(data.description || '').trim()
     const duration = Number(data.duration)
+    const placeName = String(data.placeName || '').trim()
+    const latitude = Number(data.latitude)
+    const longitude = Number(data.longitude)
 
     if (title.length < 5) return { ok: false, error: 'The name needs at least 5 letters.' }
     if (description.length < 10) {
       return { ok: false, error: 'Please say a little more about the hangout (at least 10 letters).' }
     }
-    if (!findHotspot(data.hotspotId)) return { ok: false, error: 'Please choose a place to meet.' }
+    if (placeName.length < 3) return { ok: false, error: 'Please choose a place to meet.' }
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return { ok: false, error: 'We could not put that place on the map. Please search for it again.' }
+    }
+    // The same box the database checks, so the person gets a clear message
+    // instead of a raw constraint error
+    if (latitude < 1.1 || latitude > 1.6 || longitude < 103.5 || longitude > 104.2) {
+      return { ok: false, error: 'That place is not in Singapore. Please choose somewhere closer to home.' }
+    }
     if (!HANGOUT_DURATIONS.includes(duration)) return { ok: false, error: 'Please choose how long it will last.' }
     if (!data.date || !data.time) return { ok: false, error: 'Please choose a day and a time.' }
     if (sessionStart(data.date, data.time) < new Date()) {
@@ -143,7 +166,12 @@ export const useHangoutStore = defineStore('hangout', () => {
       supabase.from('hangouts').insert({
         title,
         description,
-        hotspot_id: data.hotspotId,
+        // null for a searched place; the id is only kept so the filter works
+        hotspot_id: data.hotspotId || null,
+        place_name: placeName,
+        latitude,
+        longitude,
+        outdoor: data.outdoor === true,
         hangout_date: data.date,
         hangout_time: data.time,
         duration,
@@ -207,7 +235,8 @@ export const useHangoutStore = defineStore('hangout', () => {
     openHangouts,
     myHangouts,
     myJoined,
-    atHotspot,
+    atPlace,
+    placeNames,
     isHost,
     isGoing,
     goingCount,

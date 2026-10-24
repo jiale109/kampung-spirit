@@ -1,12 +1,12 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { useSkillSwapStore } from '../stores/skillSwap'
+import { useSkillSwapStore } from '../stores/skillSwap.js'
 import {
   formatDate,
   formatTime,
   formatDuration,
   categoryClass,
-} from '../lib/skillSwapFormat'
+} from '../lib/skillSwapFormat.js'
  
 const props = defineProps({
   session: { type: Object, required: true },

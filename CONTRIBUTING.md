@@ -49,7 +49,7 @@ Each placeholder page starts with a **GUIDE** comment that explains what to buil
 | File | Rule |
 |---|---|
 | `router/index.js` | Add your route as ONE line in `sharedChildren` (or the role's `children`). Do not reformat the file. |
-| `lib/seed.js` | Add your own `seedXxx()` function. Do not change another feature's sample data. |
+| `scripts/seed-demo.js` | Add your own sample rows. Do not change another feature's sample data. |
 | `styles/theme.css` | Prefer a `<style scoped>` block in your own component. Only put something here if 2+ features need it, and add it under the right numbered section. |
 | `layouts/*` | Only the navbar links. Tell Clarence before changing the structure. |
 

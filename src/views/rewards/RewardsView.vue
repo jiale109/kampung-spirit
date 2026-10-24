@@ -3,8 +3,8 @@
   ============================================================================
   GUIDE: Kampung Points, Rewards and Community Challenge   Owner: Nathaniel Low
   ============================================================================
-  STATUS: built. Points earned come from Supabase; spending, the wallet and
-  the challenge bonus are still saved only in the browser (localStorage).
+  STATUS: built. Points, spending, the wallet and the challenge bonus all live
+  in Supabase. Nothing about points is saved in the browser.
 
   Route: /app/rewards (in sharedChildren in router/index.js).
 
@@ -16,44 +16,30 @@
   a live progress bar, and all contributors receive bonus points when the
   target is reached. Vouchers are SIMULATED for this prototype.
 
-  HOW IT WORKS TODAY
-  - stores/points.js
-      dbLedger   rows from points_ledger in Supabase (loaded on login). These
-                 are added by database functions, e.g. confirm_help_done.
-      ledger     browser-only rows: voucher spending, challenge bonuses and the
-                 sample rows from seedLedger() in lib/seed.js.
-      myPoints, myLedger, getBalance(), communityPointsThisMonth,
-      communityProgress, isCommunityTargetReached, awardPoints(), spendPoints()
-  - stores/wallet.js   redeem(voucherId), markAsUsed(id), myWallet, unusedCount
-                       (localStorage key 'kampung-wallet')
-  - lib/vouchers.js    voucher catalogue and the type filter pills
+  HOW IT WORKS TODAY (supabase/schema.sql section 10)
+  - stores/points.js   the logged-in person's points_ledger rows (myLedger),
+                       myPoints, getBalance(), and the estate-wide total from
+                       community_points_this_month(): communityPointsThisMonth,
+                       communityProgress, isCommunityTargetReached. Call load()
+                       after anything that changes points.
+  - stores/wallet.js   myWallet and unusedCount from the wallet_items table.
+                       redeem(voucherId) calls redeem_voucher(), which checks the
+                       balance, takes the points and adds the voucher in one step.
+                       markAsUsed(id) calls mark_voucher_used().
+  - Community bonus    a trigger on points_ledger (pay_community_bonus) pays every
+                       contributor once, when the Singapore month passes
+                       COMMUNITY_TARGET. community_bonus_paid records the month.
+  - lib/vouchers.js    voucher catalogue (logos, terms) and the type filter pills.
+                       The ids and costs MUST match public.vouchers in the database.
   - lib/points.js      COMMUNITY_TARGET, COMMUNITY_BONUS and the points rules
+                       (the bonus trigger has its own copy of the two numbers)
   - components/VoucherCard.vue   one voucher in the shop
 
   WHAT IS LEFT TO DO
-  1. Community total. RLS on points_ledger only lets each person read their
-     own rows, so the "estate-wide" total is really "my points + the sample
-     rows". Add a database function (security definer) that returns the sum
-     of positive amounts this month, call it with supabase.rpc(), and stop
-     counting the seedLedger() rows.
-  2. Spending and wallet in Supabase. Today points spent and vouchers live in
-     one browser only: another device shows the old balance and no vouchers.
-     Add a wallet table and a redeem_voucher(voucher_id) function that checks
-     the balance and inserts a negative points_ledger row in one step
-     (the browser cannot write to points_ledger itself).
-  3. Challenge bonus. checkCommunityBonus() runs in the browser, so each
-     browser decides on its own. Move it into the database too, with a
-     "paid for this month" record, so it is paid exactly once.
-  4. awardPoints() only saves in the browser. Hangouts and Skill Swaps must
-     award points in their own database functions (like confirm_help_done),
-     not by calling awardPoints(). After an action that earns points, call
-     usePointsStore().load() so the navbar updates.
-  5. Empty states: make sure the page works for someone with zero points and
-     an empty wallet (<EmptyState> is already used).
-
-  6. Tests (e2e/rewards.spec.js, copy the style of e2e/helpboard.spec.js)
+  1. Tests (e2e/rewards.spec.js, copy the style of e2e/helpboard.spec.js)
      Redeem a voucher, points go down, the code is in the wallet, and
-     redeeming with too few points is refused.
+     redeeming with too few points is refused. A new account has 0 points,
+     so the test first needs points (e.g. a confirmed help request).
 
   SENIOR-FRIENDLY RULES (also in README.md and CONTRIBUTING.md)
   Plain short sentences, big buttons, one main action per screen, never use
@@ -79,6 +65,8 @@ const activeModalVoucher = ref(null)
 
 // Confirmation modal before spending
 const voucherToConfirm = ref(null)
+// True while a redeem is being saved, so "Yes, redeem" cannot be pressed twice
+const redeeming = ref(false)
 const message = ref('')
 const error = ref('')
 
@@ -122,11 +110,13 @@ function promptRedeem(voucher) {
 }
 
 // 2. User confirms redemption
-function confirmRedeem() {
-  if (!voucherToConfirm.value) return
+async function confirmRedeem() {
+  if (!voucherToConfirm.value || redeeming.value) return
 
-  const result = walletStore.redeem(voucherToConfirm.value.id)
+  redeeming.value = true
   const redeemedVoucher = voucherToConfirm.value
+  const result = await walletStore.redeem(redeemedVoucher.id)
+  redeeming.value = false
   voucherToConfirm.value = null
 
   if (result.ok) {
@@ -135,6 +125,14 @@ function confirmRedeem() {
   } else {
     error.value = result.error
   }
+}
+
+// 3. Mark a wallet voucher as used
+async function markUsed(id) {
+  message.value = ''
+  error.value = ''
+  const result = await walletStore.markAsUsed(id)
+  if (!result.ok) error.value = result.error
 }
 </script>
 
@@ -358,7 +356,7 @@ function confirmRedeem() {
                   v-else
                   type="button"
                   class="btn btn-outline-secondary btn-sm rounded-pill ms-auto"
-                  @click="walletStore.markAsUsed(item.id)"
+                  @click="markUsed(item.id)"
                 >
                   Mark as used
                 </button>
@@ -484,9 +482,10 @@ function confirmRedeem() {
               type="button"
               class="btn btn-primary rounded-pill px-4"
               data-testid="confirm-redeem"
+              :disabled="redeeming"
               @click="confirmRedeem"
             >
-              Yes, redeem
+              {{ redeeming ? 'Redeeming...' : 'Yes, redeem' }}
             </button>
           </div>
         </div>

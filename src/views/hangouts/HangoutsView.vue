@@ -94,8 +94,7 @@
   7. Points
      Points can only be added by database functions (the browser is not
      allowed to write to points_ledger). Award them in complete_hangout(),
-     using the same rule as pointsForHangout() in lib/points.js. Do not call
-     pointsStore.awardPoints(): it only saves in the browser. (Done:
+     using the same rule as pointsForHangout() in lib/points.js. (Done:
      completeHangout() in stores/hangout.js reloads the points store afterwards,
      so the navbar shows the new total.)
 

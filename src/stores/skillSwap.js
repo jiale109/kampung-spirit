@@ -4,7 +4,6 @@ import { useAuthStore } from './auth.js'
 import { usePointsStore } from './points.js'
 import { pointsForSkillSwap } from '../lib/points.js'
 import { sessionStart, sessionEnd, CATEGORIES, MIN_CAPACITY, MAX_CAPACITY } from '../lib/skillSwapFormat.js'
-//import { seedSessions } from '../lib/seed'
 import { supabase } from '../lib/supabase.js'
 
 const COLUMNS = `id, title, description, category, venue, session_date, session_time, duration, capacity, status, host_id, created_at, host:profiles!host_id(name), attendees:skill_session_attendees(user_id)`

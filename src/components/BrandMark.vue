@@ -2,8 +2,8 @@
 /*
   Brand mark                                            Owner: Clarence Tay
   The pixel-art village shown next to "Kampung Spirit" in the navbars and on
-  the landing and sign-up pages. Used in MainLayout, SeniorViewsLayout,
-  YouthViewsLayout, LandingView and RegisterView -- change it here, not there.
+  the landing and sign-up pages. Used in MainLayout, LandingView and
+  RegisterView -- change it here, not there.
 
   size is in pixels. The artwork is drawn on a 64px pixel-art grid, so only
   use 32, 64 or 128: those are 1:2, 1:1 and 2:1, where every drawn pixel

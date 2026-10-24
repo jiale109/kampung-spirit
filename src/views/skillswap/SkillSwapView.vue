@@ -302,7 +302,7 @@ onMounted(() => {
         </div>
       </div>
  
-      <div class="col-sm-6">
+      <div class="col-sm-4">
         <label for="swap-category" class="form-label">Type of session</label>
         <select id="swap-category" v-model="selectedCategory" class="form-select">
           <option value="">All types</option>
@@ -311,20 +311,20 @@ onMounted(() => {
           </option>
         </select>
       </div>
-      <div class="col-sm-6">
+      <div class="col-sm-4">
         <label for="swap-when" class="form-label">When</label>
         <select id="swap-when" v-model="whenFilter" class="form-select">
           <option v-for="o in WHEN_FILTERS" :key="o.key" :value="o.key">{{ o.label }}</option>
         </select>
       </div>
  
-      <div class="col-sm-6">
+      <div class="col-sm-4">
         <label for="swap-sort" class="form-label">Sort by</label>
         <select id="swap-sort" v-model="sortBy" class="form-select">
           <option v-for="o in SORT_OPTIONS" :key="o.key" :value="o.key">{{ o.label }}</option>
         </select>
       </div>
-      <div class="col-sm-6 d-flex align-items-end">
+      <div class="col-12">
         <div class="form-check mb-2">
           <input id="only-open" v-model="onlyOpen" type="checkbox" class="form-check-input" />
           <label for="only-open" class="form-check-label">Only sessions with spots left</label>

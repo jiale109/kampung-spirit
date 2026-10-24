@@ -704,6 +704,7 @@ to authenticated;
 -- Section 6 only grants select on the older tables, so add the new ones here
 grant select on public.hangouts, public.hangout_attendees to authenticated;
 
+-- On an empty project this inserts nothing; run pnpm seed:demo instead.
 -- Sample hangouts so the page is not empty. Optional: delete this block once
 -- residents have made their own. The host is whoever signed up first, so no
 -- user ids are hard-coded.
@@ -1012,6 +1013,7 @@ to authenticated;
 grant execute on function public.skill_swap_points(int) to authenticated;
  
  
+-- On an empty project this inserts nothing; run pnpm seed:demo instead.
 -- Sample sessions so the page is not empty. Optional: delete this block once
 -- residents have made their own. The host is the first adult who signed up, so no
 -- user ids are hard-coded. (If there is no adult account yet, nothing is inserted.)

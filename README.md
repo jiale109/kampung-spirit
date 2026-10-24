@@ -28,11 +28,11 @@ Login is real (Supabase Auth): sign up on the **Create an account** page, or log
 1. Copy `.env.example` to `.env` and fill in your project's URL and publishable key. Restart `pnpm dev` after changing it.
 2. **New, empty project:** in the Supabase dashboard open **SQL Editor > New query**, paste all of `supabase/schema.sql` and press **Run**. Switch off **Authentication > Email > Confirm email** while developing.
 3. **Project that already has the schema:** run each file in `supabase/migrations/` that you have not run yet, oldest first, the same way. For example `20261020120000_add_needed_at.sql` adds the "When do you need help?" time to requests. Every file in `supabase/migrations/` is safe to run again, so if you are not sure whether you ran one, run it.
-4. Add the demo accounts and some open requests:
+4. Add the demo accounts, some open requests, and demo hangouts and skill swaps (some people already joined, one session full):
    ```bash
    pnpm seed:demo
    ```
-   It is safe to run again: accounts that already exist are skipped, and seniors who already have requests do not get more.
+   It is safe to run again: accounts that already exist are skipped, seniors who already have requests do not get more, and hosts who already have open hangouts or skill swaps do not get more.
 
 The e2e tests sign up new `e2e-...@example.com` accounts every run, so point `.env` at a separate test project if you can.
 
@@ -98,7 +98,7 @@ supabase/
   schema.sql                 The whole database, for a new project
   migrations/                Changes to run on a project that already has the schema
 scripts/
-  seed-demo.js               pnpm seed:demo: demo accounts and open requests
+  seed-demo.js               pnpm seed:demo: demo accounts, open requests, hangouts and skill swaps
 e2e/                         Playwright tests (helpers.js + one spec per area)
 ```
 
@@ -127,7 +127,7 @@ The users are seniors, so the design is deliberately calm and large.
 
 ## Demo script (Help Board)
 
-Run `pnpm seed:demo` first (see [Supabase setup](#supabase-setup)).
+Run `pnpm seed:demo` first (see [Supabase setup](#supabase-setup)). It also adds demo hangouts and skill swaps, so those pages are not empty.
 
 1. Log in as Mdm Tan Siew Lan (`demo.tan@example.com`). You land on **My Requests**.
 2. **+ Ask for Help**: submit empty (validation), then post a request with a time later this week. Hover a card to see its details and when help is needed, then edit and cancel it. The cancelled request moves to **Past**.

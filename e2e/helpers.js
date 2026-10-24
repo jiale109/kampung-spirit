@@ -3,7 +3,8 @@ import { expect } from '@playwright/test'
 // Accounts are real Supabase users, so each test signs up its own fresh ones.
 // Point .env at a separate TEST Supabase project if you can, so these do not
 // mix with the team's real data.
-export const TEST_PASSWORD = 'kampung-test-123'
+// Meets the sign-up rules: 8+ characters, capital, small letter, number, special character
+export const TEST_PASSWORD = 'Kampung-test-123'
 const EMAIL_DOMAIN = 'example.com'
 
 // The accounts made in the current test, by name, so logging in as the same
@@ -34,6 +35,7 @@ export async function fillSignUp(page, { name, email, birthYear, block = 'Blk 41
   await page.getByLabel('Your name').fill(name)
   await page.getByLabel('Email', { exact: true }).fill(email)
   await page.getByLabel('Password', { exact: true }).fill(TEST_PASSWORD)
+  await page.getByLabel('Type your password again').fill(TEST_PASSWORD)
   await page.getByLabel('Block and street').fill(block)
   await page.getByLabel('Day').selectOption('5')
   await page.getByLabel('Month').selectOption({ label: 'March' })

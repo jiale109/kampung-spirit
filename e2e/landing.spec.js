@@ -75,3 +75,41 @@ test('Adults do not see the guardian section', async ({ page }) => {
   await fillSignUp(page, { name: 'Mr Tan', email: uniqueEmail(), birthYear: birthYearFor.Adult })
   await expect(page.getByTestId('guardian-section')).toBeHidden()
 })
+
+test('The password must meet every rule, and the two passwords must match', async ({ page }) => {
+  await fillSignUp(page, { name: 'Mr Tan', email: uniqueEmail(), birthYear: birthYearFor.Adult })
+  const password = page.getByLabel('Password', { exact: true })
+  const again = page.getByLabel('Type your password again')
+
+  // Too weak: no capital letter, number or special character
+  await password.fill('kampungs')
+  await again.fill('kampungs')
+  await page.getByRole('button', { name: 'Create account' }).click()
+  await expect(page.getByText('Your password does not meet all the rules below yet.')).toBeVisible()
+  await expect(page.getByTestId('password-rules').getByText('At least 8 characters')).toContainText('(done)')
+  await expect(page.getByTestId('password-rules').getByText('A capital letter')).toContainText('(not yet)')
+
+  // Strong, but the second box is different
+  await password.fill('Kampung-test-123')
+  await again.fill('Kampung-test-124')
+  await expect(page.getByText('The passwords do not match yet.')).toBeVisible()
+  await page.getByRole('button', { name: 'Create account' }).click()
+  await expect(page.getByText('The two passwords are different. Please type them again.')).toBeVisible()
+  await expect(page).toHaveURL(/\/register$/)
+})
+
+test('The eye button shows and hides each password', async ({ page }) => {
+  await page.goto('/register')
+  const password = page.getByLabel('Password', { exact: true })
+  await password.fill('Kampung-test-123')
+  await expect(password).toHaveAttribute('type', 'password')
+
+  const toggles = page.getByRole('button', { name: 'Show password' })
+  await expect(toggles).toHaveCount(2)
+  await toggles.first().click()
+  await expect(password).toHaveAttribute('type', 'text')
+  await expect(page.getByLabel('Type your password again')).toHaveAttribute('type', 'password')
+
+  await page.getByRole('button', { name: 'Hide password' }).click()
+  await expect(password).toHaveAttribute('type', 'password')
+})

@@ -77,7 +77,10 @@ export const useAuthStore = defineStore('auth', () => {
         return { ok: false, error: 'An account with this email already exists. Try logging in instead.' }
       }
       if (error.code === 'weak_password') {
-        return { ok: false, error: 'Please choose a longer password (at least 6 characters).' }
+        return {
+          ok: false,
+          error: 'Please choose a stronger password: at least 8 characters, with a capital letter, a small letter, a number and a special character.',
+        }
       }
       if (error.code === 'email_address_invalid') {
         return { ok: false, error: 'Please check your email address.' }

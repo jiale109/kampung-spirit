@@ -3,8 +3,8 @@
 -- ============================================================================
 -- Run once on a project that already has schema.sql: SQL Editor -> New query,
 -- paste this whole file and press Run. (schema.sql already includes this fix
--- for new, empty projects, in section 9.) Safe to run: it adds a trigger and
--- replaces a function, no data changes.
+-- for new, empty projects, in section 9.) Safe to run again: it replaces a
+-- trigger and two functions, no data changes.
 --
 -- Why: the page checked these rules, but anyone could call the API directly
 -- and create a hangout in the past, host or join one as an under-18 whose
@@ -13,7 +13,7 @@
 -- hangouts now do too.
 
 -- Checks a new hangout before it is saved (same rules as skill_sessions_check)
-create function public.hangouts_check()
+create or replace function public.hangouts_check()
 returns trigger
 language plpgsql
 set search_path = ''
@@ -33,6 +33,7 @@ $$;
 
 revoke execute on function public.hangouts_check() from public, anon, authenticated;
 
+drop trigger if exists hangouts_check on public.hangouts;
 create trigger hangouts_check
   before insert on public.hangouts
   for each row execute procedure public.hangouts_check();

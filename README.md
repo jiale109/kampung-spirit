@@ -27,7 +27,7 @@ Login is real (Supabase Auth): sign up on the **Create an account** page, or log
 
 1. Copy `.env.example` to `.env` and fill in your project's URL and publishable key. Restart `pnpm dev` after changing it.
 2. **New, empty project:** in the Supabase dashboard open **SQL Editor > New query**, paste all of `supabase/schema.sql` and press **Run**. Switch off **Authentication > Email > Confirm email** while developing.
-3. **Project that already has the schema:** run each file in `supabase/migrations/` that you have not run yet, oldest first, the same way. For example `20261020120000_add_needed_at.sql` adds the "When do you need help?" time to requests.
+3. **Project that already has the schema:** run each file in `supabase/migrations/` that you have not run yet, oldest first, the same way. For example `20261020120000_add_needed_at.sql` adds the "When do you need help?" time to requests. Every file in `supabase/migrations/` is safe to run again, so if you are not sure whether you ran one, run it.
 4. Add the demo accounts and some open requests:
    ```bash
    pnpm seed:demo

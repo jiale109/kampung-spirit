@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useAuthStore } from './auth.js'
 import { usePointsStore } from './points.js'
 import { pointsForSkillSwap } from '../lib/points.js'

@@ -59,7 +59,6 @@ const walletStore = useWalletStore()
 // Tab: 'shop' or 'wallet'
 const activeTab = ref('shop')
 
-const searchQuery = ref('')
 const selectedType = ref('All')
 const activeModalVoucher = ref(null)
 
@@ -70,18 +69,9 @@ const redeeming = ref(false)
 const message = ref('')
 const error = ref('')
 
-// Filter by search text and category
+// Filter by voucher type
 const filteredVouchers = computed(() => {
-  return vouchers.filter((v) => {
-    const matchesCategory = selectedType.value === 'All' || v.type === selectedType.value
-    const matchesSearch =
-      searchQuery.value.trim() === '' ||
-      v.merchant.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      v.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      v.type.toLowerCase().includes(searchQuery.value.toLowerCase())
-
-    return matchesCategory && matchesSearch
-  })
+  return vouchers.filter((v) => selectedType.value === 'All' || v.type === selectedType.value)
 })
 
 // Generates a Google Maps link to search for nearby outlets
@@ -240,20 +230,6 @@ async function markUsed(id) {
     <!-- Browse Voucher Tab -->
     <div v-if="activeTab === 'shop'">
 
-      <!--  Search Bar-->
-      <!-- <div class="input-group input-group-lg mb-4">
-        <span class="input-group-text bg-white border-end-0 rounded-start-pill ps-3 text-muted">
-          
-        </span>
-        <input
-          v-model="searchQuery"
-          type="search"
-          class="form-control border-start-0 rounded-end-pill pe-4 shadow-none"
-          placeholder="Search merchants, hawkers, or vouchers..."
-          aria-label="Search rewards"
-        />
-      </div> -->
-
       <!-- Category Filters -->
       <div class="d-flex gap-2 overflow-auto pb-2 mb-4" role="tablist">
         <button
@@ -264,7 +240,6 @@ async function markUsed(id) {
           :class="selectedType === t.name ? 'btn-primary active text-white' : 'btn-outline-secondary bg-white'"
           @click="selectedType = t.name"
         >
-          <!-- <span>{{ t.icon }}</span> -->
           <span>{{ t.name }}</span>
         </button>
       </div>
@@ -278,7 +253,7 @@ async function markUsed(id) {
       </div>
 
       <!-- Empty State -->
-      <EmptyState v-if="filteredVouchers.length === 0" message="No matching rewards found. Try a different search." />
+      <EmptyState v-if="filteredVouchers.length === 0" message="No matching rewards found. Try a different type." />
 
       <div v-else class="row row-cols-1 row-cols-md-2 g-4">
         <div v-for="voucher in filteredVouchers" :key="voucher.id" class="col">

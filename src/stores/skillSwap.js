@@ -30,8 +30,8 @@ function fromRow(r) {
 export const useSkillSwapStore = defineStore('skillSwap', () => {
     const auth = useAuthStore()
     const sessions = ref([])
-    const loading = ref('')
-    const loadError = ref(false)
+    const loading = ref(false)
+    const loadError = ref('')
  
     async function load() {
     loading.value = true

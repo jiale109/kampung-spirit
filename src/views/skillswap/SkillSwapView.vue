@@ -88,7 +88,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import EmptyState from '../../components/EmptyState.vue'
 import SkillSwapCard from '../../components/SkillSwapCard.vue'
-import { useSkillSwapStore } from '../../stores/skillSwap'
+import { useSkillSwapStore } from '../../stores/skillSwap.js'
 import {
   formatDate,
   dateFromToday,

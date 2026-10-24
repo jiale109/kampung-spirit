@@ -11,7 +11,7 @@ import {
   CATEGORIES,
   MIN_CAPACITY,
   MAX_CAPACITY,
-} from '../lib/skillSwapFormat'
+} from '../lib/skillSwapFormat.js'
 
 defineProps({
   //cancel --> session list 

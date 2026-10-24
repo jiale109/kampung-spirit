@@ -1,8 +1,8 @@
-`<script setup>
+<script setup>
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SkillSwapForm from '../../components/SkillSwapForm.vue'
-import { useSkillSwapStore } from '../../stores/skillSwap'
+import { useSkillSwapStore } from '../../stores/skillSwap.js'
 
 const route = useRoute()
 const router = useRouter()

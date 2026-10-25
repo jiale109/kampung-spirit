@@ -505,7 +505,7 @@ create table public.hangouts (
   hotspot_id text not null check (length(trim(hotspot_id)) > 0),
   hangout_date date not null,
   hangout_time time not null,
-  duration int not null check (duration in (30, 60, 90, 120, 150, 180)),
+  duration int not null check (duration in (30, 60, 90, 120)),
   status text not null default 'open'
     check (status in ('open', 'completed', 'cancelled')),
   created_at timestamptz not null default now()
@@ -1396,19 +1396,25 @@ grant insert (title, description, hotspot_id, place_name, latitude, longitude, o
 
 
 -- ============================================================================
--- 12. Hangouts can last up to three hours
+-- 13. Avatars: gender and skin tone
 -- ============================================================================
--- The form now offers 30 minutes to 3 hours in half hour steps, so the check
--- on duration has to allow 150 and 180 as well. Half hours only: the points
--- are worked out per hour in calc_hangout_points(), and whole half hours keep
--- that sum tidy (3 hours earns 60 points).
+-- The sprite beside someone's details used to depend on age_group alone. A
+-- resident may now also choose how it looks, from the 24 pictures in
+-- public/images, named {age group}-{gender}-{skin tone}.svg.
 --
--- The list here must match HANGOUT_DURATIONS in src/stores/hangout.js.
--- Change one, change the other.
+-- Both columns are allowed to be null, which is how everyone who signed up
+-- before today starts out. A profile with no choice yet simply shows no
+-- picture and is invited to pick one; nothing guesses a gender for them.
 --
--- Postgres named the original check for us when the column was made in
--- section 7, so it is dropped by that name and put back wider.
+-- The lists here must match GENDERS and SKIN_TONES in src/lib/profile.js.
+-- The check keeps a typo out of the column, because the value becomes part
+-- of a file name and a wrong one would show a broken picture.
 
-alter table public.hangouts drop constraint hangouts_duration_check;
-alter table public.hangouts add constraint hangouts_duration_check
-  check (duration in (30, 60, 90, 120, 150, 180));
+alter table public.profiles add column gender text
+  check (gender in ('male', 'female'));
+alter table public.profiles add column skin_tone text
+  check (skin_tone in ('light', 'brown', 'dark-brown', 'darkest'));
+
+-- Column grants add up rather than replace, so the four columns granted in
+-- section 2 stay granted and these two join them.
+grant update (gender, skin_tone) on public.profiles to authenticated;

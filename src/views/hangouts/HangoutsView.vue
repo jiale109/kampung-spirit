@@ -26,7 +26,15 @@ import HotspotMap from '../../components/HotspotMap.vue'
 
 const store = useHangoutStore()
 
+/*
+  Two ways to narrow the list, and only one is ever on:
+    selectedPlace  a place name, from pressing a marker on the map
+    pickedPoint    a spot tapped on the map, or found with the search box;
+                   hangouts within NEAR_KM of it are shown
+  Choosing one clears the other, so the page never shows two filters at once.
+*/
 const selectedPlace = ref('')
+const pickedPoint = ref(null)
 const message = ref('')
 const error = ref('')
 
@@ -47,24 +55,66 @@ onMounted(async () => {
 // Open hangouts at the chosen place, or all of them when nothing is chosen.
 // weatherWarning is added here rather than in the store, because it comes
 // from an outside API and the card only has to show it.
+// Is the list narrowed at all? Decides which empty message to show.
+const isFiltered = computed(() => selectedPlace.value !== '' || pickedPoint.value !== null)
+
+/*
+  What the person is filtering by, in words, for the empty message.
+  A named place reads better ("no hangouts at Eunos Link Park"), and a spot
+  tapped on the map has no name, so it falls back to plain words.
+*/
+const filterLabel = computed(
+  () => selectedPlace.value || pickedPoint.value?.name || 'the searched location',
+)
+
+function pickPlace(place) {
+  pickedPoint.value = null
+  selectedPlace.value = place.name
+}
+
+function pickPoint(point) {
+  selectedPlace.value = ''
+  pickedPoint.value = { lat: point.lat, lng: point.lng, name: point.name ?? '' }
+}
+
+function clearFilter() {
+  selectedPlace.value = ''
+  pickedPoint.value = null
+}
+
 const shownHangouts = computed(() =>
-  store.atPlace(selectedPlace.value).map((h) => ({
+  (pickedPoint.value ? store.nearPoint(pickedPoint.value) : store.atPlace(selectedPlace.value)).map((h) => ({
     ...h,
     weatherWarning: weatherWarning(h, forecast.value, sessionStart(h.date, h.time)),
   })),
 )
 
+/*
+  The same list, split in two. Your own hangouts come first, because they are
+  the ones you may have to cancel or mark as done, and they are the only ones
+  with those buttons on them. Everyone else's follow underneath.
+
+  Both halves are built from shownHangouts, so the place filter narrows them
+  together and neither can drift out of step with the map.
+*/
+const myHangouts = computed(() => shownHangouts.value.filter((h) => store.isHost(h)))
+const neighbourHangouts = computed(() => shownHangouts.value.filter((h) => !store.isHost(h)))
+
 // One marker per place that has a hangout on it. Two hangouts at the same
 // place only produce one marker.
 const mapPlaces = computed(() => {
-  const places = []
-  const seen = new Set()
+  const byName = new Map()
   for (const h of store.openHangouts) {
-    if (seen.has(h.placeName)) continue
-    seen.add(h.placeName)
-    places.push({ name: h.placeName, latitude: h.latitude, longitude: h.longitude })
+    const found = byName.get(h.placeName)
+    if (found) {
+      found.count += 1
+      continue
+    }
+    byName.set(h.placeName, {
+      name: h.placeName, latitude: h.latitude, longitude: h.longitude, count: 1,
+    })
   }
-  return places
+  return [...byName.values()]
 })
 
 async function join(hangout) {
@@ -114,18 +164,15 @@ async function complete(hangout) {
     <div v-if="ready" class="card mb-4">
       <div class="card-body p-4 vstack gap-3">
         <h2 class="page-title fs-4">Where we meet</h2>
-        <HotspotMap :places="mapPlaces" />
-      </div>
-    </div>
-
-    <!-- Filter by place (not a .card, so it is not mistaken for a hangout) -->
-    <div class="row g-3 mb-4">
-      <div class="col-sm-6">
-        <label for="place-filter" class="form-label">Filter by place</label>
-        <select id="place-filter" v-model="selectedPlace" class="form-select" data-testid="place-filter">
-          <option value="">All places</option>
-          <option v-for="name in store.placeNames" :key="name" :value="name">{{ name }}</option>
-        </select>
+        <p class="page-subtitle mb-0">
+          Search for a place, or tap anywhere on the map to look for a hangout spot.
+        </p>
+        <HotspotMap :places="mapPlaces" pickable label="Find a place"
+          @marker="pickPlace" @select="pickPoint" @pick="pickPoint" />
+        <div v-if="isFiltered">
+          <button type="button" class="btn btn-outline-secondary" data-testid="clear-filter"
+            @click="clearFilter">Show all places</button>
+        </div>
       </div>
     </div>
 
@@ -135,14 +182,55 @@ async function complete(hangout) {
 
     <p v-if="store.loading && store.hangouts.length === 0">Loading hangouts...</p>
 
-    <EmptyState v-if="shownHangouts.length === 0"
+    <!-- Nothing matched the place being filtered by -->
+    <EmptyState v-if="shownHangouts.length === 0 && isFiltered"
+      :message="`Sorry, there are no hangouts at ${filterLabel}.`" data-testid="no-hangouts-here">
+      <div class="d-grid gap-3 d-sm-flex justify-content-sm-center mt-4">
+        <router-link to="/app/hangouts/new" class="btn btn-primary btn-lg"
+          data-testid="propose-instead">Propose a hangout instead</router-link>
+        <button type="button" class="btn btn-outline-secondary btn-lg" @click="clearFilter">
+          Show all places
+        </button>
+      </div>
+    </EmptyState>
+
+    <!-- Nothing anywhere yet -->
+    <EmptyState v-else-if="shownHangouts.length === 0"
       message="No hangouts here yet. Why not propose one for your neighbours?">
       <router-link to="/app/hangouts/new" class="btn btn-primary btn-lg mt-4">Propose a hangout</router-link>
     </EmptyState>
 
-    <div v-else class="request-list">
-      <HangoutCard v-for="hangout in shownHangouts" :key="hangout.id" :hangout="hangout"
-        @join="join" @leave="leave" @cancel="cancel" @complete="complete" />
-    </div>
+    <!-- Yours first, then everyone else's. A heading only appears when that
+         half has something in it, so nobody is shown an empty box. -->
+    <template v-else>
+      <section v-if="myHangouts.length > 0" class="mb-5" data-testid="my-hangouts">
+        <h2 class="page-title fs-4 mb-3">
+          Hangouts you are hosting
+          <span class="page-subtitle">({{ myHangouts.length }})</span>
+        </h2>
+        <div class="request-list">
+          <HangoutCard v-for="hangout in myHangouts" :key="hangout.id" :hangout="hangout"
+            @join="join" @leave="leave" @cancel="cancel" @complete="complete" />
+        </div>
+      </section>
+
+      <section v-if="neighbourHangouts.length > 0" data-testid="neighbour-hangouts">
+        <h2 class="page-title fs-4 mb-3">
+          Hangouts from your neighbours
+          <span class="page-subtitle">({{ neighbourHangouts.length }})</span>
+        </h2>
+        <div class="request-list">
+          <HangoutCard v-for="hangout in neighbourHangouts" :key="hangout.id" :hangout="hangout"
+            @join="join" @leave="leave" @cancel="cancel" @complete="complete" />
+        </div>
+      </section>
+
+      <!-- You are hosting every hangout on the list. Said plainly, so the
+           page does not look as though your neighbours' ones failed to load. -->
+      <p v-if="neighbourHangouts.length === 0" class="page-subtitle mt-4"
+        data-testid="no-neighbour-hangouts">
+        Nobody else has proposed a hangout yet.
+      </p>
+    </template>
   </div>
 </template>

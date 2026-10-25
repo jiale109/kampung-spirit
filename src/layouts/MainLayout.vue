@@ -68,7 +68,8 @@ async function logout() {
         <!-- Points + name dropdown -->
         <ul class="navbar-nav ms-auto align-items-lg-center gap-2 gap-lg-3">
           <li class="nav-item">
-            <span class="points-pill" data-testid="points">⭐ {{ points.myPoints }} pts</span>
+            
+            <span class="points-pill" data-testid="points"><img src="/images/coin.svg" class="point-coin-img" alt="" />{{ points.myPoints }} pts</span>
           </li>
           <li class="nav-item dropdown">
             <a class="nav-link user-toggle dropdown-toggle d-flex align-items-center gap-2" href="#" role="button"

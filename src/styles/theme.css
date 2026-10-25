@@ -273,6 +273,48 @@ body {
 }
 
 /*
+  The avatar picker on the profile page.
+
+  The preview is a fixed box so the card does not jump about as the picture
+  changes, and the pixel art sits on a soft panel rather than floating on
+  white. 120x200 is exactly 5x the 24x40 artwork; keep any new size a whole
+  multiple of 24x40 or the pixels go soft.
+*/
+.avatar-picker {
+  border: 2px solid var(--ks-line-strong);
+  border-radius: 0.75rem;
+}
+
+.avatar-preview {
+  width: 9rem;
+  min-height: 13rem;
+  background-color: var(--ks-teal-tint);
+  border-radius: 0.75rem;
+}
+
+/* The four tones under the slider. Lined up with the slider above, so the
+   dot under the handle is the colour you are about to get. */
+.tone-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.tone-swatch {
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  border: 2px solid transparent;
+}
+
+/* The chosen one gets a ring. The tone is also NAMED in the label above, so
+   this is a second signal rather than the only one. */
+.tone-swatch.is-chosen {
+  border-color: var(--ks-ink);
+  box-shadow: 0 0 0 0.2rem rgba(11, 110, 110, 0.25);
+}
+
+/*
   The calendar in components/DayPicker.vue.
 
   Seven columns is one more than Bootstrap's row-cols- utilities go up to, so

@@ -19,7 +19,11 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '../lib/supabase.js'
 
-const PROFILE_COLUMNS = 'id, name, block, interests, large_text, age_group, guardian_status'
+// Every column the app reads off a profile. A column missing from this list
+// arrives as undefined in auth.user, however well it saved, so ADD TO THIS
+// LIST whenever a new column is added to public.profiles.
+const PROFILE_COLUMNS =
+  'id, name, block, interests, large_text, age_group, guardian_status, gender, skin_tone'
 
 export const useAuthStore = defineStore('auth', () => {
   // The logged-in person (or null)
@@ -113,7 +117,7 @@ export const useAuthStore = defineStore('auth', () => {
   // interests and large_text (supabase/schema.sql, section 2), so anything
   // else is refused there even if it were sent. Fields left out are not
   // touched. Reloads the profile afterwards so the whole app sees the change.
-  async function updateProfile({ name, block, interests, largeText }) {
+  async function updateProfile({ name, block, interests, largeText, gender, skinTone }) {
     if (!user.value) return { ok: false, error: 'Please log in again.' }
 
     const changes = {}
@@ -121,8 +125,22 @@ export const useAuthStore = defineStore('auth', () => {
     if (block !== undefined) changes.block = block
     if (interests !== undefined) changes.interests = interests
     if (largeText !== undefined) changes.large_text = largeText
+    // The avatar: both may be null, which means "not chosen yet"
+    if (gender !== undefined) changes.gender = gender
+    if (skinTone !== undefined) changes.skin_tone = skinTone
 
-    const { error } = await supabase.from('profiles').update(changes).eq('id', user.value.id)
+    /*
+      .select() matters: without it the database reports success even when the
+      row was never touched, because the update matched nothing it was allowed
+      to change. .single() then turns that into a real error, so a save that
+      quietly did nothing cannot show "Your profile is saved."
+    */
+    const { error } = await supabase
+      .from('profiles')
+      .update(changes)
+      .eq('id', user.value.id)
+      .select('id')
+      .single()
 
     // Shown in the browser console (F12) to help find the cause
     if (error) {

@@ -24,6 +24,11 @@ import {
   applyLargeText,
   tidyInterest,
   MAX_INTEREST_LENGTH,
+  GENDERS,
+  SKIN_TONES,
+  avatarSrc,
+  toneIndex,
+  toneAt,
 } from '../../lib/profile.js'
 
 const auth = useAuthStore()
@@ -50,22 +55,24 @@ const guardianNote = computed(() => {
   return ''
 })
 
-// A pixel sprite for the age group, shown beside the details. The files live
-// in public/images, so the path starts from the site root. age_group comes
-// from the database, so an unknown value just shows no picture.
-const ageIcons = {
-  youth: '/images/youth-icon.svg',
-  adult: '/images/adult-icon.svg',
-  senior: '/images/senior-icon.svg',
-}
-const ageIcon = computed(() => ageIcons[auth.user.age_group] ?? '')
+/*
+  The sprite beside the details. The age group comes from the birth date and
+  cannot be changed; the gender and skin tone are the resident's own choice.
+  avatarSrc() returns '' until both have been chosen, and the card then invites
+  them to pick rather than showing a stranger's face.
+*/
+const ageIcon = computed(() =>
+  avatarSrc(auth.user.age_group, auth.user.gender, auth.user.skin_tone),
+)
 
 // interests can be null on an older row, so fall back to an empty list
 const myInterests = computed(() => auth.user.interests ?? [])
 
 // The page is either reading or editing, never both: one main action per screen
 const editing = ref(false)
-const form = ref({ name: '', block: '', interests: [], largeText: false })
+// tone is the SLIDER POSITION (0 to 3), not the word, because
+// <input type="range"> works in numbers. toneAt() turns it back into a word.
+const form = ref({ name: '', block: '', interests: [], largeText: false, gender: '', tone: 0 })
 const errors = ref({})
 const saving = ref(false)
 const message = ref('')
@@ -116,6 +123,26 @@ function addInterest() {
   newInterest.value = ''
 }
 
+/*
+  The avatar AS THE FORM CURRENTLY STANDS, so the picture changes the moment a
+  gender box is pressed or the slider is moved, before anything is saved.
+  Empty until a gender is chosen, because there is no neutral drawing.
+*/
+const previewAvatar = computed(() =>
+  avatarSrc(auth.user.age_group, form.value.gender, toneAt(form.value.tone)),
+)
+
+const toneLabel = computed(() => SKIN_TONES[form.value.tone]?.label ?? '')
+
+// Said out loud for anyone using a screen reader, since the picture itself
+// carries the whole choice here (unlike the one on the card, which repeats
+// the age group written beside it).
+const previewAlt = computed(() => {
+  if (previewAvatar.value === '') return ''
+  const gender = GENDERS.find((option) => option.value === form.value.gender)
+  return `${ageGroupLabel.value}, ${gender ? gender.label.toLowerCase() : ''}, ${toneLabel.value.toLowerCase()} skin tone`
+})
+
 function startEditing() {
   // Copy the saved values in, so Cancel can simply throw the copy away.
   // interests is copied with [...] so toggling does not touch the store.
@@ -124,6 +151,8 @@ function startEditing() {
     block: auth.user.block,
     interests: [...myInterests.value],
     largeText: auth.user.large_text === true,
+    gender: auth.user.gender ?? '',
+    tone: toneIndex(auth.user.skin_tone),
   }
   // Anything already saved that is not on the fixed list was typed in before,
   // so it gets a tile again rather than disappearing from the form.
@@ -176,6 +205,10 @@ async function save() {
     block: form.value.block.trim(),
     interests: form.value.interests,
     largeText: form.value.largeText,
+    // null rather than '' for a gender never chosen: the column allows null,
+    // and '' would fail the check in schema.sql section 13
+    gender: form.value.gender === '' ? null : form.value.gender,
+    skinTone: form.value.gender === '' ? null : toneAt(form.value.tone),
   })
   saving.value = false
 
@@ -244,6 +277,10 @@ async function save() {
           -->
           <div class="w-25 d-none d-md-flex justify-content-center flex-shrink-0">
             <img v-if="ageIcon" :src="ageIcon" alt="" width="144" height="240" data-testid="age-icon" />
+            <!-- Nothing chosen yet. Rather than guess a gender, say so. -->
+            <span v-else class="page-subtitle text-center" data-testid="no-avatar">
+              Press &ldquo;Edit profile&rdquo; to choose your avatar.
+            </span>
           </div>
         </div>
       </div>
@@ -290,6 +327,61 @@ async function save() {
           <input id="block" v-model="form.block" type="text" class="form-control"
             :class="{ 'is-invalid': errors.block }" maxlength="80" placeholder="e.g. Blk 412 Eunos Cres" />
           <div class="invalid-feedback">{{ errors.block }}</div>
+        </div>
+
+        <!--
+          Your look. The picture on the left is the real avatar file, redrawn
+          as soon as anything on the right is pressed, so there is no "save and
+          hope" step. Age group is not here: it comes from the birth date.
+        -->
+        <div role="group" aria-labelledby="avatar-label">
+          <div id="avatar-label" class="form-label">Your avatar</div>
+          <p class="page-subtitle mb-3">Choose how you would like to look to your neighbours.</p>
+
+          <div class="card avatar-picker">
+            <div class="card-body p-4 d-flex flex-column flex-sm-row align-items-center gap-4">
+
+              <div class="avatar-preview flex-shrink-0 d-flex align-items-center justify-content-center">
+                <img v-if="previewAvatar" :src="previewAvatar" :alt="previewAlt"
+                  width="120" height="200" data-testid="avatar-preview" />
+                <span v-else class="page-subtitle text-center px-2" data-testid="avatar-preview-empty">
+                  Press Male or Female to see your avatar.
+                </span>
+              </div>
+
+              <div class="flex-grow-1 w-100">
+
+                <div role="group" aria-labelledby="gender-label" class="mb-4">
+                  <div id="gender-label" class="form-label">Gender</div>
+                  <div class="row row-cols-2 g-2">
+                    <div v-for="option in GENDERS" :key="option.value" class="col">
+                      <button type="button" class="btn choice-tile w-100"
+                        :class="{ active: form.gender === option.value }"
+                        :aria-pressed="form.gender === option.value"
+                        :data-testid="`gender-${option.value}`"
+                        @click="form.gender = option.value">{{ option.label }}</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- The tone is NAMED in the label as well as shown as a
+                     colour, so the choice never rests on colour alone. -->
+                <div>
+                  <label for="skin-tone" class="form-label">
+                    Skin tone: <strong data-testid="tone-label">{{ toneLabel }}</strong>
+                  </label>
+                  <input id="skin-tone" v-model.number="form.tone" type="range" class="form-range"
+                    min="0" :max="SKIN_TONES.length - 1" step="1" data-testid="skin-tone" />
+                  <div class="tone-swatches" aria-hidden="true">
+                    <span v-for="(tone, index) in SKIN_TONES" :key="tone.value" class="tone-swatch"
+                      :class="{ 'is-chosen': index === form.tone }"
+                      :style="{ backgroundColor: tone.swatch }"></span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Big toggle buttons, like the category tiles in RequestForm.vue -->

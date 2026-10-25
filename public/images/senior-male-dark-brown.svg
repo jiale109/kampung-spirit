@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -4 24 40" shape-rendering="crispEdges" role="img" aria-labelledby="title desc">
+  <title id="title">Senior male avatar — Dark brown skin (#8E6047)</title>
+  <desc id="desc">A silver-haired senior in a plum cardigan, standing with a cane, rendered as a compact front-facing retro pixel sprite.</desc>
+  <!-- cane with hooked handle, to the character's right -->
+  <path fill="#252b3b" d="M19 18h2v1h1v3h-2v-1h-1v10h-2V20h2z"/>
+  <path fill="#a8794f" d="M19 19h1v1h1v1h-1v1h-1v9h-1v-11h1z"/>
+  <path fill="#d2a46b" d="M19 20h1v1h-1zM18 23h1v6h-1z"/>
+  <!-- trousers and shoes -->
+  <path fill="#252b3b" d="M8 25h4v4h-1v2H7v-2h1zM13 25h4v4h1v2h-4v-2h-1z"/>
+  <path fill="#5b536b" d="M9 26h2v3H9zM14 26h2v3h-2z"/>
+  <path fill="#252b3b" d="M7 29h4v1h2v2H6v-1h1zM13 29h4v1h2v2h-6v-1h-1z"/>
+  <path fill="#b5a6a0" d="M7 31h5v1H7zM14 31h5v1h-5z"/>
+  <!-- arms and hands; one hand near the cane -->
+  <path fill="#252b3b" d="M7 18h3v-1h4v1h3v1h2v4h-2v2h-2v-2h1v-3h-3v-1H9v2H8v4H6v-2H5v-4h2z"/>
+  <path fill="#8E6047" d="M5 23h2v2h2v1H6v-1H5zM16 22h2v1h2v2h-2v1h-2v-2h-1v-1h1z"/>
+  <!-- plum cardigan over pale shirt -->
+  <path fill="#252b3b" d="M8 17h2v-1h4v1h2v1h2v7h-2v1H7v-1H6v-7h2z"/>
+  <path fill="#78516f" d="M9 17h2v1h2v-1h2v1h2v6h-2v2H8v-2H7v-5h2z"/>
+  <path fill="#a77998" d="M8 19h2v4H8zM15 19h2v4h-2z"/>
+  <path fill="#f0dfb4" d="M11 17h3v1h1v5h-2v-3h-1v3h-2v-5h1z"/>
+  <path fill="#d9b978" d="M11 18h3v1h-3zM12 20h1v3h-1z"/>
+  <!-- head, ears, and skin -->
+  <path fill="#252b3b" d="M6 6h2V4h2V3h7v1h2v2h2v8h-1v2h-2v2H8v-2H6v-2H5V8h1z"/>
+  <path fill="#8E6047" d="M7 7h2V5h2V4h5v1h2v2h2v6h-1v2h-2v1H9v-1H7v-2H6V8h1z"/>
+  <!-- soft silver hair with side tufts -->
+  <path fill="#252b3b" d="M5 9V6h2V4h2V3h8v1h3v2h2v4h-2V8h-2V6h-3v2h-4v1H9v3H7v2H6v-2H5v-3z"/>
+  <path fill="#bfc9c7" d="M6 8V6h2V4h3v2h4V4h3v2h2v3h-2V8h-3v1h-4V8H9v3H7v2H6V9H5z"/>
+  <path fill="#edf0e4" d="M8 5h2v1H8zM15 5h2v1h-2zM6 7h1v1H6z"/>
+  <path fill="#89999d" d="M6 12h2v2H7v1H6zM18 11h2v3h-1v1h-1z"/>
+  <!-- clean skin layer across the eye line keeps hair clear of both eyes -->
+  <path fill="#8E6047" d="M8 8h10v1h1v4h-1v1H8v-1H7V9h1z"/>
+  <!-- eyes and gentle age lines -->
+  <path fill="#252b3b" d="M9 10h1v2H9zM15 10h1v2h-1z"/>
+  <path fill="#b78370" d="M8 13h2v1H8zM15 13h2v1h-2zM11 15h3v1h-3z"/>
+  <!-- foreground cane so its hooked handle stays readable at sprite size -->
+  <path fill="#252b3b" d="M19 17h3v1h2v3h-2v1h-1v9h-2V21h-1v-1h-2v-2h3z"/>
+  <path fill="#a8794f" d="M20 18h1v2h2v1h-2v10h-1V21h-1v-1h-1v-1h2z"/>
+  <path fill="#d2a46b" d="M20 19h1v1h1v1h-1v1h-1v7h-1v-9h1z"/>
+</svg>

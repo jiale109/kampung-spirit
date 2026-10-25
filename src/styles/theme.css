@@ -272,6 +272,61 @@ body {
   border-color: var(--ks-danger);
 }
 
+/*
+  The calendar in components/DayPicker.vue.
+
+  Seven columns is one more than Bootstrap's row-cols- utilities go up to, so
+  the week is laid out with CSS grid here. minmax(0, 1fr) rather than 1fr
+  matters: without it a long day name would stop the columns shrinking and the
+  calendar would run off the side of a narrow phone.
+*/
+.day-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.day-head {
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--ks-ink);
+}
+
+/* Big enough to hit with a thumb, and every day the same size */
+.day-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.4rem;
+  padding: 0.25rem 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  border-radius: 0.6rem;
+}
+
+/* A day outside the two months we accept: holds the space, does nothing */
+.day-blank {
+  min-height: 3.4rem;
+}
+
+.day-today {
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Matches .form-control.is-invalid, so a missing day looks like any other
+   box that still needs filling in */
+.day-picker.is-invalid-box {
+  border: 2px solid var(--ks-danger);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
 .invalid-feedback {
   margin-top: 0.4rem;
   font-size: 1rem;

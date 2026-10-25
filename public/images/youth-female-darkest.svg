@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -4 24 40" shape-rendering="crispEdges" role="img" aria-labelledby="title desc">
+  <title id="title">Youth female avatar — Darkest skin (#603F36)</title>
+  <desc id="desc">A young female volunteer with a high ponytail, hoodie, backpack, and skirt, rendered as a compact front-facing retro pixel sprite.</desc>
+  <!-- legs and shoes -->
+  <path fill="#252b3b" d="M8 25h4v4h-1v2H7v-2h1zM13 25h4v4h1v2h-4v-2h-1z"/>
+  <path fill="#394568" d="M9 26h2v3H9zM14 26h2v3h-2z"/>
+  <path fill="#252b3b" d="M7 29h4v1h2v2H6v-1h1zM13 29h4v1h2v2h-6v-1h-1z"/>
+  <path fill="#e5c86f" d="M7 31h5v1H7zM14 31h5v1h-5z"/>
+  <!-- small backpack peeking out behind the left shoulder -->
+  <path fill="#252b3b" d="M2 18h5v1h2v6H7v1H3v-1H2v-5h1z"/>
+  <path fill="#bd5548" d="M3 19h4v1h1v4H7v1H3z"/>
+  <path fill="#e98d60" d="M3 20h1v3H3zM5 24h2v1H5z"/>
+  <!-- arms behind the hoodie -->
+  <path fill="#252b3b" d="M7 18h3v2H8v4H6v2H4v-2h1v-5h2zM15 18h3v2h2v5h1v2h-2v-2h-2v-4h-2z"/>
+  <path fill="#603F36" d="M5 24h2v2h2v1H6v-1H5zM18 24h2v2h1v1h-3v-1h-1z"/>
+  <!-- hoodie silhouette and bright blue-violet shirt -->
+  <path fill="#252b3b" d="M8 17h2v-1h4v1h2v1h2v7h-2v1H8v-1H6v-7h2z"/>
+  <path fill="#6b75c8" d="M9 18h6v1h2v5h-1v1H8v-1H7v-5h2z"/>
+  <path fill="#8795e0" d="M9 19h6v1H9z"/>
+  <path fill="#e7a14f" d="M10 18h4v1h-4z"/>
+  <!-- visible backpack strap across the shoulder -->
+  <path fill="#252b3b" d="M7 17h2v1h1v6H8v-5H7z"/>
+  <path fill="#e98d60" d="M8 18h1v5H8z"/>
+  <!-- coral A-line skirt over leggings -->
+  <path fill="#252b3b" d="M8 23h8v1h2v2h1v3h-1v1H6v-1H5v-3h1v-2h2z"/>
+  <path fill="#c65c77" d="M9 24h6v1h2v1h1v2H7v-2h1v-1h1z"/>
+  <path fill="#e58b9d" d="M8 27h10v1H8z"/>
+  <!-- hands in front of the skirt -->
+  <path fill="#603F36" d="M5 24h2v2h2v1H6v-1H5zM18 24h2v2h1v1h-3v-1h-1z"/>
+  <!-- head outline, ears, and skin -->
+  <path fill="#252b3b" d="M6 6h2V4h2V3h7v1h2v2h2v8h-1v2h-2v2H8v-2H6v-2H5V8h1z"/>
+  <path fill="#603F36" d="M7 7h2V5h2V4h5v1h2v2h2v6h-1v2h-2v1H9v-1H7v-2H6V8h1z"/>
+  <!-- youthful tousled dark hair -->
+  <path fill="#252b3b" d="M5 9V6h2V4h2V3h3V2h4v1h3v2h2v4h-2V7h-2V6h-3v2h-2v2H9v2H7v3H6v-2H5v-2H4V9z"/>
+  <path fill="#523c3b" d="M6 8V6h2V4h3v2h3V4h3v2h3v3h-2V8h-3v1h-3v2H9v2H7v2H6v-3H5V9h1z"/>
+  <path fill="#8a5c50" d="M8 5h2v1H8zM14 4h2v1h-2z"/>
+  <!-- unmistakable high ponytail, loose side strands, and small hair tie -->
+  <path fill="#252b3b" d="M18 3h3v2h2v2h1v5h-1v3h-2v2h-2v-2h1v-3h1V8h-2V6h-2zM5 9h2v7h1v2h1v2H6v-1H5v-2H4v-6h1zM17 12h2v5h1v2h-2v-1h-1z"/>
+  <path fill="#523c3b" d="M19 5h2v2h2v4h-1v3h-2v-2h1V8h-2zM6 11h1v5H6z"/>
+  <path fill="#e67885" d="M18 5h2v1h-2z"/>
+  <!-- clean skin layer across the eye line keeps fringe out of the face -->
+  <path fill="#603F36" d="M8 8h10v1h1v4h-1v1H8v-1H7V9h1z"/>
+  <!-- simple face -->
+  <path fill="#252b3b" d="M9 10h1v2H9zM15 10h1v2h-1z"/>
+  <path fill="#c97870" d="M11 14h3v1h-3z"/>
+</svg>

@@ -32,11 +32,15 @@ const props = defineProps({
   places: { type: Array, default: () => [] },
   // Shown above the search box, e.g. 'Where shall we meet?'
   label: { type: String, default: 'Find a place' },
+  // One line of help between the search box and the map. Left out, nothing
+  // is shown, so a page that explains itself above the card says it once.
+  hint: { type: String, default: '' },
   // true on the propose form: tapping the map drops the pin there
   pickable: { type: Boolean, default: false },
 })
 
 /*
+  marker: one of the places drawn on the map was pressed.
   select: a place chosen from the OneMap search, with a name.
   pick:   a spot tapped on the map. There is no name for it, because reading
           a name back from coordinates needs OneMap's reverse geocode, which
@@ -44,7 +48,7 @@ const props = defineProps({
           to name the spot instead, which also reads better than OneMap's own
           names for some buildings.
 */
-const emit = defineEmits(['select', 'pick'])
+const emit = defineEmits(['select', 'pick', 'marker'])
 
 // 'Default' is the colour map. 'Grey_HD' is the quieter grey one.
 const TILES = 'https://www.onemap.gov.sg/maps/tiles/Default/{z}/{x}/{y}.png'
@@ -78,7 +82,12 @@ onMounted(() => {
       fillColor: '#ffffff',
       fillOpacity: 1,
     }).addTo(map)
-    marker.bindPopup(`<strong>${h.name}</strong>`)
+    // The popup says it in words as well, so the map never relies on a dot alone
+    const count = h.count === undefined ? '' :
+      `<br>${h.count === 1 ? '1 hangout' : `${h.count} hangouts`}`
+    marker.bindPopup(`<strong>${h.name}</strong>${count}`)
+    // Pressing a marker tells the page, which filters the list below
+    marker.on('click', () => emit('marker', h))
     markers.push(marker)
   }
 
@@ -92,6 +101,8 @@ onMounted(() => {
   // a keyboard, who cannot tap a map.
   if (props.pickable) {
     map.on('click', (e) => {
+      // A press on a marker also reaches the map; the marker handles those
+      if (e.originalEvent?.target?.closest?.('.leaflet-interactive')) return
       dropPin(e.latlng.lat, e.latlng.lng, 'Your chosen spot')
       emit('pick', { lat: e.latlng.lat, lng: e.latlng.lng })
     })
@@ -130,9 +141,7 @@ function goTo(place) {
 <template>
   <div class="vstack gap-3">
     <LocationSearch :label="label" @select="goTo" />
-    <p v-if="pickable" class="page-subtitle mb-0">
-      Search for a place, or tap the map to put the pin exactly where you mean.
-    </p>
+    <p v-if="hint" class="page-subtitle mb-0">{{ hint }}</p>
     <div ref="mapEl" style="height: 420px; border-radius: 0.75rem;" data-testid="hotspot-map"></div>
   </div>
 </template>

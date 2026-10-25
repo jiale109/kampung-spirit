@@ -505,7 +505,7 @@ create table public.hangouts (
   hotspot_id text not null check (length(trim(hotspot_id)) > 0),
   hangout_date date not null,
   hangout_time time not null,
-  duration int not null check (duration in (30, 60, 90, 120)),
+  duration int not null check (duration in (30, 60, 90, 120, 150, 180)),
   status text not null default 'open'
     check (status in ('open', 'completed', 'cancelled')),
   created_at timestamptz not null default now()
@@ -1393,3 +1393,22 @@ alter table public.hangouts add constraint hangouts_inside_singapore
 grant insert (title, description, hotspot_id, place_name, latitude, longitude, outdoor,
               hangout_date, hangout_time, duration)
   on public.hangouts to authenticated;
+
+
+-- ============================================================================
+-- 12. Hangouts can last up to three hours
+-- ============================================================================
+-- The form now offers 30 minutes to 3 hours in half hour steps, so the check
+-- on duration has to allow 150 and 180 as well. Half hours only: the points
+-- are worked out per hour in calc_hangout_points(), and whole half hours keep
+-- that sum tidy (3 hours earns 60 points).
+--
+-- The list here must match HANGOUT_DURATIONS in src/stores/hangout.js.
+-- Change one, change the other.
+--
+-- Postgres named the original check for us when the column was made in
+-- section 7, so it is dropped by that name and put back wider.
+
+alter table public.hangouts drop constraint hangouts_duration_check;
+alter table public.hangouts add constraint hangouts_duration_check
+  check (duration in (30, 60, 90, 120, 150, 180));

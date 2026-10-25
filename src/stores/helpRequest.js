@@ -105,6 +105,7 @@ export const useHelpRequestStore = defineStore('helpRequest', () => {
       title: d.title, description: d.description, category: d.category,
       difficulty: d.difficulty, duration: d.duration,
       needed_at: new Date(d.neededAt).toISOString(),
+      location: d.location || 'Blk 412 Eunos Cres',
     }))
 
   const updateRequest = (id, d) =>

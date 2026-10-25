@@ -521,13 +521,24 @@ body {
 }
 
 .points-pill {
-  display: inline-block;
-  padding: 0.4rem 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.85rem;
   border-radius: 999px;
   background: var(--ks-amber-bg);
   color: var(--ks-amber-ink);
   font-weight: 700;
   white-space: nowrap;
+  line-height: 1.2;
+}
+
+.point-coin-img {
+  width: 1.5em;
+  height: 1.5em;
+  vertical-align: -0.32em;
+  object-fit: contain;
+  margin-right: 0.25rem;
+  display: inline-block;
 }
 
 .dropdown-menu {

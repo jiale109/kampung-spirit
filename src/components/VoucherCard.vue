@@ -32,7 +32,7 @@ defineEmits(['select'])
 
             <div class="d-flex align-items-center justify-content-between pt-2 border-top">
                 <span class="points-pill text-nowrap">
-                    ⭐ {{ voucher.cost }} pts
+                     <img src="/images/coin.svg" class="point-coin-img" alt="" /> {{ voucher.cost }} pts
                 </span>
 
                 <span v-if="!canAfford"

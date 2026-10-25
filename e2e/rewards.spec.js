@@ -12,7 +12,7 @@ function voucherCard(page, merchant) {
 
 test('A new account starts with 0 points and cannot redeem vouchers', async ({ page }) => {
   await login(page, 'Youth', 'Aisha')
-  await expect(page.getByTestId('points')).toHaveText('⭐ 0 pts')
+  await expect(page.getByTestId('points')).toContainText(' 0 pts')
   await page.getByRole('link', { name: 'Rewards' }).click()
   await expect(page).toHaveURL(/\/app\/rewards$/)
   await expect(page.getByTestId('rewards-balance')).toContainText('0 pts')
@@ -21,7 +21,7 @@ test('A new account starts with 0 points and cannot redeem vouchers', async ({ p
   const kopitiam = voucherCard(page, 'Kimly Kopitiam')
   await expect(kopitiam).toBeVisible()
   await expect(kopitiam.getByText('Need pts')).toBeVisible()
-  
+
   // Opening the voucher modal shows the redeem button disabled with needed points
   await kopitiam.click()
   const redeemBtn = page.getByRole('button', { name: 'Need 30 more pts' })

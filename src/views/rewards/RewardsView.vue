@@ -136,7 +136,8 @@ async function markUsed(id) {
       </div>
       <div>
         <span class="count-pill is-full" data-testid="rewards-balance">
-          ⭐ <strong>{{ pointsStore.myPoints }} pts</strong>
+           <img src="/images/coin.svg" class="point-coin-img" alt="" />
+           <strong>{{ pointsStore.myPoints }} pts</strong>
         </span>
       </div>
     </div>
@@ -439,7 +440,7 @@ async function markUsed(id) {
           </div>
           <div class="modal-body fs-6">
             <p>
-              Spend <strong>⭐ {{ voucherToConfirm.cost }} points</strong> to redeem
+              Spend <strong> <img src="/images/coin.svg" class="point-coin-img" alt="" /> {{ voucherToConfirm.cost }} points</strong> to redeem
               <strong>{{ voucherToConfirm.title }}</strong> from
               <strong>{{ voucherToConfirm.merchant }}</strong>?
             </p>

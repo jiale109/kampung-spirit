@@ -17,6 +17,32 @@ import { resetApp, login, logout, card, openCard } from './helpers.js'
 // A different title each run, so old rows in the shared project cannot match
 const stamp = () => Date.now().toString().slice(-6)
 
+/*
+  The day is chosen from the calendar in components/DayPicker.vue, so it is
+  PRESSED rather than typed. 0 is today, 1 is tomorrow, and so on.
+*/
+function dayFromToday(n) {
+  const d = new Date()
+  d.setDate(d.getDate() + n)
+  const pad = (x) => String(x).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+/*
+  Press that day on the calendar. A day a week or two out can fall in the
+  month after the one showing, so step forward once if it is not there yet.
+*/
+async function chooseDay(page, n) {
+  const iso = dayFromToday(n)
+  let cell = page.getByTestId(`day-${iso}`)
+  if ((await cell.count()) === 0) {
+    await page.getByTestId('next-month').click()
+    cell = page.getByTestId(`day-${iso}`)
+  }
+  await cell.click()
+  await expect(page.getByTestId('chosen-day')).toBeVisible()
+}
+
 // OneMap's reply, cut down to what lib/onemap.js reads
 function onemapResult(name, lat, lng) {
   return {
@@ -82,7 +108,7 @@ async function proposeHangout(page, { title, place = 'Eunos Community Club', des
 
   await page.getByLabel('What will you do?').fill(description)
   if (outdoor !== undefined) await page.getByTestId('outdoor-switch').setChecked(outdoor)
-  await page.getByLabel('Which day?').selectOption({ index: dayIndex })
+  await chooseDay(page, dayIndex)
   if (time) await page.getByLabel('What time?').selectOption(time)
   await page.getByRole('button', { name: 'Propose hangout' }).click()
 }
@@ -132,7 +158,7 @@ test('A resident can propose a hangout at a place found on OneMap', async ({ pag
   await page.getByTestId('place-search-go').click()
   await page.getByTestId('place-results').getByRole('button').first().click()
   await page.getByLabel('What will you do?').fill('A quiet read and a chat at the library.')
-  await page.getByLabel('Which day?').selectOption({ index: 1 })
+  await chooseDay(page, 1)
   await page.getByRole('button', { name: 'Propose hangout' }).click()
 
   await expect(card(page, title)).toBeVisible()
@@ -227,7 +253,7 @@ test('The weather API being down does not break the page', async ({ page }) => {
   await expect(card(page, title).getByTestId('weather-warning')).toHaveCount(0)
 })
 
-test('Hangouts can be filtered by place', async ({ page }) => {
+test('Searching for a place filters the list to near it', async ({ page }) => {
   const atPark = `Park filter ${stamp()}`
 
   await fakeOneMap(page, 'Eunos Link Park', 1.3245, 103.9085)
@@ -237,12 +263,21 @@ test('Hangouts can be filtered by place', async ({ page }) => {
     title: atPark, place: 'Eunos Link Park',
     description: 'Only this one is at the park for this run.',
   })
-
-  // The filter lists the places that actually have hangouts
-  await page.getByTestId('place-filter').selectOption('Eunos Link Park')
   await expect(card(page, atPark)).toBeVisible()
 
-  await page.getByTestId('place-filter').selectOption('')
+  /*
+    The search box above the map is the typed way in, so it works with a
+    keyboard. Pressing what it finds drops a pin there and shows the hangouts
+    near it, so our park hangout stays on the list.
+  */
+  await page.getByTestId('place-search').fill('eunos link park')
+  await page.getByTestId('place-search-go').click()
+  await page.getByTestId('place-results').getByRole('button').first().click()
+  await expect(card(page, atPark)).toBeVisible()
+
+  // And the filter can be taken off again
+  await page.getByTestId('clear-filter').click()
+  await expect(page.getByTestId('clear-filter')).toHaveCount(0)
   await expect(card(page, atPark)).toBeVisible()
 })
 
@@ -283,7 +318,7 @@ test('A spot can be tapped straight onto the map and named', async ({ page }) =>
   await page.getByTestId('chosen-place').fill('Void deck of Blk 412')
 
   await page.getByLabel('What will you do?').fill('A sit down and a chat in the shade.')
-  await page.getByLabel('Which day?').selectOption({ index: 1 })
+  await chooseDay(page, 1)
   await page.getByRole('button', { name: 'Propose hangout' }).click()
 
   await expect(card(page, title)).toBeVisible()
@@ -302,4 +337,149 @@ test('A pin with no name cannot be saved', async ({ page }) => {
   await page.getByRole('button', { name: 'Propose hangout' }).click()
 
   await expect(page.getByText(/Please give this place a name/)).toBeVisible()
+})
+
+test('Pressing a marker on the map filters the list to that place', async ({ page }) => {
+  await fakeOneMap(page, 'Eunos Link Park', 1.3245, 103.9085)
+  await login(page, 'Adult', 'Clarence')
+  await page.getByRole('link', { name: 'Hangouts' }).click()
+
+  const title = `Map filter ${stamp()}`
+  await proposeHangout(page, {
+    title, place: 'Eunos Link Park',
+    description: 'The one we will find by pressing the map.',
+  })
+  await expect(card(page, title)).toBeVisible()
+  // No filter yet, so there is nothing to clear
+  await expect(page.getByTestId('clear-filter')).toHaveCount(0)
+
+  /*
+    Markers are Leaflet circles, which it draws with the class
+    leaflet-interactive. The shared Supabase project may hold other people's
+    hangouts, so this presses whichever marker comes first and only checks
+    that a filter went on and can be taken off again. The place name itself
+    is covered by the search test above.
+  */
+  await page.getByTestId('hotspot-map').locator('.leaflet-interactive').first().click()
+  await expect(page.getByTestId('clear-filter')).toBeVisible()
+
+  await page.getByTestId('clear-filter').click()
+  await expect(page.getByTestId('clear-filter')).toHaveCount(0)
+  await expect(card(page, title)).toBeVisible()
+})
+
+test('A place with no hangouts says so and offers to propose one', async ({ page }) => {
+  await fakeOneMap(page, 'Eunos Link Park', 1.3245, 103.9085)
+  await login(page, 'Adult', 'Clarence')
+  await page.getByRole('link', { name: 'Hangouts' }).click()
+
+  // Tap a corner of the map, far from anything that has a hangout
+  await page.getByTestId('hotspot-map').click({ position: { x: 30, y: 30 } })
+
+  await expect(page.getByText(/Sorry, there are no hangouts at/)).toBeVisible()
+  await expect(page.getByTestId('propose-instead')).toBeVisible()
+
+  // And it leads to the propose form
+  await page.getByTestId('propose-instead').click()
+  await expect(page.getByRole('heading', { name: 'Propose a hangout' })).toBeVisible()
+})
+
+test('A hangout can last up to three hours', async ({ page }) => {
+  await fakeOneMap(page, 'Bishan Community Club', 1.3509, 103.8485)
+  await login(page, 'Adult', 'Clarence')
+  await page.getByRole('link', { name: 'Hangouts' }).click()
+  await page.getByRole('link', { name: 'Propose a hangout' }).first().click()
+
+  /*
+    30 minutes to 3 hours in half hours. The same six lengths are in
+    HANGOUT_DURATIONS in src/stores/hangout.js and in the check on the column
+    in supabase/schema.sql section 12, so a length offered here is a length
+    the database will take.
+  */
+  const lengths = await page.getByTestId('hangout-duration').locator('option')
+    .evaluateAll((options) => options.map((o) => Number(o.value)))
+  expect(lengths).toEqual([30, 60, 90, 120, 150, 180])
+
+  // And the longest one really does save
+  const title = `Long afternoon ${stamp()}`
+  await page.getByLabel('Short name').fill(title)
+  await page.getByTestId('place-search').fill('bishan community club')
+  await page.getByTestId('place-search-go').click()
+  await page.getByTestId('place-results').getByRole('button').first().click()
+  await page.getByLabel('What will you do?').fill('A long afternoon of board games together.')
+  await chooseDay(page, 1)
+  await page.getByTestId('hangout-duration').selectOption('180')
+  await page.getByRole('button', { name: 'Propose hangout' }).click()
+
+  await expect(card(page, title)).toBeVisible()
+})
+
+test('A warning goes away once that box is put right', async ({ page }) => {
+  await fakeOneMap(page, 'Bishan Community Club', 1.3509, 103.8485)
+  await login(page, 'Adult', 'Clarence')
+  await page.getByRole('link', { name: 'Hangouts' }).click()
+  await page.getByRole('link', { name: 'Propose a hangout' }).first().click()
+
+  // An empty form complains about every box
+  await page.getByRole('button', { name: 'Propose hangout' }).click()
+  await expect(page.getByText(/Please choose where to meet/)).toBeVisible()
+  await expect(page.getByText('Please write at least 5 characters.')).toBeVisible()
+
+  // Choosing a place answers that warning, without pressing the button again
+  await page.getByTestId('place-search').fill('bishan community club')
+  await page.getByTestId('place-search-go').click()
+  await page.getByTestId('place-results').getByRole('button').first().click()
+  await expect(page.getByText(/Please choose where to meet/)).toHaveCount(0)
+
+  // And so does typing a name
+  await page.getByLabel('Short name').fill(`Fixed up ${stamp()}`)
+  await expect(page.getByText('Please write at least 5 characters.')).toHaveCount(0)
+})
+
+test('The calendar shows a whole month and keeps to the two months we accept', async ({ page }) => {
+  await login(page, 'Adult', 'Clarence')
+  await page.getByRole('link', { name: 'Hangouts' }).click()
+  await page.getByRole('link', { name: 'Propose a hangout' }).first().click()
+
+  // It opens on this month, and yesterday is not there to press
+  const yesterday = dayFromToday(-1)
+  await expect(page.getByTestId(`day-${yesterday}`)).toHaveCount(0)
+  // There is no earlier month worth showing, so the back arrow is off
+  await expect(page.getByTestId('previous-month')).toBeDisabled()
+
+  // Today is there, and pressing it says so in words as well as in colour
+  await page.getByTestId(`day-${dayFromToday(0)}`).click()
+  await expect(page.getByTestId('chosen-day')).toContainText('You have chosen')
+
+  // Next month is reachable, and going back returns to where we started
+  const thisMonth = await page.getByTestId('month-label').textContent()
+  await page.getByTestId('next-month').click()
+  await expect(page.getByTestId('month-label')).not.toHaveText(thisMonth)
+  await page.getByTestId('previous-month').click()
+  await expect(page.getByTestId('month-label')).toHaveText(thisMonth)
+})
+
+test('Your own hangouts are listed apart from your neighbours\u2019', async ({ page }) => {
+  const title = `Mine not theirs ${stamp()}`
+
+  await fakeOneMap(page, 'Eunos Link Park', 1.3245, 103.9085)
+  await login(page, 'Adult', 'Clarence')
+  await page.getByRole('link', { name: 'Hangouts' }).click()
+  await proposeHangout(page, {
+    title, place: 'Eunos Link Park',
+    description: 'The host should find this one under their own heading.',
+  })
+
+  // The host sees it under "Hangouts you are hosting", and not under the other
+  await expect(page.getByTestId('my-hangouts')).toContainText(title)
+  await expect(page.getByTestId('my-hangouts')).toContainText('Hangouts you are hosting')
+  await expect(page.getByTestId('neighbour-hangouts').filter({ hasText: title })).toHaveCount(0)
+  await logout(page)
+
+  // Somebody else sees the very same hangout under the neighbours' heading
+  await fakeOneMap(page, 'Eunos Link Park', 1.3245, 103.9085)
+  await login(page, 'Youth', 'Wei Jie')
+  await page.getByRole('link', { name: 'Hangouts' }).click()
+  await expect(page.getByTestId('neighbour-hangouts')).toContainText(title)
+  await expect(page.getByTestId('my-hangouts').filter({ hasText: title })).toHaveCount(0)
 })

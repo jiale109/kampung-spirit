@@ -19,7 +19,12 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth.js'
 import { usePointsStore } from '../../stores/points.js'
-import { interests as interestOptions, applyLargeText } from '../../lib/profile.js'
+import {
+  interests as interestOptions,
+  applyLargeText,
+  tidyInterest,
+  MAX_INTEREST_LENGTH,
+} from '../../lib/profile.js'
 
 const auth = useAuthStore()
 const points = usePointsStore()
@@ -66,6 +71,51 @@ const saving = ref(false)
 const message = ref('')
 const saveError = ref('')
 
+/*
+  Interests the person typed in themselves, kept beside the fixed list while
+  the form is open. They are held separately so that switching one OFF leaves
+  its tile on screen to be switched on again, instead of the tile vanishing
+  the moment it is deselected.
+*/
+const extraOptions = ref([])
+const newInterest = ref('')
+const interestError = ref('')
+
+// The fixed list first, then anything this person added
+const allInterestOptions = computed(() => [...interestOptions, ...extraOptions.value])
+
+/*
+  Add what has been typed. tidyInterest() in lib/profile.js folds it into the
+  fixed list when it is really one of those ('gardening' -> 'Gardening'), so
+  typing your own does not quietly stop you matching neighbours.
+*/
+function addInterest() {
+  interestError.value = ''
+  const name = tidyInterest(newInterest.value)
+
+  if (name === '') {
+    interestError.value = 'Please write an interest first.'
+    return
+  }
+  if (name.length > MAX_INTEREST_LENGTH) {
+    interestError.value = `Please keep it to ${MAX_INTEREST_LENGTH} letters or fewer.`
+    return
+  }
+  if (isChosen(name)) {
+    interestError.value = `${name} is already one of your interests.`
+    return
+  }
+
+  // Already on a tile, so just switch it on rather than make a second one
+  if (allInterestOptions.value.includes(name)) {
+    toggleInterest(name)
+  } else {
+    extraOptions.value = [...extraOptions.value, name]
+    form.value.interests = [...form.value.interests, name]
+  }
+  newInterest.value = ''
+}
+
 function startEditing() {
   // Copy the saved values in, so Cancel can simply throw the copy away.
   // interests is copied with [...] so toggling does not touch the store.
@@ -75,6 +125,11 @@ function startEditing() {
     interests: [...myInterests.value],
     largeText: auth.user.large_text === true,
   }
+  // Anything already saved that is not on the fixed list was typed in before,
+  // so it gets a tile again rather than disappearing from the form.
+  extraOptions.value = myInterests.value.filter((name) => !interestOptions.includes(name))
+  newInterest.value = ''
+  interestError.value = ''
   errors.value = {}
   message.value = ''
   saveError.value = ''
@@ -85,6 +140,8 @@ function stopEditing() {
   editing.value = false
   errors.value = {}
   saveError.value = ''
+  interestError.value = ''
+  newInterest.value = ''
 }
 
 function isChosen(name) {
@@ -240,10 +297,31 @@ async function save() {
           <div id="interests-label" class="form-label">Interests</div>
           <p class="page-subtitle mb-3">Choose as many as you like. Press one again to remove it.</p>
           <div class="row row-cols-1 row-cols-sm-2 g-2">
-            <div v-for="option in interestOptions" :key="option" class="col">
+            <div v-for="option in allInterestOptions" :key="option" class="col">
               <button type="button" class="btn choice-tile w-100" :class="{ active: isChosen(option) }"
                 :aria-pressed="isChosen(option)" @click="toggleInterest(option)">{{ option }}</button>
             </div>
+          </div>
+
+          <!-- Anything the list has missed. Enter adds it; without .prevent
+               Enter would send the whole form instead. -->
+          <div class="mt-3">
+            <label for="new-interest" class="form-label">Something else you enjoy</label>
+            <div class="row g-2">
+              <div class="col">
+                <input id="new-interest" v-model="newInterest" type="text" class="form-control"
+                  :class="{ 'is-invalid': interestError }" :maxlength="MAX_INTEREST_LENGTH"
+                  placeholder="e.g. Mahjong" data-testid="new-interest"
+                  @keydown.enter.prevent="addInterest" @input="interestError = ''" />
+              </div>
+              <div class="col-auto">
+                <button type="button" class="btn btn-outline-primary" data-testid="add-interest"
+                  @click="addInterest">Add</button>
+              </div>
+            </div>
+            <div v-if="interestError" class="invalid-feedback d-block" role="alert"
+              data-testid="interest-error">{{ interestError }}</div>
+            <div class="form-text">It joins the list above, already switched on.</div>
           </div>
         </div>
 

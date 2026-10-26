@@ -23,7 +23,7 @@ import { supabase } from '../lib/supabase.js'
 // arrives as undefined in auth.user, however well it saved, so ADD TO THIS
 // LIST whenever a new column is added to public.profiles.
 const PROFILE_COLUMNS =
-  'id, name, block, interests, large_text, age_group, guardian_status, gender, skin_tone'
+  'id, name, block, interests, large_text, age_group, guardian_status, gender, skin_tone, hidden_interests, show_walker'
 
 export const useAuthStore = defineStore('auth', () => {
   // The logged-in person (or null)
@@ -117,7 +117,9 @@ export const useAuthStore = defineStore('auth', () => {
   // interests and large_text (supabase/schema.sql, section 2), so anything
   // else is refused there even if it were sent. Fields left out are not
   // touched. Reloads the profile afterwards so the whole app sees the change.
-  async function updateProfile({ name, block, interests, largeText, gender, skinTone }) {
+  async function updateProfile({
+    name, block, interests, largeText, gender, skinTone, hiddenInterests, showWalker,
+  }) {
     if (!user.value) return { ok: false, error: 'Please log in again.' }
 
     const changes = {}
@@ -128,6 +130,10 @@ export const useAuthStore = defineStore('auth', () => {
     // The avatar: both may be null, which means "not chosen yet"
     if (gender !== undefined) changes.gender = gender
     if (skinTone !== undefined) changes.skin_tone = skinTone
+    // Suggestions this person has taken off their own list (section 15)
+    if (hiddenInterests !== undefined) changes.hidden_interests = hiddenInterests
+    // The walking avatar in the navbar (section 16)
+    if (showWalker !== undefined) changes.show_walker = showWalker
 
     /*
       .select() matters: without it the database reports success even when the

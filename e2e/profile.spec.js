@@ -118,3 +118,167 @@ test('An avatar of my own does not change what I can edit', async ({ page }) => 
   await expect(page.getByTestId('age-icon'))
     .toHaveAttribute('src', '/images/adult-male-darkest.svg')
 })
+
+test('An interest you added yourself can be switched off, and then removed', async ({ page }) => {
+  await login(page, 'Adult', 'Clarence')
+  await openProfile(page)
+  await page.getByTestId('edit-profile').click()
+
+  // Add one of your own. It arrives switched on.
+  await page.getByTestId('new-interest').fill('Mahjong')
+  await page.getByTestId('add-interest').click()
+  const tile = page.getByRole('button', { name: 'Mahjong', exact: true })
+  await expect(tile).toHaveAttribute('aria-pressed', 'true')
+
+  // While it is ON there is no cross: the tile itself is how you switch off
+  await expect(page.getByTestId('remove-Mahjong')).toHaveCount(0)
+
+  // Switch it off and the cross appears
+  await tile.click()
+  await expect(tile).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.getByTestId('remove-Mahjong')).toBeVisible()
+
+  // The cross takes it off the list altogether
+  await page.getByTestId('remove-Mahjong').click()
+  await expect(tile).toHaveCount(0)
+
+  // A suggestion from the fixed list behaves the same way
+  const fixed = page.getByRole('button', { name: 'Gardening', exact: true })
+  await expect(page.getByTestId('remove-Gardening')).toBeVisible()
+  await fixed.click()
+  await expect(page.getByTestId('remove-Gardening')).toHaveCount(0)
+  await fixed.click()
+  await page.getByTestId('remove-Gardening').click()
+  await expect(fixed).toHaveCount(0)
+
+  // Typing it back brings it back, so nothing is lost for good
+  await page.getByTestId('new-interest').fill('gardening')
+  await page.getByTestId('add-interest').click()
+  await expect(page.getByRole('button', { name: 'Gardening', exact: true }))
+    .toHaveAttribute('aria-pressed', 'true')
+})
+
+test('Your own interests are saved, and come back with their crosses', async ({ page }) => {
+  await login(page, 'Adult', 'Clarence')
+  await openProfile(page)
+  await page.getByTestId('edit-profile').click()
+
+  await page.getByTestId('new-interest').fill('Lion dance')
+  await page.getByTestId('add-interest').click()
+  await page.getByTestId('save-profile').click()
+  await expect(page.getByTestId('profile-interests')).toContainText('Lion dance')
+
+  // Reopening the form knows it was yours, so it can still be removed
+  await page.getByTestId('edit-profile').click()
+  const tile = page.getByRole('button', { name: 'Lion dance', exact: true })
+  await tile.click()
+  await expect(page.getByTestId('remove-Lion dance')).toBeVisible()
+  await page.getByTestId('remove-Lion dance').click()
+  await page.getByTestId('save-profile').click()
+  await expect(page.getByTestId('profile-interests')).not.toContainText('Lion dance')
+})
+
+test('A suggestion taken off the list stays off next time', async ({ page }) => {
+  await login(page, 'Adult', 'Clarence')
+  await openProfile(page)
+  await page.getByTestId('edit-profile').click()
+
+  // Gardening starts on the list for everyone
+  const gardening = page.getByRole('button', { name: 'Gardening', exact: true })
+  await expect(gardening).toBeVisible()
+
+  // Take it off and save
+  await page.getByTestId('remove-Gardening').click()
+  await expect(gardening).toHaveCount(0)
+  await page.getByTestId('save-profile').click()
+
+  // Still gone after reopening the form, and after a reload: it came back
+  // from the database, not from the page remembering
+  await page.getByTestId('edit-profile').click()
+  await expect(page.getByRole('button', { name: 'Gardening', exact: true })).toHaveCount(0)
+  await page.reload()
+  await page.getByTestId('edit-profile').click()
+  await expect(page.getByRole('button', { name: 'Gardening', exact: true })).toHaveCount(0)
+
+  // Typing it back restores it, switched on, and it is a fixed tile again
+  // rather than a second copy of its own
+  await page.getByTestId('new-interest').fill('gardening')
+  await page.getByTestId('add-interest').click()
+  await expect(page.getByRole('button', { name: 'Gardening', exact: true }))
+    .toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Gardening', exact: true })).toHaveCount(1)
+
+  await page.getByTestId('save-profile').click()
+  await expect(page.getByTestId('profile-interests')).toContainText('Gardening')
+})
+
+test('Cancel throws away a removal, it is not saved', async ({ page }) => {
+  await login(page, 'Adult', 'Clarence')
+  await openProfile(page)
+  await page.getByTestId('edit-profile').click()
+
+  await page.getByTestId('remove-Cooking').click()
+  await expect(page.getByRole('button', { name: 'Cooking', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Cancel' }).click()
+
+  // Reopening starts again from what was saved, so Cooking is back
+  await page.getByTestId('edit-profile').click()
+  await expect(page.getByRole('button', { name: 'Cooking', exact: true })).toBeVisible()
+})
+
+test('The walking avatar is off until asked for, and needs an avatar first', async ({ page }) => {
+  await login(page, 'Adult', 'Clarence')
+  await openProfile(page)
+
+  // Nothing walks by default
+  await expect(page.getByTestId('walker')).toHaveCount(0)
+
+  await page.getByTestId('edit-profile').click()
+  // No avatar chosen yet, so the switch cannot be used
+  await expect(page.getByTestId('walker-switch')).toBeDisabled()
+
+  // Choose a look, and it becomes available
+  await page.getByTestId('gender-male').click()
+  await page.getByTestId('skin-tone').fill('2')
+  await expect(page.getByTestId('walker-switch')).toBeEnabled()
+
+  await page.getByTestId('walker-switch').check()
+  await page.getByTestId('save-profile').click()
+
+  // It walks, as the right person, with both frames of the stride
+  const walker = page.getByTestId('walker')
+  await expect(walker).toBeAttached()
+  await expect(walker.locator('img').first())
+    .toHaveAttribute('src', '/images/adult-male-dark-brown.svg')
+  await expect(walker.locator('img').nth(1))
+    .toHaveAttribute('src', '/images/adult-male-dark-brown-walk.svg')
+
+  // Still there after a reload, so it came from the database
+  await page.reload()
+  await expect(page.getByTestId('walker')).toBeAttached()
+
+  // And it can be switched off again
+  await page.getByTestId('edit-profile').click()
+  await page.getByTestId('walker-switch').uncheck()
+  await page.getByTestId('save-profile').click()
+  await expect(page.getByTestId('walker')).toHaveCount(0)
+})
+
+test('Someone who asks for less motion never sees the walker move', async ({ browser }) => {
+  // The browser tells the page, and theme.css takes it from there. This is
+  // WCAG 2.2.2 handled without the person having to find the switch.
+  const context = await browser.newContext({ reducedMotion: 'reduce' })
+  const page = await context.newPage()
+  await resetApp(page)
+  await login(page, 'Adult', 'Clarence')
+  await openProfile(page)
+  await page.getByTestId('edit-profile').click()
+  await page.getByTestId('gender-female').click()
+  await page.getByTestId('walker-switch').check()
+  await page.getByTestId('save-profile').click()
+
+  // It is in the page, but the stylesheet hides it
+  await expect(page.getByTestId('walker')).toBeAttached()
+  await expect(page.getByTestId('walker')).toBeHidden()
+  await context.close()
+})

@@ -1,0 +1,25 @@
+# Settings for the Supabase command-line tool (`supabase functions deploy`).
+# Our Edge Functions are plain JavaScript, so each one names its index.js file
+# (the tool looks for index.ts by default).
+#
+# verify_jwt = false means Supabase does not require a login token. That is on
+# purpose for these three: Telegram, the database webhooks and the cron job
+# cannot send one, so each checks its own secret header instead (see
+# supabase/functions/README.md). telegram-account keeps the normal check,
+# because the website calls it as the logged-in person.
+
+[functions.telegram-webhook]
+entrypoint = "./functions/telegram-webhook/index.js"
+verify_jwt = false
+
+[functions.notify]
+entrypoint = "./functions/notify/index.js"
+verify_jwt = false
+
+[functions.send-reminders]
+entrypoint = "./functions/send-reminders/index.js"
+verify_jwt = false
+
+[functions.telegram-account]
+entrypoint = "./functions/telegram-account/index.js"
+verify_jwt = true

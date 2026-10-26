@@ -74,6 +74,16 @@ export function avatarSrc(ageGroup, gender, skinTone) {
 }
 
 /*
+  The second frame of the walk: the same person mid-stride. Frame one is the
+  ordinary avatar above, so a walk is the two swapped back and forth.
+  Returns '' whenever avatarSrc() does, and the walker is then not drawn.
+*/
+export function avatarWalkSrc(ageGroup, gender, skinTone) {
+  const still = avatarSrc(ageGroup, gender, skinTone)
+  return still === '' ? '' : still.replace('.svg', '-walk.svg')
+}
+
+/*
   Where a tone sits on the slider, and which tone a slider position means.
   The slider works in whole numbers, 0 to 3, because <input type="range">
   gives back numbers rather than words.

@@ -505,7 +505,7 @@ create table public.hangouts (
   hotspot_id text not null check (length(trim(hotspot_id)) > 0),
   hangout_date date not null,
   hangout_time time not null,
-  duration int not null check (duration in (30, 60, 90, 120)),
+  duration int not null check (duration in (30, 60, 90, 120, 150, 180)),
   status text not null default 'open'
     check (status in ('open', 'completed', 'cancelled')),
   created_at timestamptz not null default now()
@@ -1396,6 +1396,25 @@ grant insert (title, description, hotspot_id, place_name, latitude, longitude, o
 
 
 -- ============================================================================
+-- 12. Hangouts can last up to three hours
+-- ============================================================================
+-- The form offers 30 minutes to 3 hours in half hour steps, so the check on
+-- duration has to allow 150 and 180 as well. Half hours only: the points are
+-- worked out per hour in calc_hangout_points(), and whole half hours keep
+-- that sum tidy (3 hours earns 60 points).
+--
+-- The list here must match HANGOUT_DURATIONS in src/stores/hangout.js.
+-- Change one, change the other.
+--
+-- Postgres named the original check for us when the column was made in
+-- section 7, so it is dropped by that name and put back wider.
+
+alter table public.hangouts drop constraint hangouts_duration_check;
+alter table public.hangouts add constraint hangouts_duration_check
+  check (duration in (30, 60, 90, 120, 150, 180));
+
+
+-- ============================================================================
 -- 13. Avatars: gender and skin tone
 -- ============================================================================
 -- The sprite beside someone's details used to depend on age_group alone. A
@@ -1504,3 +1523,25 @@ grant execute on all functions in schema public to service_role;
 alter default privileges in schema public grant all on tables to service_role;
 alter default privileges in schema public grant all on sequences to service_role;
 alter default privileges in schema public grant execute on functions to service_role;
+
+
+-- ============================================================================
+-- 15. Interests a person has taken off their list
+-- ============================================================================
+-- The profile page offers a fixed list of interests (src/lib/profile.js) plus
+-- anything the person types in. A suggestion they do not want can now be
+-- taken off their own list with the cross on the tile.
+--
+-- It is remembered PER PERSON, not deleted: the fixed list belongs to
+-- everybody, so one resident hiding 'Gardening' must not take it away from
+-- their neighbours. Typing it back in the box brings it back for them.
+--
+-- Nothing checks the values. An entry that no longer matches anything in the
+-- fixed list is simply ignored when the form is drawn, so renaming a
+-- suggestion in lib/profile.js cannot break anyone's profile.
+
+alter table public.profiles add column hidden_interests text[] not null default '{}';
+
+-- Column grants add up rather than replace, so this joins the ones already
+-- granted in sections 2 and 13.
+grant update (hidden_interests) on public.profiles to authenticated;

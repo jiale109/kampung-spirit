@@ -273,6 +273,111 @@ body {
 }
 
 /*
+  The walking avatar in the navbar (MainLayout.vue), switched on per person
+  in Edit profile.
+
+  Two frames sit on top of each other and take it in turns to be visible,
+  which reads as a stride. steps() rather than a smooth fade: pixel art should
+  snap between poses, not cross-dissolve.
+
+  The navbar needs position: relative so the walker is placed against it, and
+  overflow: hidden so it disappears off the edge rather than widening the page
+  and causing a sideways scrollbar.
+*/
+.app-navbar {
+  position: relative;
+  overflow: hidden;
+}
+
+.walker {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 1.6rem;
+  height: 2.7rem;
+  pointer-events: none;
+  z-index: 0;
+  animation: ks-stroll 28s linear infinite;
+}
+
+.walker-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  animation: ks-step 0.7s steps(1, end) infinite;
+}
+
+/* The second frame is half a step behind, so exactly one is ever showing */
+.walker-frame-2 {
+  animation-delay: 0.35s;
+}
+
+@keyframes ks-stroll {
+  from { transform: translateX(-2rem); }
+  to { transform: translateX(100vw); }
+}
+
+@keyframes ks-step {
+  0%, 50% { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
+}
+
+/*
+  WCAG 2.2.2 (Pause, Stop, Hide): movement that starts on its own and runs
+  past five seconds must be stoppable. The switch in Edit profile is that
+  control, and this honours anyone whose system already asks for less motion,
+  without their having to find the switch at all.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .walker {
+    display: none;
+  }
+}
+
+/*
+  An interest someone added themselves, on the profile page.
+
+  The cross is laid over the corner of the tile. It only appears once that
+  interest is switched off, so the two actions never compete: pressing the
+  tile stops you liking it, pressing the cross takes it off the list.
+*/
+.interest-tile-wrap {
+  position: relative;
+}
+
+/*
+  Just the cross, with no bubble behind it. It is NOT a Bootstrap .btn: that
+  brings its own padding and minimum width, which stretched the round
+  background into an oval.
+
+  The 2rem box is kept even though nothing is drawn on it, because that is the
+  part you can press. Invisible, but a proper target at 22px text.
+*/
+.interest-remove {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--ks-muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.interest-remove:hover,
+.interest-remove:focus-visible {
+  color: var(--ks-danger);
+}
+
+/*
   The avatar picker on the profile page.
 
   The preview is a fixed box so the card does not jump about as the picture
@@ -523,22 +628,30 @@ body {
 .points-pill {
   display: inline-flex;
   align-items: center;
-  padding: 0.35rem 0.85rem;
+  gap: 0.4rem;
+  padding: 0.4rem 0.95rem;
   border-radius: 999px;
   background: var(--ks-amber-bg);
   color: var(--ks-amber-ink);
   font-weight: 700;
   white-space: nowrap;
-  line-height: 1.2;
 }
 
+/*
+  The coin in the points pill (MainLayout.vue).
+
+  WITHOUT A SIZE HERE THE COIN FILLS THE SCREEN. The file is an SVG with no
+  width or height of its own, so a browser gives it the whole of whatever box
+  it is in. It must be sized in CSS.
+
+  1.4rem keeps it just under the cap height of the "0 pts" beside it. It is
+  pixel art, so the exact number matters less than keeping it small enough
+  that the pill does not grow.
+*/
 .point-coin-img {
-  width: 1.5em;
-  height: 1.5em;
-  vertical-align: -0.32em;
-  object-fit: contain;
-  margin-right: 0.25rem;
-  display: inline-block;
+  width: 1.4rem;
+  height: 1.4rem;
+  flex-shrink: 0;
 }
 
 .dropdown-menu {

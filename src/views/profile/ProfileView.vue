@@ -19,7 +19,6 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth.js'
 import { usePointsStore } from '../../stores/points.js'
-import TelegramConnect from '../../components/TelegramConnect.vue'
 import {
   interests as interestOptions,
   applyLargeText,
@@ -73,7 +72,10 @@ const myInterests = computed(() => auth.user.interests ?? [])
 const editing = ref(false)
 // tone is the SLIDER POSITION (0 to 3), not the word, because
 // <input type="range"> works in numbers. toneAt() turns it back into a word.
-const form = ref({ name: '', block: '', interests: [], largeText: false, gender: '', tone: 0 })
+const form = ref({
+  name: '', block: '', interests: [], largeText: false,
+  gender: '', tone: 0, showWalker: false,
+})
 const errors = ref({})
 const saving = ref(false)
 const message = ref('')
@@ -86,11 +88,23 @@ const saveError = ref('')
   the moment it is deselected.
 */
 const extraOptions = ref([])
+
+/*
+  Suggestions from the fixed list that this person has taken off. They cannot
+  simply be deleted, because the fixed list is shared by everybody; hiding
+  them is per person, and saved in profiles.hidden_interests (schema.sql
+  section 15). Typing one back into the box brings it back.
+*/
+const hiddenOptions = ref([])
+
 const newInterest = ref('')
 const interestError = ref('')
 
-// The fixed list first, then anything this person added
-const allInterestOptions = computed(() => [...interestOptions, ...extraOptions.value])
+// The suggestions still wanted, then anything this person added
+const allInterestOptions = computed(() => [
+  ...interestOptions.filter((name) => !hiddenOptions.value.includes(name)),
+  ...extraOptions.value,
+])
 
 /*
   Add what has been typed. tidyInterest() in lib/profile.js folds it into the
@@ -114,13 +128,15 @@ function addInterest() {
     return
   }
 
-  // Already on a tile, so just switch it on rather than make a second one
-  if (allInterestOptions.value.includes(name)) {
-    toggleInterest(name)
-  } else {
+  if (hiddenOptions.value.includes(name)) {
+    // A suggestion that was taken off comes back to the fixed list, rather
+    // than joining the end as one of your own
+    hiddenOptions.value = hiddenOptions.value.filter((item) => item !== name)
+  } else if (!allInterestOptions.value.includes(name)) {
     extraOptions.value = [...extraOptions.value, name]
-    form.value.interests = [...form.value.interests, name]
   }
+  // Whichever way it got there, it arrives switched on
+  if (!isChosen(name)) toggleInterest(name)
   newInterest.value = ''
 }
 
@@ -144,6 +160,26 @@ const previewAlt = computed(() => {
   return `${ageGroupLabel.value}, ${gender ? gender.label.toLowerCase() : ''}, ${toneLabel.value.toLowerCase()} skin tone`
 })
 
+/*
+  Take a tile off the list. Offered only once that interest is switched OFF,
+  so the cross cannot be mistaken for "stop liking this" - switching off is
+  what pressing the tile itself does.
+
+  One you typed in is thrown away. One of the fixed suggestions is only
+  hidden, because that list belongs to everybody.
+*/
+function removeOption(name) {
+  if (extraOptions.value.includes(name)) {
+    extraOptions.value = extraOptions.value.filter((item) => item !== name)
+  } else {
+    hiddenOptions.value = [...hiddenOptions.value, name]
+  }
+  // It should already be off, but a stray copy here would be saved to the
+  // database, so make sure
+  form.value.interests = form.value.interests.filter((item) => item !== name)
+  interestError.value = ''
+}
+
 function startEditing() {
   // Copy the saved values in, so Cancel can simply throw the copy away.
   // interests is copied with [...] so toggling does not touch the store.
@@ -154,10 +190,16 @@ function startEditing() {
     largeText: auth.user.large_text === true,
     gender: auth.user.gender ?? '',
     tone: toneIndex(auth.user.skin_tone),
+    showWalker: auth.user.show_walker === true,
   }
   // Anything already saved that is not on the fixed list was typed in before,
   // so it gets a tile again rather than disappearing from the form.
   extraOptions.value = myInterests.value.filter((name) => !interestOptions.includes(name))
+  // Only names still on the fixed list are kept, so renaming a suggestion in
+  // lib/profile.js cannot leave a dead entry hiding nothing
+  hiddenOptions.value = (auth.user.hidden_interests ?? []).filter((name) =>
+    interestOptions.includes(name),
+  )
   newInterest.value = ''
   interestError.value = ''
   errors.value = {}
@@ -205,6 +247,10 @@ async function save() {
     name: form.value.name.trim(),
     block: form.value.block.trim(),
     interests: form.value.interests,
+    hiddenInterests: hiddenOptions.value,
+    // Nothing to walk without an avatar, so the switch cannot be left on
+    // pointing at a person who does not exist
+    showWalker: form.value.gender === '' ? false : form.value.showWalker,
     largeText: form.value.largeText,
     // null rather than '' for a gender never chosen: the column allows null,
     // and '' would fail the check in schema.sql section 13
@@ -310,8 +356,6 @@ async function save() {
         </div>
       </div>
 
-      <TelegramConnect />
-
     </div>
 
     <!-- 2. Editing: only the four things the database lets a user change -->
@@ -393,8 +437,18 @@ async function save() {
           <p class="page-subtitle mb-3">Choose as many as you like. Press one again to remove it.</p>
           <div class="row row-cols-1 row-cols-sm-2 g-2">
             <div v-for="option in allInterestOptions" :key="option" class="col">
-              <button type="button" class="btn choice-tile w-100" :class="{ active: isChosen(option) }"
-                :aria-pressed="isChosen(option)" @click="toggleInterest(option)">{{ option }}</button>
+              <!--
+                The cross sits BESIDE the tile in the markup, not inside it: a
+                button within a button is not allowed, and a screen reader
+                would never reach it. It is placed on the corner with CSS.
+              -->
+              <div class="interest-tile-wrap">
+                <button type="button" class="btn choice-tile w-100" :class="{ active: isChosen(option) }"
+                  :aria-pressed="isChosen(option)" @click="toggleInterest(option)">{{ option }}</button>
+                <button v-if="!isChosen(option)" type="button"
+                  class="interest-remove" :aria-label="`Remove ${option} from the list`"
+                  :data-testid="`remove-${option}`" @click="removeOption(option)">&times;</button>
+              </div>
             </div>
           </div>
 
@@ -417,6 +471,22 @@ async function save() {
             <div v-if="interestError" class="invalid-feedback d-block" role="alert"
               data-testid="interest-error">{{ interestError }}</div>
             <div class="form-text">It joins the list above, already switched on.</div>
+          </div>
+        </div>
+
+        <!--
+          Movement that starts on its own has to be something people can turn
+          off (WCAG 2.2.2), so it is off until asked for. theme.css also
+          honours prefers-reduced-motion, for anyone whose computer has
+          already said it wants less movement.
+        -->
+        <div class="form-check form-switch">
+          <input id="show-walker" v-model="form.showWalker" type="checkbox" role="switch"
+            class="form-check-input" :disabled="form.gender === ''" data-testid="walker-switch" />
+          <label for="show-walker" class="form-check-label">Show my avatar walking</label>
+          <div class="form-text">
+            <template v-if="form.gender === ''">Choose your avatar above first.</template>
+            <template v-else>Your avatar strolls along the green bar at the top.</template>
           </div>
         </div>
 

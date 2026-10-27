@@ -19,6 +19,7 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth.js'
 import { usePointsStore } from '../../stores/points.js'
+import TelegramConnect from '../../components/TelegramConnect.vue'
 import {
   interests as interestOptions,
   applyLargeText,
@@ -355,6 +356,8 @@ async function save() {
           </p>
         </div>
       </div>
+
+      <TelegramConnect />
 
     </div>
 

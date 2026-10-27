@@ -331,12 +331,12 @@ test.describe('My Tasks', () => {
 
     // The youth helps and marks it done: no points yet
     await switchTo(page, 'Youth', 'Siti')
-    await expect(points).toHaveText('⭐ 0 pts')
+    await expect(points).toHaveText('0 pts')
     await acceptCard(page, toComplete)
     await markTaskDone(page, toComplete)
     await expect(page.getByText(/Waiting for Uncle Raj to confirm/)).toBeVisible()
     await expect(inList('active-tasks', toComplete)).toBeVisible()
-    await expect(points).toHaveText('⭐ 0 pts')
+    await expect(points).toHaveText('0 pts')
 
     // The senior confirms: a thank-you message gets focus, and the request moves to Past
     await switchTo(page, 'Senior', 'Uncle Raj')
@@ -352,7 +352,7 @@ test.describe('My Tasks', () => {
 
     // The youth now has the points, and the task is in Past
     await switchTo(page, 'Youth', 'Siti')
-    await expect(points).toHaveText('⭐ 30 pts')
+    await expect(points).toHaveText('30 pts')
     await page.getByRole('link', { name: 'My Tasks', exact: true }).click()
     await expect(inList('past-tasks', toComplete)).toContainText('Done, points earned')
     await expect(inList('active-tasks', toComplete)).toHaveCount(0)

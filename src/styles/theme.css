@@ -3,8 +3,8 @@
    Loaded after Bootstrap (see main.js), so these rules override its defaults.
 
    1. Colours and fonts      5. Navbar
-   2. Base text (18px, 22px  6. Page layout
-      for seniors)           7. Request card (simple, opens on hover/tap)
+   2. Base text (22px, 27px  6. Page layout
+      with large text)       7. Request card (simple, opens on hover/tap)
    3. Buttons                8. Badges, alerts, empty state, modal
    4. Forms                  9. Landing page
    ========================================================================== */
@@ -53,7 +53,7 @@
 /* 2. Base text
    -------------------------------------------------------------------------- */
 
-/* 112.5% of the browser default = 18px, and it still follows the user's own text-size setting */
+/* 137.5% of the browser default = 22px, and it still follows the user's own text-size setting */
 html {
   font-size: 137.5%;
 }
@@ -272,6 +272,208 @@ body {
   border-color: var(--ks-danger);
 }
 
+/*
+  The walking avatar in the navbar (MainLayout.vue), switched on per person
+  in Edit profile.
+
+  Two frames sit on top of each other and take it in turns to be visible,
+  which reads as a stride. steps() rather than a smooth fade: pixel art should
+  snap between poses, not cross-dissolve.
+
+  The navbar needs position: relative so the walker is placed against it, and
+  overflow: hidden so it disappears off the edge rather than widening the page
+  and causing a sideways scrollbar.
+*/
+.app-navbar {
+  position: relative;
+  overflow: hidden;
+}
+
+.walker {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 1.6rem;
+  height: 2.7rem;
+  pointer-events: none;
+  z-index: 0;
+  animation: ks-stroll 28s linear infinite;
+}
+
+.walker-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  animation: ks-step 0.7s steps(1, end) infinite;
+}
+
+/* The second frame is half a step behind, so exactly one is ever showing */
+.walker-frame-2 {
+  animation-delay: 0.35s;
+}
+
+@keyframes ks-stroll {
+  from { transform: translateX(-2rem); }
+  to { transform: translateX(100vw); }
+}
+
+@keyframes ks-step {
+  0%, 50% { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
+}
+
+/*
+  WCAG 2.2.2 (Pause, Stop, Hide): movement that starts on its own and runs
+  past five seconds must be stoppable. The switch in Edit profile is that
+  control, and this honours anyone whose system already asks for less motion,
+  without their having to find the switch at all.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .walker {
+    display: none;
+  }
+}
+
+/*
+  An interest someone added themselves, on the profile page.
+
+  The cross is laid over the corner of the tile. It only appears once that
+  interest is switched off, so the two actions never compete: pressing the
+  tile stops you liking it, pressing the cross takes it off the list.
+*/
+.interest-tile-wrap {
+  position: relative;
+}
+
+/*
+  Just the cross, with no bubble behind it. It is NOT a Bootstrap .btn: that
+  brings its own padding and minimum width, which stretched the round
+  background into an oval.
+
+  The 2rem box is kept even though nothing is drawn on it, because that is the
+  part you can press. Invisible, but a proper target at 22px text.
+*/
+.interest-remove {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--ks-muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.interest-remove:hover,
+.interest-remove:focus-visible {
+  color: var(--ks-danger);
+}
+
+/*
+  The avatar picker on the profile page.
+
+  The preview is a fixed box so the card does not jump about as the picture
+  changes, and the pixel art sits on a soft panel rather than floating on
+  white. 120x200 is exactly 5x the 24x40 artwork; keep any new size a whole
+  multiple of 24x40 or the pixels go soft.
+*/
+.avatar-picker {
+  border: 2px solid var(--ks-line-strong);
+  border-radius: 0.75rem;
+}
+
+.avatar-preview {
+  width: 9rem;
+  min-height: 13rem;
+  background-color: var(--ks-teal-tint);
+  border-radius: 0.75rem;
+}
+
+/* The four tones under the slider. Lined up with the slider above, so the
+   dot under the handle is the colour you are about to get. */
+.tone-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.tone-swatch {
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  border: 2px solid transparent;
+}
+
+/* The chosen one gets a ring. The tone is also NAMED in the label above, so
+   this is a second signal rather than the only one. */
+.tone-swatch.is-chosen {
+  border-color: var(--ks-ink);
+  box-shadow: 0 0 0 0.2rem rgba(11, 110, 110, 0.25);
+}
+
+/*
+  The calendar in components/DayPicker.vue.
+
+  Seven columns is one more than Bootstrap's row-cols- utilities go up to, so
+  the week is laid out with CSS grid here. minmax(0, 1fr) rather than 1fr
+  matters: without it a long day name would stop the columns shrinking and the
+  calendar would run off the side of a narrow phone.
+*/
+.day-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.day-head {
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--ks-ink);
+}
+
+/* Big enough to hit with a thumb, and every day the same size */
+.day-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.4rem;
+  padding: 0.25rem 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  border-radius: 0.6rem;
+}
+
+/* A day outside the two months we accept: holds the space, does nothing */
+.day-blank {
+  min-height: 3.4rem;
+}
+
+.day-today {
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Matches .form-control.is-invalid, so a missing day looks like any other
+   box that still needs filling in */
+.day-picker.is-invalid-box {
+  border: 2px solid var(--ks-danger);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
 .invalid-feedback {
   margin-top: 0.4rem;
   font-size: 1rem;
@@ -424,13 +626,32 @@ body {
 }
 
 .points-pill {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   padding: 0.4rem 0.95rem;
   border-radius: 999px;
   background: var(--ks-amber-bg);
   color: var(--ks-amber-ink);
   font-weight: 700;
   white-space: nowrap;
+}
+
+/*
+  The coin in the points pill (MainLayout.vue).
+
+  WITHOUT A SIZE HERE THE COIN FILLS THE SCREEN. The file is an SVG with no
+  width or height of its own, so a browser gives it the whole of whatever box
+  it is in. It must be sized in CSS.
+
+  1.4rem keeps it just under the cap height of the "0 pts" beside it. It is
+  pixel art, so the exact number matters less than keeping it small enough
+  that the pill does not grow.
+*/
+.point-coin-img {
+  width: 1.4rem;
+  height: 1.4rem;
+  flex-shrink: 0;
 }
 
 .dropdown-menu {
@@ -878,7 +1099,8 @@ body {
   color: #fff;
   text-wrap: balance;
   font-family: var(--ks-font-display);
-  font-size: clamp(2.25rem, 1.5rem + 3vw, 3.75rem);
+  /* About 39px on phones, 51px on a laptop, 61px at most (with 22px base text) */
+  font-size: clamp(1.75rem, 1rem + 2vw, 2.75rem);
   font-weight: 700;
   line-height: 1.12;
 }

@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -4 24 40" shape-rendering="crispEdges" role="img" aria-labelledby="title desc">
+  <title id="title">Adult female avatar — Dark brown skin (#8E6047)</title>
+  <desc id="desc">An adult woman with a shoulder-length bob, teal collared blouse, and smart-casual skirt, rendered as a compact front-facing retro pixel sprite.</desc>
+  <!-- khaki chinos -->
+  <path fill="#252b3b" d="M8 25h9v4h-1v3h-4v-2h-1v2H7v-3h1z"/>
+  <path fill="#b59a68" d="M9 26h3v5H8v-2h1zM13 26h3v5h-3v-2h-1z"/>
+  <path fill="#d0b781" d="M9 27h2v1H9zM14 27h1v1h-1z"/>
+  <!-- simple belt -->
+  <path fill="#252b3b" d="M8 24h9v2H8z"/>
+  <path fill="#76523b" d="M9 24h7v1H9z"/>
+  <path fill="#e0c785" d="M12 24h2v2h-2z"/>
+  <!-- casual brown shoes -->
+  <path fill="#252b3b" d="M7 30h4v1h2v2H6v-1h1zM13 30h4v1h2v2h-6v-1h-1z"/>
+  <path fill="#76523b" d="M7 31h4v1h2v1H7zM14 31h3v1h2v1h-5z"/>
+  <path fill="#d9b978" d="M7 33h6v1H7zM14 33h5v1h-5z"/>
+  <!-- relaxed arms and hands, no props -->
+  <path fill="#252b3b" d="M7 18h3v-1h4v1h3v2h2v4h-2v2h-2v-2h1v-3h-2v-1H9v2H8v3H6v-2H5v-4h2z"/>
+  <path fill="#4f7f79" d="M7 19h2v1H8v4H7zM16 19h1v1h1v4h-2v-2h1v-2h-1z"/>
+  <path fill="#8E6047" d="M5 23h2v2h2v1H6v-1H5zM16 23h2v2h2v1h-3v-1h-1z"/>
+  <!-- smart-casual collared shirt -->
+  <path fill="#252b3b" d="M8 17h2v-1h4v1h2v1h2v7h-2v2H7v-2H6v-7h2z"/>
+  <path fill="#4f7f79" d="M9 17h2v1h2v-1h2v1h2v6h-2v2H8v-2H7v-5h2z"/>
+  <path fill="#75a295" d="M8 19h2v5H8zM15 19h2v4h-2z"/>
+  <!-- open collar, button placket, and understated pocket -->
+  <path fill="#e9e5d6" d="M10 17h4v1l1 1h-2l-1 2-1-2h-2l1-1z"/>
+  <path fill="#263b43" d="M11 20h2v5h-2z"/>
+  <path fill="#e9e5d6" d="M11 21h1v1h-1zM11 23h1v1h-1z"/>
+  <path fill="#315e5c" d="M14 20h2v2h-2z"/>
+  <path fill="#9bb8a5" d="M14 20h2v1h-2z"/>
+  <!-- teal smart-casual skirt over the existing leggings -->
+  <path fill="#252b3b" d="M8 23h8v1h2v2h1v3h-1v1H6v-1H5v-3h1v-2h2z"/>
+  <path fill="#386967" d="M9 24h6v1h2v1h1v2H7v-2h1v-1h1z"/>
+  <path fill="#75a295" d="M8 27h10v1H8z"/>
+  <!-- hands in front of the skirt -->
+  <path fill="#8E6047" d="M5 23h2v2h2v1H6v-1H5zM16 23h2v2h2v1h-3v-1h-1z"/>
+  <!-- head outline and skin -->
+  <path fill="#252b3b" d="M6 6h2V4h2V3h7v1h2v2h2v8h-1v2h-2v2H8v-2H6v-2H5V8h1z"/>
+  <path fill="#8E6047" d="M7 7h2V5h2V4h5v1h2v2h2v6h-1v2h-2v1H9v-1H7v-2H6V8h1z"/>
+  <!-- neatly side-parted adult hair -->
+  <path fill="#252b3b" d="M5 9V6h2V4h2V3h7v1h3v2h2v4h-2V8h-2V6h-3v2h-4v1H9v3H7v2H6v-2H5v-3z"/>
+  <path fill="#383943" d="M6 8V6h2V4h3v2h4V4h3v2h2v3h-2V8h-3v1h-4V8H9v3H7v2H6V9h-1z"/>
+  <!-- shoulder-length layered bob, shaped to the shoulders -->
+  <path fill="#252b3b" d="M4 8h3v8h1v2h1v2H7v1H5v-2H4v-1H3v-7h1zM18 8h3v1h2v8h-1v2h-2v2h-2v-2h1v-3h-1v-5h1z"/>
+  <path fill="#4b464c" d="M5 11h1v5H5zM20 11h1v5h-1z"/>
+  <path fill="#d9b978" d="M19 7h2v1h-2z"/>
+  <!-- clear skin across eyes so hair stays above the face -->
+  <path fill="#8E6047" d="M8 8h10v1h1v4h-1v1H8v-1H7V9h1z"/>
+  <!-- clear eyes and a simple smile -->
+  <path fill="#252b3b" d="M9 10h1v2H9zM15 10h1v2h-1z"/>
+  <path fill="#c97870" d="M11 15h3v1h-3z"/>
+</svg>

@@ -2,51 +2,50 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { supabase } from '../lib/supabase.js'
 import { useAuthStore } from './auth.js'
-import { seedLedger } from '../lib/seed.js'
 import { COMMUNITY_TARGET, COMMUNITY_BONUS } from '../lib/points.js'
 
-const STORAGE_KEY = 'kampung-points'
-
+// Points live only in Supabase (points_ledger). Earning, spending (redeem_voucher)
+// and the community bonus are all done by database functions.
 export const usePointsStore = defineStore('points', () => {
   const auth = useAuthStore()
 
-  // 1. Load from localStorage or seed
-  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
-  const ledger = ref(saved ? saved.ledger : seedLedger())
-  // Flag to ensure the bonus is paid only once per calendar month (e.g. '2026-10')
-  const bonusPaidForMonth = ref(saved ? saved.bonusPaidForMonth : null)
-  const dbLedger = ref([]) // stores points fetched from Supabase
-  const communityTotal = ref(0) // Real estate-wide total from Supabase RPC
-  // 2. Persist to localStorage
-  watch(
-    [ledger, bonusPaidForMonth],
-    () => {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          ledger: ledger.value,
-          bonusPaidForMonth: bonusPaidForMonth.value,
-        }),
-      )
-    },
-    { deep: true },
-  )
+  // Points used to be kept in the browser. Remove that old copy once.
+  try {
+    localStorage.removeItem('kampung-points')
+  } catch {
+    // Storage can be blocked (e.g. private mode); there is nothing to remove then
+  }
 
-  // Load real points from Supabase database
-  async function load() {
+  const dbLedger = ref([]) // the logged-in person's rows from points_ledger
+  const communityTotal = ref(0) // estate-wide total from the community_points_this_month() RPC
+
+  // The load that is running right now, or null when none is
+  let loadPromise = null
+
+  // Load real points from Supabase. The help request store calls this every time
+  // requests load, so if a load is already running, share it instead of fetching twice.
+  function load() {
+    if (!loadPromise) loadPromise = fetchPoints().finally(() => { loadPromise = null })
+    return loadPromise
+  }
+
+  async function fetchPoints() {
     // 1. Load user's personal points
-    if (auth.user?.id) {
+    const userId = auth.user?.id
+    if (userId) {
       const { data, error } = await supabase
         .from('points_ledger')
-        .select('id, user_id, amount, reason, created_at')
+        .select('id, user_id, amount, reason, is_bonus, created_at')
         .order('created_at', { ascending: false })
 
-      if (!error && data) {
+      // Skip the result if someone else logged in (or out) while it was loading
+      if (!error && data && auth.user?.id === userId) {
         dbLedger.value = data.map((row) => ({
           id: row.id,
           userId: row.user_id,
           amount: row.amount,
           reason: row.reason,
+          isBonus: row.is_bonus,
           createdAt: new Date(row.created_at).getTime(),
         }))
       }
@@ -62,48 +61,28 @@ export const usePointsStore = defineStore('points', () => {
   // Automatically fetch points from Supabase whenever user logs in or out
   watch(
     () => auth.user?.id,
-    (newId) => {
-      load()
+    async (newId) => {
       if (!newId) dbLedger.value = []
+      // A load started before the login would not fetch this person's rows, so
+      // wait for it to finish and then start a fresh one
+      if (loadPromise) await loadPromise.catch(() => {})
+      load()
     },
     { immediate: true },
   )
 
-  // Combines Supabase database points + local voucher redemptions & bonuses
-  const allLedger = computed(() => [...dbLedger.value, ...ledger.value])
+  // 3. User Balance. RLS only returns your own rows, so this works for the
+  // logged-in person only; anyone else gets 0.
+  const myPoints = computed(() => dbLedger.value.reduce((sum, entry) => sum + entry.amount, 0))
 
-  // Helper: check if a timestamp occurred in the current month
-  function isCurrentMonth(timestamp) {
-    if (!timestamp) return false
-    const d = new Date(timestamp)
-    const now = new Date()
-    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
-  }
-
-  // Current year-month key, e.g. '2026-10'
-  const currentMonthKey = computed(() => {
-    const now = new Date()
-    const y = now.getFullYear()
-    const m = String(now.getMonth() + 1).padStart(2, '0')
-    return `${y}-${m}`
-  })
-
-  // 3. User Balance
   function getBalance(userId) {
-    if (!userId) return 0
-    return allLedger.value
-      .filter((entry) => entry.userId === userId)
-      .reduce((sum, entry) => sum + entry.amount, 0)
+    return userId && userId === auth.user?.id ? myPoints.value : 0
   }
 
-  const myPoints = computed(() => getBalance(auth.user?.id))
+  const myLedger = computed(() => (auth.user?.id ? dbLedger.value : []))
 
-  const myLedger = computed(() => {
-    if (!auth.user?.id) return []
-    return allLedger.value.filter((entry) => entry.userId === auth.user.id)
-  })
   // 4. Community Challenge Metrics
-  // Sum of all points earned by everyone this month (amount > 0) (from supabase)
+  // Sum of all points earned by everyone this month, not counting bonuses (from supabase)
   const communityPointsThisMonth = computed(() => communityTotal.value)
 
   // Progress percentage (0 to 100)
@@ -115,76 +94,7 @@ export const usePointsStore = defineStore('points', () => {
     return communityPointsThisMonth.value >= COMMUNITY_TARGET
   })
 
-  // 5. Bonus Rule: When target is met, give each contributor a bonus ONCE
-  function checkCommunityBonus() {
-    const monthKey = currentMonthKey.value
-    if (communityPointsThisMonth.value >= COMMUNITY_TARGET && bonusPaidForMonth.value !== monthKey) {
-      bonusPaidForMonth.value = monthKey
-
-      // Unique contributors who earned points this month (excluding bonuses)
-      const contributors = [
-        ...new Set(
-          allLedger.value
-            .filter((entry) => entry.amount > 0 && isCurrentMonth(entry.createdAt) && !entry.isBonus)
-            .map((entry) => entry.userId),
-        ),
-      ]
-
-      // Award bonus points to each contributor
-      contributors.forEach((userId) => {
-        ledger.value.unshift({
-          id: 'p' + Date.now() + Math.random().toString(36).slice(2, 6),
-          userId,
-          amount: COMMUNITY_BONUS,
-          reason: `🎉 Community Challenge Bonus (${monthKey})`,
-          isBonus: true,
-          createdAt: Date.now(),
-        })
-      })
-    }
-  }
-
-  // 6. Award Points action
-  function awardPoints(userId, amount, reason = 'Points awarded') {
-    const entry = {
-      id: 'p' + Date.now() + Math.random().toString(36).slice(2, 6),
-      userId,
-      amount: Math.abs(Number(amount)),
-      reason,
-      createdAt: Date.now(),
-    }
-    ledger.value.unshift(entry)
-
-    // Check if this award pushed the community past the 10,000 threshold
-    checkCommunityBonus()
-    return entry
-  }
-
-  // 7. Spend Points action
-  function spendPoints(userId, amount, reason = 'Points spent') {
-    const num = Math.abs(Number(amount))
-    if (getBalance(userId) < num) {
-      return { ok: false, error: 'Not enough points' }
-    }
-    const entry = {
-      id: 'p' + Date.now() + Math.random().toString(36).slice(2, 6),
-      userId,
-      amount: -num,
-      reason,
-      createdAt: Date.now(),
-    }
-    ledger.value.unshift(entry)
-    return { ok: true, entry }
-  }
-
-  // 8. Reset
-  function reset() {
-    ledger.value = seedLedger()
-    bonusPaidForMonth.value = null
-  }
-
   return {
-    ledger: allLedger,
     myPoints,
     myLedger,
     COMMUNITY_TARGET,
@@ -192,11 +102,7 @@ export const usePointsStore = defineStore('points', () => {
     communityPointsThisMonth,
     communityProgress,
     isCommunityTargetReached,
-    bonusPaidForMonth,
     getBalance,
-    awardPoints,
-    spendPoints,
     load,
-    reset,
   }
 })

@@ -12,6 +12,10 @@
 import { ref } from 'vue'
 import { searchAddress } from '../lib/onemap.js'
 
+defineProps({
+  label: { type: String, default: 'Find a place' },
+})
+
 const emit = defineEmits(['select'])
 
 const query = ref('')
@@ -37,12 +41,15 @@ function choose(place) {
 
 <template>
   <div>
-    <label for="place-search" class="form-label">Find a place</label>
+    <label for="place-search" class="form-label">{{ label }}</label>
     <div class="row g-2">
       <div class="col">
+        <!-- keydown and prevent, not keyup: this box sits inside the propose
+             form, and Enter in a text box submits the form it is in. Without
+             this, searching for a place would send the whole form. -->
         <input id="place-search" v-model="query" type="text" class="form-control"
           placeholder="e.g. Eunos Community Club" data-testid="place-search"
-          @keyup.enter="search" />
+          @keydown.enter.prevent="search" />
       </div>
       <div class="col-auto">
         <button type="button" class="btn btn-primary" :disabled="searching"

@@ -30,12 +30,6 @@ export function formatDate(iso) {
   return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`
 }
 
-//format date to display as dd-mm-yyyy
-export function formatDateShort(iso) {
-  const [y, m, d] = iso.split('-')
-  return `${d}-${m}-${y}`
-}
-
 //to change to 12-hour clock from 24-hour clock
 export function formatTime(hhmm) {
   const [h, m] = hhmm.split(':').map(Number)
@@ -60,15 +54,22 @@ export function sessionStart(dateISO, hhmm) {
   return new Date(y, mo - 1, d, h, mi)
 }
 
-//session categories 
+//when it finishes: the start plus its length in minutes
+export function sessionEnd(dateISO, hhmm, minutes) {
+  return new Date(sessionStart(dateISO, hhmm).getTime() + minutes * 60 * 1000)
+}
+
+//session categories
+// Must match the check constraint on skill_sessions.category in
+// supabase/schema.sql (section 8.2) word for word, or inserts are refused.
 export const CATEGORIES = [
   'Tech',
   'Cooking',
   'Crafts',
-  'Health & Fitness',
-  'Arts & Music',
+  'Health & fitness',
+  'Arts & music',
   'Languages',
-  'Others',
+  'Other',
 ]
 
 //for weekends-only filter 

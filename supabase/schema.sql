@@ -235,11 +235,12 @@ create table public.help_requests (
   helper_id uuid references public.profiles(id) on delete set null,
   title text not null check (length(trim(title)) >= 5),
   description text not null check (length(trim(description)) >= 10),
-  category text not null check (category in ('Tech', 'Grocery', 'Lifting', 'Translation', 'Companion Walk')),
+  category text not null check (category in ('Tech', 'Grocery', 'Lifting', 'Translation', 'Companion Walk', 'Other')),
   difficulty text not null check (difficulty in ('Easy', 'Medium', 'Hard')),
   duration int not null check (duration in (15, 30, 45, 60, 90, 120)),
   is_physical boolean not null default false,
   needed_at timestamptz not null,        -- when the requester needs the help
+  location text not null check (length(trim(location)) between 1 and 100),  -- where the helper meets the requester
   points int not null default 0,
   status text not null default 'open'
     check (status in ('open', 'accepted', 'pending_confirmation', 'completed', 'cancelled')),
@@ -292,8 +293,8 @@ create policy "Edit your own request while it is open"
 -- The browser may only write these columns. Status changes go through the
 -- functions in section 5, which check the rules.
 revoke insert, update, delete on public.help_requests from anon, authenticated;
-grant insert (title, description, category, difficulty, duration, is_physical, needed_at) on public.help_requests to authenticated;
-grant update (title, description, category, difficulty, duration, is_physical, needed_at) on public.help_requests to authenticated;
+grant insert (title, description, category, difficulty, duration, is_physical, needed_at, location) on public.help_requests to authenticated;
+grant update (title, description, category, difficulty, duration, is_physical, needed_at, location) on public.help_requests to authenticated;
 
 create table public.points_ledger (
   id uuid primary key default gen_random_uuid(),

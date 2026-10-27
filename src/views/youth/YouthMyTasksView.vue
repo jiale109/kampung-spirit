@@ -66,7 +66,8 @@ function doWithdraw() {
         <h2 id="active-heading" class="h4 fw-bold mb-3">Active</h2>
         <p v-if="activeTasks.length === 0">You have no active tasks right now.</p>
         <div v-else class="request-list">
-          <RequestCard v-for="request in activeTasks" :key="request.id" :request="request" :show-helper="false">
+          <RequestCard v-for="request in activeTasks" :key="request.id" :request="request" :show-helper="false"
+            viewer="helper">
             <template #actions>
               <template v-if="request.status === 'accepted'">
                 <button class="btn btn-primary btn-lg" data-testid="mark-done" :disabled="busy !== ''"
@@ -86,7 +87,8 @@ function doWithdraw() {
       <section v-if="pastTasks.length > 0" class="mt-5" aria-labelledby="past-heading" data-testid="past-tasks">
         <h2 id="past-heading" class="h4 fw-bold mb-3">Past</h2>
         <div class="request-list">
-          <RequestCard v-for="request in pastTasks" :key="request.id" :request="request" :show-helper="false">
+          <RequestCard v-for="request in pastTasks" :key="request.id" :request="request" :show-helper="false"
+            viewer="helper">
             <template #actions>
               <span v-if="request.status === 'completed'" class="request-success">
                 ✔ You earned {{ request.points }} points

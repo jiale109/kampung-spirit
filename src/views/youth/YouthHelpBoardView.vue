@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { useHelpRequestStore, isPastTime } from '../../stores/helpRequest.js'
+import { useHelpRequestStore, isPastTime, formatNeededAt } from '../../stores/helpRequest.js'
 import { categories, MAX_ACTIVE_TASKS } from '../../lib/points.js'
 import EmptyState from '../../components/EmptyState.vue'
 import RequestCard from '../../components/RequestCard.vue'
@@ -9,7 +9,7 @@ import ConfirmModal from '../../components/ConfirmModal.vue'
 const store = useHelpRequestStore()
 
 const selectedCategory = ref('')
-const sortBy = ref('newest')
+const sortBy = ref('soonest')
 const acceptedTitle = ref('')   
 const error = ref('')
 
@@ -17,7 +17,15 @@ const successAlert = ref(null)
 const errorAlert = ref(null)
 
 
-const physicalRequest = ref(null)
+// The request waiting for "Yes, I can help" in the modal
+const requestToAccept = ref(null)
+
+// "Sat 25 Oct, 3:00 PM at Eunos CC entrance." plus a warning for physical tasks
+const acceptMessage = computed(() => {
+  const r = requestToAccept.value
+  const when = `${formatNeededAt(r.neededAt)} at ${r.location}.`
+  return r.isPhysical ? `${when} This task needs physical effort.` : when
+})
 
 const busyId = ref(null)
 
@@ -40,14 +48,14 @@ function accept(request) {
   acceptedTitle.value = ''
   error.value = ''
 
-  if (request.isPhysical) physicalRequest.value = request
-  else doAccept(request, false)
+  requestToAccept.value = request
 }
 
-function confirmPhysical() {
-  const request = physicalRequest.value
-  physicalRequest.value = null
-  doAccept(request, true)
+// "Yes, I can help" also counts as agreeing to the physical effort
+function confirmAccept() {
+  const request = requestToAccept.value
+  requestToAccept.value = null
+  doAccept(request, request.isPhysical)
 }
 
 async function doAccept(request, physicalOk) {
@@ -92,10 +100,10 @@ async function doAccept(request, physicalOk) {
       <div class="col-sm-6">
         <label for="sort-by" class="form-label">Sort by</label>
         <select id="sort-by" v-model="sortBy" class="form-select">
+          <option value="soonest">Soonest first</option>
           <option value="newest">Newest first</option>
           <option value="points">Most points</option>
           <option value="shortest">Shortest time</option>
-          <option value="soonest">Soonest first</option>
         </select>
       </div>
     </div>
@@ -106,7 +114,11 @@ async function doAccept(request, physicalOk) {
     <div v-if="acceptedTitle" ref="successAlert" class="alert alert-success accept-alert" role="status"
       tabindex="-1" data-testid="accept-success">
       <span>You accepted "{{ acceptedTitle }}". It is now in My Tasks.</span>
-      <router-link to="/app/tasks" class="btn btn-primary">View My Tasks</router-link>
+      <span class="accept-alert-actions">
+        <router-link to="/app/tasks" class="btn btn-primary">View My Tasks</router-link>
+        <button type="button" class="btn btn-outline-success alert-close" aria-label="Close message"
+          data-testid="close-message" @click="acceptedTitle = ''">✕</button>
+      </span>
     </div>
     <div v-if="error" ref="errorAlert" class="alert alert-danger" role="alert" tabindex="-1">{{ error }}</div>
     <div v-if="store.atLimit" class="alert alert-warning">
@@ -127,7 +139,7 @@ async function doAccept(request, physicalOk) {
     <EmptyState v-else-if="filteredRequests.length === 0" message="No open requests here right now. Check back soon!" />
 
     <div v-else class="request-list">
-      <RequestCard v-for="request in filteredRequests" :key="request.id" :request="request" hide-status>
+      <RequestCard v-for="request in filteredRequests" :key="request.id" :request="request" hide-status compact show-waiting>
         <template #actions>
           <button class="btn btn-primary btn-lg" data-testid="accept" :disabled="store.atLimit || busyId !== null"
             @click="accept(request)">
@@ -137,10 +149,9 @@ async function doAccept(request, physicalOk) {
       </RequestCard>
     </div>
 
-    <ConfirmModal v-if="physicalRequest" title="Physical task"
-      message="This task needs physical effort. Are you comfortable doing it?"
-      confirm-label="Yes, I can do it" cancel-label="Not this time" testid="confirm-physical"
-      @confirm="confirmPhysical" @cancel="physicalRequest = null" />
+    <ConfirmModal v-if="requestToAccept" title="Can you make it?" :message="acceptMessage"
+      confirm-label="Yes, I can help" cancel-label="Not now" testid="confirm-accept"
+      @confirm="confirmAccept" @cancel="requestToAccept = null" />
   </div>
 </template>
 
@@ -158,6 +169,17 @@ async function doAccept(request, physicalOk) {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem 1rem;
+}
+
+.accept-alert-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.alert-close {
+  min-width: 3rem;
+  min-height: 3rem;
 }
 
 .alert[tabindex='-1']:focus {

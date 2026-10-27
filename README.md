@@ -2,7 +2,7 @@
 
 > Neighbours helping neighbours, one small favour at a time.
 
-IS216 group project (G6, Team 1). A web app for one HDB estate (Eunos) where seniors post help requests, youths nearby accept them, residents join hangouts and skill-swap sessions, and helpers earn points they can redeem for (simulated) vouchers from local merchants.
+IS216 group project (G6, Team 1). A web app for one HDB estate (Eunos) where seniors post help requests, youths in the same estate accept them, residents join hangouts and skill-swap sessions, and helpers earn points they can redeem for (simulated) vouchers from local merchants.
 
 Built with Vue 3, Pinia, Vue Router and Bootstrap 5. Tested with Playwright. Deployed on Vercel.
 

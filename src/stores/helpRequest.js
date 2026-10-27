@@ -8,7 +8,7 @@ import { MAX_ACTIVE_TASKS } from '../lib/points.js'
 
 
 const COLUMNS = `id, title, description, category, difficulty, duration, points, is_physical, status,
-  requester_id, helper_id, needed_at, created_at,
+  requester_id, helper_id, needed_at, location, created_at,
   requester:profiles!requester_id(name, block),
   helper:profiles!helper_id(name)`
 
@@ -29,6 +29,7 @@ function fromRow(r) {
     helperId: r.helper_id,
     helperName: r.helper?.name ?? null,
     neededAt: new Date(r.needed_at).getTime(),
+    location: r.location,
     createdAt: new Date(r.created_at).getTime(),
   }
 }
@@ -94,25 +95,27 @@ export const useHelpRequestStore = defineStore('helpRequest', () => {
 
   async function run(call) {
     const { error } = await call
-    if (error) return { ok: false, error: error.message }
+    // Reload after a failure too: the request may have changed (for example someone
+    // else took it), so the list should show that instead of the old card
     if (loadPromise) await loadPromise.catch(() => {})
     await load()
-    return { ok: true }
+    return error ? { ok: false, error: error.message } : { ok: true }
   }
 
   const createRequest = (d) =>
     run(supabase.from('help_requests').insert({
       title: d.title, description: d.description, category: d.category,
-      difficulty: d.difficulty, duration: d.duration,
+      difficulty: d.difficulty, duration: d.duration, is_physical: d.isPhysical,
       needed_at: new Date(d.neededAt).toISOString(),
-      location: d.location || 'Blk 412 Eunos Cres',
+      location: d.location.trim(),
     }))
 
   const updateRequest = (id, d) =>
     run(supabase.from('help_requests').update({
       title: d.title, description: d.description, category: d.category,
-      difficulty: d.difficulty, duration: d.duration,
+      difficulty: d.difficulty, duration: d.duration, is_physical: d.isPhysical,
       needed_at: new Date(d.neededAt).toISOString(),
+      location: d.location.trim(),
     }).eq('id', id))
 
   const cancelRequest = (id) => run(supabase.rpc('cancel_help_request', { request_id: id }))

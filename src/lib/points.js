@@ -12,7 +12,7 @@
   - COMMUNITY_TARGET and COMMUNITY_BONUS: the monthly challenge
     (used by stores/points.js and views/rewards/RewardsView.vue).
 */
-// Settings for help requests, and the (placeholder) points rule.
+// Settings for help requests, and the points rules.
 
 export const categories = [
   { name: 'Tech', icon: '📱' },

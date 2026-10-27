@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '../lib/supabase.js'
 import { useAuthStore } from './auth.js'
+import { usePointsStore } from './points.js'
 import { MAX_ACTIVE_TASKS } from '../lib/points.js'
 
 
@@ -51,19 +52,12 @@ export function formatNeededAt(ms) {
 
 export const useHelpRequestStore = defineStore('helpRequest', () => {
   const auth = useAuthStore()
+  // The points balance lives in the points store (see stores/points.js)
+  const points = usePointsStore()
 
   const requests = ref([])
   const loading = ref(false)
   const loadError = ref('')
-  // The logged-in person's balance: the sum of their rows in points_ledger
-  const myPoints = ref(0)
-
-  // RLS only returns your own ledger rows, so adding them all up gives your balance
-  async function loadPoints() {
-    const { data, error } = await supabase.from('points_ledger').select('amount')
-    if (!error) myPoints.value = data.reduce((sum, row) => sum + row.amount, 0)
-  }
-
   // The load that is running right now, or null when none is
   let loadPromise = null
 
@@ -78,7 +72,8 @@ export const useHelpRequestStore = defineStore('helpRequest', () => {
     loadError.value = ''
     const [{ data, error }] = await Promise.all([
       supabase.from('help_requests').select(COLUMNS).order('created_at', { ascending: false }),
-      loadPoints(),
+      // Refresh the balance too, so points earned from an accept / confirm show straight away
+      points.load(),
     ])
     if (error) loadError.value = 'Could not load requests. Please try again.'
     else requests.value = data.map(fromRow)
@@ -134,7 +129,7 @@ export const useHelpRequestStore = defineStore('helpRequest', () => {
 
   return {
     requests, loading, loadError,
-    myRequests, openRequests, myTasks, activeCount, atLimit, myPoints,
+    myRequests, openRequests, myTasks, activeCount, atLimit,
     getRequestById, load,
     createRequest, updateRequest, cancelRequest, confirmDone,
     acceptRequest, markDone, withdrawFromTask,

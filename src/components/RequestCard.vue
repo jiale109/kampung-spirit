@@ -102,7 +102,7 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
             </div>
             <div>
               <dt>Reward</dt>
-              <dd>⭐ {{ request.points }} points</dd>
+              <dd> <img src="/images/coin.svg" class="point-coin-img" alt="" />{{ request.points }} points</dd>
             </div>
           </dl>
 

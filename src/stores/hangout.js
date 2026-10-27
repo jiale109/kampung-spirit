@@ -14,15 +14,16 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useAuthStore } from './auth.js'
-import { findHotspot } from '../lib/hotspots.js'
-import { sessionStart } from '../lib/skillSwapFormat.js'
+import { usePointsStore } from './points.js'
+import { sessionStart, sessionEnd } from '../lib/skillSwapFormat.js'
 import { supabase } from '../lib/supabase.js'
 
-// Must match the duration check in supabase/schema.sql section 7. Change one,
-// change the other, or the insert is refused by the database.
-export const HANGOUT_DURATIONS = [30, 60, 90, 120]
+// Must match the duration check in supabase/schema.sql (set in section 7,
+// widened in section 12). Change one, change the other, or the insert is
+// refused by the database.
+export const HANGOUT_DURATIONS = [30, 60, 90, 120, 150, 180]
 
-const COLUMNS = `id, title, description, hotspot_id, hangout_date, hangout_time, duration, status, host_id, created_at, host:profiles!host_id(name), attendees:hangout_attendees(user_id)`
+const COLUMNS = `id, title, description, hotspot_id, place_name, latitude, longitude, outdoor, hangout_date, hangout_time, duration, status, host_id, created_at, host:profiles!host_id(name), attendees:hangout_attendees(user_id)`
 
 function fromRow(r) {
   return {
@@ -30,6 +31,13 @@ function fromRow(r) {
     title: r.title,
     description: r.description,
     hotspotId: r.hotspot_id,
+    // Every hangout carries its own place, so the card and the map never have
+    // to look anything up. hotspotId is only a tag for the filter, and is null
+    // for a place someone searched for on OneMap.
+    placeName: r.place_name,
+    latitude: Number(r.latitude),
+    longitude: Number(r.longitude),
+    outdoor: r.outdoor === true,
     date: r.hangout_date,
     time: String(r.hangout_time).slice(0, 5),
     duration: r.duration,
@@ -81,6 +89,16 @@ export const useHangoutStore = defineStore('hangout', () => {
   const isGoing = (hangout) => !!me.value && hangout.attendeeIds.includes(me.value.id)
   const goingCount = (hangout) => hangout.attendeeIds.length
 
+  // The time now, updated every minute so past items drop off without a reload.
+  // Pinia stores live for the whole app, so the interval is never cleared.
+  const now = ref(new Date())
+  setInterval(() => { now.value = new Date() }, 60 * 1000)
+
+  const hasStarted = (item) => sessionStart(item.date, item.time) <= now.value
+  const hasEnded = (item) => sessionEnd(item.date, item.time, item.duration) <= now.value
+  // Ended items stay for their host only, until they mark them done or cancel
+  const stillShown = (item) => !hasEnded(item) || isHost(item)
+
   const needSignIn = () => ({ ok: false, error: 'Please sign in first.' })
   const notFound = () => ({ ok: false, error: 'We could not find that hangout.' })
 
@@ -88,35 +106,74 @@ export const useHangoutStore = defineStore('hangout', () => {
 
   const byStart = (a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)
 
-  /** Hangouts people can still join, soonest first. */
+  /** Open hangouts that have not ended (or that I host), soonest first. */
   const openHangouts = computed(() =>
-    hangouts.value.filter((h) => h.status === 'open').sort(byStart),
+    hangouts.value.filter((h) => h.status === 'open' && stillShown(h)).sort(byStart),
   )
   /** Open hangouts the signed-in person is hosting. */
   const myHangouts = computed(() => openHangouts.value.filter((h) => isHost(h)))
   /** Open hangouts the signed-in person is going to. */
   const myJoined = computed(() => openHangouts.value.filter((h) => isGoing(h)))
 
-  /** Open hangouts at one hotspot, or all of them when id is '' . */
-  function atHotspot(hotspotId) {
-    if (!hotspotId) return openHangouts.value
-    return openHangouts.value.filter((h) => h.hotspotId === hotspotId)
+  /** Open hangouts at one place, or all of them when name is ''. */
+  function atPlace(placeName) {
+    if (!placeName) return openHangouts.value
+    return openHangouts.value.filter((h) => h.placeName === placeName)
+  }
+
+  /*
+    How far from a tapped pin still counts as "here". One kilometre is about
+    a 12 minute walk, which is the sort of distance a resident means when they
+    press a spot on the map.
+  */
+  const NEAR_KM = 1
+
+  // Singapore is tiny, so treating a degree as a flat 111 km in both
+  // directions is accurate to a few metres here. No great-circle maths needed.
+  function distanceKm(aLat, aLng, bLat, bLng) {
+    const dLat = (aLat - bLat) * 111
+    const dLng = (aLng - bLng) * 111
+    return Math.sqrt(dLat * dLat + dLng * dLng)
+  }
+
+  /** Open hangouts within NEAR_KM of a tapped point, or all when none given. */
+  function nearPoint(point) {
+    if (!point || !Number.isFinite(point.lat) || !Number.isFinite(point.lng)) {
+      return openHangouts.value
+    }
+    return openHangouts.value.filter(
+      (h) => distanceKm(h.latitude, h.longitude, point.lat, point.lng) <= NEAR_KM,
+    )
   }
 
   // ---- actions (each returns { ok, error }) ----
 
   async function createHangout(data) {
     if (!me.value) return needSignIn()
+    if (me.value.guardian_status === 'pending') {
+      return { ok: false, error: 'Your parent or guardian needs to confirm your account before you can host.' }
+    }
 
     const title = String(data.title || '').trim()
     const description = String(data.description || '').trim()
     const duration = Number(data.duration)
+    const placeName = String(data.placeName || '').trim()
+    const latitude = Number(data.latitude)
+    const longitude = Number(data.longitude)
 
     if (title.length < 5) return { ok: false, error: 'The name needs at least 5 letters.' }
     if (description.length < 10) {
       return { ok: false, error: 'Please say a little more about the hangout (at least 10 letters).' }
     }
-    if (!findHotspot(data.hotspotId)) return { ok: false, error: 'Please choose a place to meet.' }
+    if (placeName.length < 3) return { ok: false, error: 'Please choose a place to meet.' }
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return { ok: false, error: 'We could not put that place on the map. Please search for it again.' }
+    }
+    // The same box the database checks, so the person gets a clear message
+    // instead of a raw constraint error
+    if (latitude < 1.1 || latitude > 1.6 || longitude < 103.5 || longitude > 104.2) {
+      return { ok: false, error: 'That place is not in Singapore. Please choose somewhere closer to home.' }
+    }
     if (!HANGOUT_DURATIONS.includes(duration)) return { ok: false, error: 'Please choose how long it will last.' }
     if (!data.date || !data.time) return { ok: false, error: 'Please choose a day and a time.' }
     if (sessionStart(data.date, data.time) < new Date()) {
@@ -129,7 +186,12 @@ export const useHangoutStore = defineStore('hangout', () => {
       supabase.from('hangouts').insert({
         title,
         description,
-        hotspot_id: data.hotspotId,
+        // null for a searched place; the id is only kept so the filter works
+        hotspot_id: data.hotspotId || null,
+        place_name: placeName,
+        latitude,
+        longitude,
+        outdoor: data.outdoor === true,
         hangout_date: data.date,
         hangout_time: data.time,
         duration,
@@ -144,6 +206,10 @@ export const useHangoutStore = defineStore('hangout', () => {
     if (h.status !== 'open') return { ok: false, error: 'This hangout is no longer open.' }
     if (isHost(h)) return { ok: false, error: 'You are hosting this hangout, so you are already going.' }
     if (isGoing(h)) return { ok: false, error: 'You are already going to this hangout.' }
+    if (hasStarted(h)) return { ok: false, error: 'This has already started, so it is too late to join.' }
+    if (me.value.guardian_status === 'pending') {
+      return { ok: false, error: 'Your parent or guardian needs to confirm your account before you can join.' }
+    }
     return run(supabase.rpc('join_hangout', { hangout_id: id }))
   }
 
@@ -170,7 +236,15 @@ export const useHangoutStore = defineStore('hangout', () => {
     const h = find(id)
     if (!h) return notFound()
     if (!isHost(h)) return { ok: false, error: 'Only the host can complete this hangout.' }
-    return run(supabase.rpc('complete_hangout', { hangout_id: id }))
+    if (sessionStart(h.date, h.time) > new Date()) {
+      return { ok: false, error: 'You can mark a hangout as done once it has started.' }
+    }
+    // Other refusals (e.g. nobody else joined) come back from the database as plain sentences
+    const result = await run(supabase.rpc('complete_hangout', { hangout_id: id }))
+    if (!result.ok) return result
+    // complete_hangout() adds points_ledger rows, so refresh the balance in the navbar
+    await usePointsStore().load()
+    return { ok: true }
   }
 
   return {
@@ -181,10 +255,14 @@ export const useHangoutStore = defineStore('hangout', () => {
     openHangouts,
     myHangouts,
     myJoined,
-    atHotspot,
+    atPlace,
+    nearPoint,
+    NEAR_KM,
     isHost,
     isGoing,
     goingCount,
+    hasStarted,
+    hasEnded,
     createHangout,
     joinHangout,
     leaveHangout,

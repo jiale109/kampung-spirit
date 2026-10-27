@@ -9,7 +9,6 @@
 */
 import { ref, computed } from 'vue'
 import { useHangoutStore } from '../stores/hangout.js'
-import { hotspotName, findHotspot } from '../lib/hotspots.js'
 import { formatDate, formatTime, formatDuration } from '../lib/skillSwapFormat.js'
 
 const props = defineProps({
@@ -21,12 +20,15 @@ const store = useHangoutStore()
 
 const isHost = computed(() => store.isHost(props.hangout))
 const isGoing = computed(() => store.isGoing(props.hangout))
-const canJoin = computed(() => !isHost.value && !isGoing.value)
-
-const hotspot = computed(() => findHotspot(props.hangout.hotspotId))
+// Too late to join once it has started; the host can only mark it done after that
+// (the database checks this too). The store's clock updates every minute.
+const hasStarted = computed(() => store.hasStarted(props.hangout))
+const hasEnded = computed(() => store.hasEnded(props.hangout))
+const canJoin = computed(() => !isHost.value && !isGoing.value && !hasStarted.value)
 
 // Always words, never colour on its own (the pill has a dot as well)
 const status = computed(() => {
+  if (isHost.value && hasEnded.value) return { label: 'Waiting for you to mark as done', cls: 'status-pending' }
   if (isHost.value) return { label: 'You are hosting', cls: 'status-accepted' }
   if (isGoing.value) return { label: 'You are going', cls: 'status-open' }
   return { label: 'Open to join', cls: 'status-completed' }
@@ -67,7 +69,7 @@ const detailsId = computed(() => `hangout-details-${props.hangout.id}`)
     @pointerenter="onEnter" @pointerleave="onLeave">
     <div class="card-body">
       <div class="request-top">
-        <span class="category-label">{{ hotspotName(hangout.hotspotId) }}</span>
+        <span class="category-label">{{ hangout.placeName }}</span>
         <span class="status-pill" :class="status.cls">{{ status.label }}</span>
       </div>
 
@@ -101,7 +103,7 @@ const detailsId = computed(() => `hangout-details-${props.hangout.id}`)
             </div>
             <div>
               <dt>Where</dt>
-              <dd>{{ hotspotName(hangout.hotspotId) }}<template v-if="hotspot?.outdoor"> (outdoors)</template></dd>
+              <dd>{{ hangout.placeName }}<template v-if="hangout.outdoor"> (outdoors)</template></dd>
             </div>
             <div>
               <dt>Going</dt>
@@ -121,8 +123,9 @@ const detailsId = computed(() => `hangout-details-${props.hangout.id}`)
               @click="emit('leave', hangout)">I cannot make it</button>
 
             <template v-if="isHost">
-              <button type="button" class="btn btn-primary btn-lg" data-testid="complete"
+              <button v-if="hasStarted" type="button" class="btn btn-primary btn-lg" data-testid="complete"
                 @click="emit('complete', hangout)">Mark as done</button>
+              <p v-else class="request-note mb-0" data-testid="complete-later">You can mark this as done once it has started.</p>
               <button type="button" class="btn btn-outline-danger" data-testid="cancel"
                 @click="emit('cancel', hangout)">Cancel this hangout</button>
             </template>

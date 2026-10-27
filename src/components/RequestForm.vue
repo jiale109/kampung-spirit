@@ -198,7 +198,7 @@ function cancel() {
       </div>
 
       <p class="points-note">
-        The helper earns <strong>⭐ {{ previewPoints }} points</strong> after you confirm the task is done.
+        The helper earns <strong><img src="/images/coin.svg" class="point-coin-img" alt="" /> {{ previewPoints }} points</strong> after you confirm the task is done.
       </p>
 
       <div>

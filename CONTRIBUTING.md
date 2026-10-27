@@ -42,14 +42,14 @@ Stay inside your own feature folder when you can. That way we rarely edit the sa
 | Accounts and login (backend) | Reuben Tham | `stores/auth.js`, `views/LandingView.vue` |
 | Profile pages, layout and theme | Clarence Tay | `views/profile/*`, `layouts/*`, `styles/theme.css` |
 
-Each placeholder page starts with a **GUIDE** comment that explains what to build and in what order. Read it first.
+Each feature's main page starts with a **GUIDE** comment that explains how it works and what is still left. Read it first.
 
 ### Files everyone touches (be careful)
 
 | File | Rule |
 |---|---|
 | `router/index.js` | Add your route as ONE line in `sharedChildren` (or the role's `children`). Do not reformat the file. |
-| `lib/seed.js` | Add your own `seedXxx()` function. Do not change another feature's sample data. |
+| `scripts/seed-demo.js` | Add your own sample rows. Do not change another feature's sample data. |
 | `styles/theme.css` | Prefer a `<style scoped>` block in your own component. Only put something here if 2+ features need it, and add it under the right numbered section. |
 | `layouts/*` | Only the navbar links. Tell Clarence before changing the structure. |
 
@@ -65,7 +65,7 @@ If you get a merge conflict, do not guess: ask the person who owns the file.
 
 ## 5. Senior-friendly rules (every page must follow these)
 
-1. Senior pages use **22px** text, everyone else 18px. Everything is sized in `rem`, so use `rem` too, never `px` for text, padding or button size.
+1. Text is **22px** for everyone, and **27px** when "Use large text" is on (sign up or Profile page; `html.large-text` in `theme.css`, applied by `MainLayout.vue` and `lib/profile.js`). Everything is sized in `rem`, so use `rem` too, never `px` for text, padding or button size.
 2. Buttons and inputs are at least 48px tall. One clear main action per screen.
 3. Never show a state by colour alone. Write it ("Open", "Full", "Awaiting confirmation").
 4. Keep screens calm: show the title and status first, and put details behind hover or tap (see `components/RequestCard.vue`).

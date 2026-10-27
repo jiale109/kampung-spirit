@@ -5,7 +5,7 @@
 -- paste this file and press Run. (schema.sql already includes this change for
 -- new, empty projects.)
 
-alter table public.help_requests add column needed_at timestamptz;
+alter table public.help_requests add column if not exists needed_at timestamptz;
 
 -- Existing requests have no time yet; use the time they were posted
 update public.help_requests set needed_at = created_at where needed_at is null;

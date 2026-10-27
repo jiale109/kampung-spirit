@@ -286,7 +286,22 @@ body {
 */
 .app-navbar {
   position: relative;
+}
+
+/*
+  The strip the walker is clipped to.
+
+  The clipping CANNOT go on .app-navbar itself: the name dropdown lives inside
+  the navbar and hangs below it, so overflow: hidden there cut the menu off.
+  This is a box of exactly the navbar's size that holds nothing but the
+  walker, so the walker is clipped at the edges and the menu is not.
+*/
+.walker-track {
+  position: absolute;
+  inset: 0;
   overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .walker {
@@ -295,8 +310,6 @@ body {
   left: 0;
   width: 1.6rem;
   height: 2.7rem;
-  pointer-events: none;
-  z-index: 0;
   animation: ks-stroll 28s linear infinite;
 }
 
@@ -330,7 +343,7 @@ body {
   without their having to find the switch at all.
 */
 @media (prefers-reduced-motion: reduce) {
-  .walker {
+  .walker-track {
     display: none;
   }
 }

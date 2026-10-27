@@ -61,9 +61,11 @@ async function logout() {
       hides the other, turn and turn about, which is what makes it a walk
       rather than a slide. Decorative, so hidden from screen readers.
     -->
-    <div v-if="showWalker" class="walker" aria-hidden="true" data-testid="walker">
-      <img :src="walkerStill" class="walker-frame walker-frame-1" alt="" />
-      <img :src="walkerStep" class="walker-frame walker-frame-2" alt="" />
+    <div v-if="showWalker" class="walker-track" aria-hidden="true" data-testid="walker">
+      <div class="walker">
+        <img :src="walkerStill" class="walker-frame walker-frame-1" alt="" />
+        <img :src="walkerStep" class="walker-frame walker-frame-2" alt="" />
+      </div>
     </div>
 
     <div class="container">

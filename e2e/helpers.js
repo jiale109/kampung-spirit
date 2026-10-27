@@ -81,7 +81,8 @@ export async function login(page, role, name) {
   } else {
     accounts.set(name, await signUp(page, { name, birthYear: birthYearFor[role] }))
   }
-  await expect(page).toHaveURL(role === 'Senior' ? /\/app\/requests$/ : /\/app$/)
+  // Supabase can take a while to create an account, especially on the first sign-up of a run
+  await expect(page).toHaveURL(role === 'Senior' ? /\/app\/requests$/ : /\/app$/, { timeout: 15000 })
 }
 
 export async function logout(page) {

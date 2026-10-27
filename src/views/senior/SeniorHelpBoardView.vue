@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useAuthStore } from '../../stores/auth.js'
 import { useHelpRequestStore, isPastTime, formatNeededAt } from '../../stores/helpRequest.js'
 import EmptyState from '../../components/EmptyState.vue'
@@ -22,6 +22,17 @@ const requestToCancel = ref(null)
 const message = ref('')
 const error = ref('')
 
+const successAlert = ref(null)
+
+// If someone already agreed to help, say so: they will see the cancel in their tasks
+const cancelMessage = computed(() => {
+  const request = store.myRequests.find((r) => r.id === requestToCancel.value)
+  if (request?.status === 'accepted') {
+    return `${request.helperName} has already agreed to help. If you cancel, they will see it as cancelled in their tasks.`
+  }
+  return 'Nobody will be able to help with this request anymore.'
+})
+
 const busy = ref('')
 
 async function confirmDone(request) {
@@ -32,6 +43,8 @@ async function confirmDone(request) {
     const result = await store.confirmDone(request.id)
     if (result.ok) {
       message.value = `Thank you! ${request.helperName} earned ${request.points} points.`
+      await nextTick()
+      successAlert.value?.focus()
     } else {
       error.value = result.error
     }
@@ -67,7 +80,12 @@ onMounted(store.load)
       <router-link v-if="store.myRequests.length > 0" to="/app/requests/create" class="btn btn-primary btn-lg">+ Ask for Help</router-link>
     </div>
 
-    <div v-if="message" class="alert alert-success" role="status">{{ message }}</div>
+    <div v-if="message" ref="successAlert" class="alert alert-success closable-alert" role="status" tabindex="-1"
+      data-testid="confirm-success">
+      <span>{{ message }}</span>
+      <button type="button" class="btn btn-outline-success alert-close" aria-label="Close message"
+        data-testid="close-message" @click="message = ''">✕</button>
+    </div>
     <div v-if="error" class="alert alert-danger" role="alert">{{ error }}</div>
     <p v-if="store.loading && store.myRequests.length === 0">Loading your requests…</p>
 
@@ -85,8 +103,9 @@ onMounted(store.load)
         <h2 id="active-heading" class="h4 fw-bold mb-3">Active</h2>
         <p v-if="activeRequests.length === 0">You have no active requests right now.</p>
         <div v-else class="request-list">
+          <!-- Always open, so the helper note, progress and buttons never hide behind a tap -->
           <RequestCard v-for="request in activeRequests" :key="request.id" :request="request" :show-requester="false"
-            :open="request.status === 'pending_confirmation'">
+            :open="true" viewer="requester">
             <template v-if="isPastTime(request)" #notice>
               <span data-testid="past-time">⚠ Time passed. Please choose a new time.</span>
               <router-link :to="`/app/requests/edit/${request.id}`" class="btn btn-primary">Reschedule</router-link>
@@ -113,19 +132,38 @@ onMounted(store.load)
       <section v-if="pastRequests.length > 0" class="mt-5" aria-labelledby="past-heading" data-testid="past-requests">
         <h2 id="past-heading" class="h4 fw-bold mb-3">Past</h2>
         <div class="request-list">
-          <RequestCard v-for="request in pastRequests" :key="request.id" :request="request" :show-requester="false" />
+          <RequestCard v-for="request in pastRequests" :key="request.id" :request="request" :show-requester="false"
+            viewer="requester" />
         </div>
       </section>
     </template>
 
     <ConfirmModal v-if="requestToCancel" title="Cancel this request?"
-      message="Nobody will be able to help with this request anymore."
+      :message="cancelMessage"
       confirm-label="Yes, cancel" cancel-label="Keep it" danger testid="confirm-cancel"
       @confirm="doCancel" @cancel="requestToCancel = null" />
   </div>
 </template>
 
 <style scoped>
+.closable-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.alert[tabindex='-1']:focus {
+  outline: 3px solid var(--ks-teal-dark);
+  outline-offset: 3px;
+}
+
+.alert-close {
+  flex-shrink: 0;
+  min-width: 3rem;
+  min-height: 3rem;
+}
+
 .load-error {
   display: flex;
   flex-wrap: wrap;

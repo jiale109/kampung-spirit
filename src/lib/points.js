@@ -20,6 +20,7 @@ export const categories = [
   { name: 'Lifting', icon: '📦' },
   { name: 'Translation', icon: '🗣️' },
   { name: 'Companion Walk', icon: '🚶' },
+  { name: 'Other', icon: '🤝' },
 ]
 
 // "Companion Walk" -> "cat-companion-walk" (used by theme.css to colour each category)

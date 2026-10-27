@@ -282,3 +282,33 @@ test('Someone who asks for less motion never sees the walker move', async ({ bro
   await expect(page.getByTestId('walker')).toBeHidden()
   await context.close()
 })
+
+test('The name menu still opens fully while the walker is on', async ({ page }) => {
+  /*
+    A regression guard. The walker used to be clipped with overflow: hidden on
+    the navbar itself, which also cut off this menu, because the menu hangs
+    below the navbar it lives in. The clipping now sits on .walker-track,
+    which holds nothing but the walker.
+  */
+  await login(page, 'Adult', 'Clarence')
+  await openProfile(page)
+  await page.getByTestId('edit-profile').click()
+  await page.getByTestId('gender-male').click()
+  await page.getByTestId('walker-switch').check()
+  await page.getByTestId('save-profile').click()
+  await expect(page.getByTestId('walker')).toBeAttached()
+
+  // Open the name menu and check it is really on screen, not clipped away
+  await page.locator('a.dropdown-toggle').click()
+  const menu = page.locator('.dropdown-menu.show')
+  await expect(menu).toBeVisible()
+
+  const box = await menu.boundingBox()
+  expect(box.height).toBeGreaterThan(40)
+
+  // Every item in it must be reachable, which a clipped menu's are not
+  await expect(menu.getByRole('link', { name: 'Profile' })).toBeVisible()
+  await expect(menu.getByRole('button', { name: /log out/i })).toBeVisible()
+  await menu.getByRole('link', { name: 'Profile' }).click()
+  await expect(page).toHaveURL(/\/app\/profile$/)
+})

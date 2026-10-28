@@ -12,6 +12,7 @@ import {
   MIN_CAPACITY,
   MAX_CAPACITY,
 } from '../lib/skillSwapFormat.js'
+import DayPicker from '../components/DayPicker.vue'   // adjust path to wherever it lives
 
 defineProps({
   //cancel --> session list 
@@ -166,20 +167,17 @@ async function onSubmit() {
     </div>
 
     <!-- day -->
-    <div class="mb-4">
-      <label for="swap-date" class="form-label">Which day?</label>
-      <select
-        id="swap-date"
-        v-model="form.date"
-        class="form-select"
-        :class="{ 'is-invalid': errors.date }"
-        :aria-invalid="!!errors.date"
-        aria-describedby="swap-date-error"
-      >
-        <option v-for="d in dates" :key="d.value" :value="d.value">{{ d.label }}</option>
-      </select>
-      <div v-if="errors.date" id="swap-date-error" class="invalid-feedback">{{ errors.date }}</div>
-    </div>
+<div class="mb-4">
+  <label id="swap-date-label" class="form-label">Which day?</label>
+  <DayPicker
+    id="swap-date"
+    v-model="form.date"
+    :min="dates[0].value"
+    :max="dates[dates.length - 1].value"
+    :invalid="!!errors.date"
+  />
+  <div v-if="errors.date" id="swap-date-error" class="invalid-feedback d-block">{{ errors.date }}</div>
+</div>
 
     <!-- time & duration -->
     <div class="row g-3 mb-4">

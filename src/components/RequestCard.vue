@@ -62,7 +62,8 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
       </h2>
 
       <p v-if="compact" class="request-stats" data-testid="card-stats">
-        ⭐ {{ request.points }} pts · {{ request.duration }} min · {{ request.difficulty }} effort
+           <img src="/images/coin.svg" class="point-coin-img" alt="" />
+         {{ request.points }} pts · {{ request.duration }} min · {{ request.difficulty }} effort
       </p>
 
       <p class="request-summary" data-testid="card-summary">

@@ -30,7 +30,7 @@ const expanded = computed(() => props.open || pinned.value)
 
 const detailsId = useId()
 
-// OneMap is only asked when someone presses "View map", never when the list loads
+// The map is only drawn when someone presses "View map", never when the list loads
 const showMap = ref(false)
 
 
@@ -129,7 +129,8 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
 
     <!-- Moved to <body>: inside the card it would sit under the other cards and be hidden when the card closes -->
     <Teleport to="body">
-      <RequestMapModal v-if="showMap" :location="request.location" @close="showMap = false" />
+      <RequestMapModal v-if="showMap" :location="request.location" :latitude="request.latitude"
+        :longitude="request.longitude" @close="showMap = false" />
     </Teleport>
   </article>
 </template>

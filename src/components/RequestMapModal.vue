@@ -1,20 +1,24 @@
 <script setup>
 /*
   "Where to meet" modal for one help request.
-  Looks up the request's place with OneMap (lib/onemap.js) when it opens and
-  shows the best match on a small map. The place is always written in words
-  too, so the modal is still useful when OneMap finds nothing or is down.
+  Shows the pin the requester chose on the form (components/RequestForm.vue)
+  on a small map, with the place written in words too. Nothing is looked up:
+  the coordinates are saved on the request.
+
+  Older requests have no pin. Then the modal only says the meeting place in
+  words, with no map.
 
   Show it with v-if: the map is removed when the modal closes, so opening it
   again builds a fresh one.
 */
-import { ref, onMounted, onUnmounted, nextTick, useId } from 'vue'
+import { ref, onMounted, onUnmounted, useId } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { searchAddress } from '../lib/onemap.js'
 
 const props = defineProps({
   location: { type: String, required: true },
+  latitude: { type: Number, default: null },
+  longitude: { type: Number, default: null },
 })
 
 const emit = defineEmits(['close'])
@@ -29,10 +33,8 @@ const titleId = useId()
 const closeButton = ref(null)
 const mapEl = ref(null)
 
-const searching = ref(true)
-const place = ref(null)   // the first OneMap result, or null when nothing matched
+const hasPin = Number.isFinite(props.latitude) && Number.isFinite(props.longitude)
 let map = null
-let closed = false
 
 // Escape closes the modal, like the close button
 function onKeydown(event) {
@@ -41,34 +43,24 @@ function onKeydown(event) {
 
 // Move focus into the modal, and give it back to where it was when the modal closes
 let previousFocus = null
-onMounted(async () => {
+onMounted(() => {
   previousFocus = document.activeElement
   closeButton.value.focus()
   document.addEventListener('keydown', onKeydown)
-
-  const results = await searchAddress(props.location + ' Singapore')
-  if (closed) return   // closed before OneMap answered
-  place.value = results[0] ?? null
-  searching.value = false
-
-  // The map's box only exists once Vue has drawn the result
-  if (!place.value) return
-  await nextTick()
-  if (closed) return
-  showMap(place.value)
+  if (hasPin) showMap()
 })
 
 onUnmounted(() => {
-  closed = true
   document.removeEventListener('keydown', onKeydown)
   if (map) map.remove()
   map = null
   previousFocus?.focus?.()
 })
 
-function showMap({ lat, lng }) {
+function showMap() {
+  const where = [props.latitude, props.longitude]
   map = L.map(mapEl.value, {
-    center: [lat, lng],
+    center: where,
     zoom: 17,
     minZoom: 11,
     maxZoom: 19,
@@ -76,14 +68,17 @@ function showMap({ lat, lng }) {
   })
   L.tileLayer(TILES, { minZoom: 11, maxZoom: 19, attribution: ATTRIBUTION }).addTo(map)
 
-  // Same circle as HotspotMap.vue: no pin image needed
-  L.circleMarker([lat, lng], {
+  // Same circle as HotspotMap.vue: no pin image needed. The popup is built as
+  // text, not HTML, because the name was typed by the requester.
+  const name = document.createElement('strong')
+  name.textContent = props.location
+  L.circleMarker(where, {
     radius: 10,
     weight: 3,
     color: '#0b6e6e',
     fillColor: '#ffffff',
     fillOpacity: 1,
-  }).addTo(map)
+  }).addTo(map).bindPopup(name).openPopup()
 }
 </script>
 
@@ -99,23 +94,10 @@ function showMap({ lat, lng }) {
               @click="emit('close')"></button>
           </div>
           <div class="modal-body vstack gap-3">
-            <p class="m-0" data-testid="map-location"><strong>Meeting place:</strong> {{ location }}</p>
+            <p class="m-0" data-testid="map-location"><strong>Meeting place:</strong> {{ location }}.</p>
 
-            <p v-if="searching" class="m-0" role="status">Finding the place…</p>
-
-            <template v-else-if="place">
-              <div ref="mapEl" class="request-map" role="region" :aria-label="`Map showing ${place.name}`"
-                data-testid="request-map"></div>
-              <div data-testid="map-match">
-                <p class="m-0 fw-bold">{{ place.name }}</p>
-                <p class="m-0">{{ place.address }}</p>
-              </div>
-              <p class="m-0">This is our best match. Please check the details with the requester.</p>
-            </template>
-
-            <p v-else class="m-0" role="status" data-testid="map-not-found">
-              We could not find this place on the map. The meeting place is: {{ location }}.
-            </p>
+            <div v-if="hasPin" ref="mapEl" class="request-map" role="region" :aria-label="`Map showing ${location}`"
+              data-testid="request-map"></div>
           </div>
         </div>
       </div>

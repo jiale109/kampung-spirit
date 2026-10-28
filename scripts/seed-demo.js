@@ -1,6 +1,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { CATEGORIES, dateFromToday } from '../src/lib/skillSwapFormat.js'
+import { findHotspot } from '../src/lib/hotspots.js'
 
 try {
   process.loadEnvFile('.env')
@@ -40,21 +41,29 @@ function inDays(daysFromNow, hour) {
   return d.toISOString()
 }
 
+// The pin for a request's meeting place, from a hotspot in src/lib/hotspots.js
+function pinAt(hotspotId) {
+  const { latitude, longitude } = findHotspot(hotspotId)
+  return { latitude, longitude }
+}
+
 // Requests for each senior, by email. Together they cover all 5 categories.
+// Each has a place name and a pin. The CC ones match a hotspot exactly; the
+// rest are not hotspots, so they use the nearest one (check before the demo).
 const requestsBySenior = {
   'demo.tan@example.com': [
-    { title: 'Help me set up Singpass', description: 'I got a new phone and cannot log in to Singpass any more.', category: 'Tech', difficulty: 'Medium', duration: 45, needed_at: inDays(1, 10), location: 'Eunos CC entrance' },
-    { title: 'Buy groceries from Sheng Siong', description: 'Rice, eggs, vegetables and milk. I will give you the list and money.', category: 'Grocery', difficulty: 'Easy', duration: 30, needed_at: inDays(2, 9), location: 'Sheng Siong Eunos Crescent' },
-    { title: 'Walk with me to the clinic', description: 'Polyclinic appointment at Eunos. I walk slowly and need company.', category: 'Companion Walk', difficulty: 'Easy', duration: 60, needed_at: inDays(4, 14), location: 'Blk 412 void deck' },
+    { title: 'Help me set up Singpass', description: 'I got a new phone and cannot log in to Singpass any more.', category: 'Tech', difficulty: 'Medium', duration: 45, needed_at: inDays(1, 10), location: 'Eunos CC entrance', ...pinAt('eunos-cc') },
+    { title: 'Buy groceries from Sheng Siong', description: 'Rice, eggs, vegetables and milk. I will give you the list and money.', category: 'Grocery', difficulty: 'Easy', duration: 30, needed_at: inDays(2, 9), location: 'Sheng Siong Eunos Crescent', ...pinAt('eunos-crescent-market') },
+    { title: 'Walk with me to the clinic', description: 'Polyclinic appointment at Eunos. I walk slowly and need company.', category: 'Companion Walk', difficulty: 'Easy', duration: 60, needed_at: inDays(4, 14), location: 'Blk 412 void deck', ...pinAt('eunos-crescent-market') },
   ],
   'demo.lim@example.com': [
-    { title: 'Carry gas tank upstairs', description: 'New gas tank arrives at the void deck, I cannot carry it up.', category: 'Lifting', difficulty: 'Hard', duration: 15, needed_at: inDays(1, 16), location: 'Blk 410 void deck' },
-    { title: 'Explain my HDB letter in Chinese', description: 'I received an English letter from HDB and want to know what it says.', category: 'Translation', difficulty: 'Easy', duration: 15, needed_at: inDays(3, 11), location: 'Eunos CC reading corner' },
+    { title: 'Carry gas tank upstairs', description: 'New gas tank arrives at the void deck, I cannot carry it up.', category: 'Lifting', difficulty: 'Hard', duration: 15, needed_at: inDays(1, 16), location: 'Blk 410 void deck', ...pinAt('eunos-crescent-market') },
+    { title: 'Explain my HDB letter in Chinese', description: 'I received an English letter from HDB and want to know what it says.', category: 'Translation', difficulty: 'Easy', duration: 15, needed_at: inDays(3, 11), location: 'Eunos CC reading corner', ...pinAt('eunos-cc') },
   ],
   'demo.fatimah@example.com': [
-    { title: 'Video call my grandson', description: 'Please show me how to video call on WhatsApp so I can see my grandson.', category: 'Tech', difficulty: 'Easy', duration: 30, needed_at: inDays(2, 15), location: 'Blk 415 void deck benches' },
-    { title: 'Move my old cabinet', description: 'Small wooden cabinet from the bedroom to the living room.', category: 'Lifting', difficulty: 'Medium', duration: 30, needed_at: inDays(5, 10), location: 'Blk 415 lift lobby' },
-    { title: 'Translate a clinic form to Malay', description: 'The polyclinic gave me a form in English. Please explain it in Malay.', category: 'Translation', difficulty: 'Easy', duration: 30, needed_at: inDays(6, 13), location: 'Eunos Polyclinic entrance' },
+    { title: 'Video call my grandson', description: 'Please show me how to video call on WhatsApp so I can see my grandson.', category: 'Tech', difficulty: 'Easy', duration: 30, needed_at: inDays(2, 15), location: 'Blk 415 void deck benches', ...pinAt('eunos-crescent-market') },
+    { title: 'Move my old cabinet', description: 'Small wooden cabinet from the bedroom to the living room.', category: 'Lifting', difficulty: 'Medium', duration: 30, needed_at: inDays(5, 10), location: 'Blk 415 lift lobby', ...pinAt('eunos-crescent-market') },
+    { title: 'Translate a clinic form to Malay', description: 'The polyclinic gave me a form in English. Please explain it in Malay.', category: 'Translation', difficulty: 'Easy', duration: 30, needed_at: inDays(6, 13), location: 'Eunos Polyclinic entrance', ...pinAt('eunos-mrt') },
   ],
 }
 

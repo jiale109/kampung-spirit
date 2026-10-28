@@ -67,6 +67,19 @@ const filterLabel = computed(
   () => selectedPlace.value || pickedPoint.value?.name || 'the searched location',
 )
 
+/*
+  What the list is narrowed to, in words. The two filters work differently
+  and must not claim to be the same thing: pressing a marker picks hangouts
+  with that exact place NAME, while searching or tapping picks everything
+  within NEAR_KM of a point.
+*/
+const filterNote = computed(() => {
+  if (selectedPlace.value !== '') return `at ${selectedPlace.value}`
+  const name = pickedPoint.value?.name
+  const where = name ? name : 'the spot you chose'
+  return `within ${store.NEAR_KM} km of ${where}`
+})
+
 function pickPlace(place) {
   pickedPoint.value = null
   selectedPlace.value = place.name
@@ -169,11 +182,24 @@ async function complete(hangout) {
         </p>
         <HotspotMap :places="mapPlaces" pickable label="Find a place"
           @marker="pickPlace" @select="pickPoint" @pick="pickPoint" />
-        <div v-if="isFiltered">
-          <button type="button" class="btn btn-outline-secondary" data-testid="clear-filter"
-            @click="clearFilter">Show all places</button>
-        </div>
       </div>
+    </div>
+
+    <!--
+      What the search actually did. Without this the only sign a filter was on
+      was a button underneath the map, which is off the screen once the map has
+      panned to the place you looked up, so the list below looked as though it
+      had ignored you.
+    -->
+    <div v-if="isFiltered" class="filter-banner d-flex flex-wrap align-items-center
+      justify-content-between gap-3 mb-4" role="status" data-testid="filter-banner">
+      <span>
+        Showing <strong>{{ shownHangouts.length }}</strong>
+        {{ shownHangouts.length === 1 ? 'hangout' : 'hangouts' }}
+        {{ filterNote }}.
+      </span>
+      <button type="button" class="btn btn-outline-secondary flex-shrink-0"
+        data-testid="clear-filter" @click="clearFilter">Show all places</button>
     </div>
 
     <div v-if="message" class="alert alert-success" role="status">{{ message }}</div>

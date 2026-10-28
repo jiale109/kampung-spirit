@@ -23,6 +23,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import EmptyState from '../../components/EmptyState.vue'
 import SkillSwapCard from '../../components/SkillSwapCard.vue'
+import HotspotMap from '../../components/HotspotMap.vue'
+import { NEAR_KM, isNearPoint, countWithoutPin, placeMarkers } from '../../lib/nearby.js'
 import { useSkillSwapStore } from '../../stores/skillSwap.js'
 import {
   formatDate,
@@ -43,6 +45,20 @@ const sortBy = ref('date-asc')
 const selectedCategory = ref('') // e.g. ['Tech', 'Crafts']
 const whenFilter = ref('any') // any | week | weekend
 const onlyOpen = ref(false) // only sessions with spots left
+
+/*
+  Narrowing to one place, the same two ways as the Hangouts page:
+    selectedPlace  a venue name, from pressing a marker
+    pickedPoint    a spot searched for or tapped; anything within NEAR_KM of
+                   it counts
+  Choosing one clears the other, so there is never more than one place filter.
+*/
+const selectedPlace = ref('')
+const pickedPoint = ref(null)
+
+// The map is drawn once the sessions are in, so every marker is known when
+// it is built and none has to be added afterwards
+const mapReady = ref(false)
 const notice = ref(null) // { kind: 'ok' | 'error', text }
 
 //to allow user to filter all events, going, hosting 
@@ -62,13 +78,21 @@ const baseList = computed (() => {
     return store.openSessions
 })
 
-// --- displays the available categories + available no. of sessions ---
-const categoryOptions = computed (() => 
-    CATEGORIES.map((name) => ({
+/*
+  The filter list: the seven suggestions, plus anything hosts have typed in
+  that is not one of them.
+
+  Without the second half a session called "Mahjong" could be created and
+  then never filtered for, because the list only knew the fixed seven.
+*/
+const categoryOptions = computed(() => {
+    const inUse = [...new Set(store.openSessions.map((s) => s.category))]
+    const extras = inUse.filter((name) => name && !CATEGORIES.includes(name)).sort()
+    return [...CATEGORIES, ...extras].map((name) => ({
         name,
-        count: store.openSessions.filter((s) => s.category === name).length, 
+        count: store.openSessions.filter((s) => s.category === name).length,
     }))
-)
+})
 
 // --- search + filters ---
 const words = computed (() => query.value.trim().toLowerCase().split(/\s+/).filter(Boolean))
@@ -85,8 +109,20 @@ function matchesSearch(s) {
     ].join(' ').toLowerCase()
     return words.value.every((w) => text.includes(w))
 }
+/*
+  Pressing a marker matches the venue NAME; searching or tapping matches
+  anything within NEAR_KM of the point. A session with no pin (saved before
+  the map was added) cannot honestly be called near anywhere, so it drops out
+  while a place filter is on - the banner says how many.
+*/
+function passesPlace(s) {
+    if (selectedPlace.value !== '') return s.venue === selectedPlace.value
+    return isNearPoint(s, pickedPoint.value)
+}
+
 //filter function
 function passesFilters(s) {
+    if (!passesPlace(s)) return false
     if (selectedCategory.value && s.category !== selectedCategory.value) return false
     if (whenFilter.value === 'week' && s.date > dateFromToday(7)) return false 
     if (whenFilter.value === 'weekend' && !isWeekend(s.date)) return false 
@@ -115,13 +151,45 @@ const shown = computed(() =>
 //other helpers for display screen 
 function clearFilters() {
   selectedCategory.value = ''
+  clearPlaceFilter()
 
   whenFilter.value = 'any'
   onlyOpen.value = false
 }
 
+const isPlaceFiltered = computed(() => selectedPlace.value !== '' || pickedPoint.value !== null)
+
+const placeNote = computed(() => {
+  if (selectedPlace.value !== '') return `at ${selectedPlace.value}`
+  const name = pickedPoint.value?.name
+  return `within ${NEAR_KM} km of ${name || 'the spot you chose'}`
+})
+
+// One marker per venue that has a session on it, with a count in the popup
+const mapPlaces = computed(() => placeMarkers(store.openSessions, 'venue'))
+
+const hiddenWithoutPin = computed(() =>
+  isPlaceFiltered.value ? countWithoutPin(store.openSessions) : 0,
+)
+
+function pickPlace(place) {
+  pickedPoint.value = null
+  selectedPlace.value = place.name
+}
+
+function pickPoint(point) {
+  selectedPlace.value = ''
+  pickedPoint.value = { lat: point.lat, lng: point.lng, name: point.name ?? '' }
+}
+
+function clearPlaceFilter() {
+  selectedPlace.value = ''
+  pickedPoint.value = null
+}
+
 const activeFilterCount = computed(
   () =>
+    (isPlaceFiltered.value ? 1 : 0) +
     (selectedCategory.value ? 1 : 0) +
     (whenFilter.value !== 'any' ? 1 : 0) +
     (onlyOpen.value ? 1 : 0),
@@ -137,6 +205,7 @@ const countText = computed(() => {
 })
 
 const emptyMessage = computed(() => {
+  if (isPlaceFiltered.value) return `Sorry, there are no sessions ${placeNote.value}.`
   if (isNarrowed.value) return 'No sessions match. Try fewer filters or a shorter search.'
   if (filter.value === 'hosting') return 'You are not hosting a session yet.'
   if (filter.value === 'going') return 'You have not joined a session yet.'
@@ -192,7 +261,9 @@ onMounted(() => {
   if (route.query.created) {
     notice.value = { kind: 'ok', text: 'Your session is shared. Neighbours can now join it.' }
   }
-  store.load()
+  store.load().then(() => {
+    mapReady.value = true
+  })
 })
 </script>
 
@@ -220,6 +291,36 @@ onMounted(() => {
         {{ t.label }}
       </button>
     </div>
+    <div v-if="mapReady" class="card mb-4">
+      <div class="card-body p-4 vstack gap-3">
+        <h2 class="page-title fs-4">Where sessions are held</h2>
+        <p class="page-subtitle mb-0">
+          Search for a place, or tap anywhere on the map to find sessions near it.
+        </p>
+        <HotspotMap :places="mapPlaces" pickable label="Find a place"
+          @marker="pickPlace" @select="pickPoint" @pick="pickPoint" />
+      </div>
+    </div>
+
+    <!-- What the list has been narrowed to. The map panning away hides the
+         button under it, so the filter is named again here. -->
+    <div v-if="isPlaceFiltered" class="filter-banner d-flex flex-wrap align-items-center
+      justify-content-between gap-3 mb-4" role="status" data-testid="place-filter-banner">
+      <span>
+        Showing <strong>{{ shown.length }}</strong>
+        {{ shown.length === 1 ? 'session' : 'sessions' }}
+        {{ placeNote }}.
+        <template v-if="hiddenWithoutPin > 0">
+          <br />
+          {{ hiddenWithoutPin }} older
+          {{ hiddenWithoutPin === 1 ? 'session has' : 'sessions have' }}
+          no place on the map, so {{ hiddenWithoutPin === 1 ? 'it is' : 'they are' }} not shown.
+        </template>
+      </span>
+      <button type="button" class="btn btn-outline-secondary flex-shrink-0"
+        data-testid="clear-place-filter" @click="clearPlaceFilter">Show all places</button>
+    </div>
+
     <!--search | filter | sort-->
     <div class="row g-3 mb-3">
       <div class="col-12">

@@ -3,10 +3,12 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from './auth.js'
 import { usePointsStore } from './points.js'
 import { pointsForSkillSwap } from '../lib/points.js'
-import { sessionStart, sessionEnd, CATEGORIES, MIN_CAPACITY, MAX_CAPACITY } from '../lib/skillSwapFormat.js'
+import {
+  sessionStart, sessionEnd, MIN_CAPACITY, MAX_CAPACITY, MAX_CATEGORY_LENGTH,
+} from '../lib/skillSwapFormat.js'
 import { supabase } from '../lib/supabase.js'
 
-const COLUMNS = `id, title, description, category, venue, session_date, session_time, duration, capacity, status, host_id, created_at, host:profiles!host_id(name), attendees:skill_session_attendees(user_id)`
+const COLUMNS = `id, title, description, category, venue, latitude, longitude, session_date, session_time, duration, capacity, status, host_id, created_at, host:profiles!host_id(name), attendees:skill_session_attendees(user_id)`
 
 function fromRow(r) {
   return {
@@ -15,6 +17,9 @@ function fromRow(r) {
     description: r.description,
     category: r.category,
     venue: r.venue,
+    // Sessions saved before the map was added have no pin, so these stay null
+    latitude: r.latitude == null ? null : Number(r.latitude),
+    longitude: r.longitude == null ? null : Number(r.longitude),
     date: r.session_date,
     time: String(r.session_time).slice(0,5),
     duration: r.duration,
@@ -93,15 +98,37 @@ export const useSkillSwapStore = defineStore('skillSwap', () => {
     const title = String(data.title || '').trim()
     const description = String(data.description || '').trim()
     const venue = String(data.venue || '').trim()
+    const latitude = data.latitude == null ? null : Number(data.latitude)
+    const longitude = data.longitude == null ? null : Number(data.longitude)
     const capacity = Number(data.capacity)
     const duration = Number(data.duration)
  
     if (title.length < 5) return { ok: false, error: 'The name needs at least 5 letters.' }
     if (!description) return { ok: false, error: 'Please say what people will learn.' }
-    if (!CATEGORIES.includes(data.category)) {
+    /*
+      Any kind of session is allowed now, not only the seven suggestions, so
+      this checks the shape rather than the value. The same length is checked
+      by the database (migration 20261029140000).
+    */
+    const category = String(data.category || '').trim()
+    if (category.length < 1 || category.length > MAX_CATEGORY_LENGTH) {
       return { ok: false, error: 'Please choose a type of session.' }
     }
     if (venue.length < 3) return { ok: false, error: 'Please say where the session will be.' }
+    /*
+      A pin is optional, so an older session without one still saves. When
+      there IS one it has to be whole and inside Singapore, which is the same
+      rule the database checks (migrations/20261029120000_add_session_coordinates.sql).
+      Checking here as well turns a raw constraint error into a plain sentence.
+    */
+    if (latitude !== null || longitude !== null) {
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return { ok: false, error: 'We could not put that place on the map. Please search for it again.' }
+      }
+      if (latitude < 1.1 || latitude > 1.6 || longitude < 103.5 || longitude > 104.2) {
+        return { ok: false, error: 'That place is not in Singapore. Please choose somewhere closer to home.' }
+      }
+    }
     if (!Number.isInteger(capacity) || capacity < MIN_CAPACITY || capacity > MAX_CAPACITY) {
       return { ok: false, error: `Choose between ${MIN_CAPACITY} and ${MAX_CAPACITY} people.` }
     }
@@ -114,8 +141,10 @@ export const useSkillSwapStore = defineStore('skillSwap', () => {
       supabase.from('skill_sessions').insert({
         title,
         description,
-        category: data.category,
+        category,
         venue,
+        latitude,
+        longitude,
         session_date: data.date,
         session_time: data.time,
         duration,

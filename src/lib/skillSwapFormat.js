@@ -30,6 +30,12 @@ export function formatDate(iso) {
   return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`
 }
 
+//format date to display as dd-mm-yyyy
+export function formatDateShort(iso) {
+  const [y, m, d] = iso.split('-')
+  return `${d}-${m}-${y}`
+}
+
 //to change to 12-hour clock from 24-hour clock
 export function formatTime(hhmm) {
   const [h, m] = hhmm.split(':').map(Number)
@@ -54,14 +60,28 @@ export function sessionStart(dateISO, hhmm) {
   return new Date(y, mo - 1, d, h, mi)
 }
 
-//when it finishes: the start plus its length in minutes
-export function sessionEnd(dateISO, hhmm, minutes) {
-  return new Date(sessionStart(dateISO, hhmm).getTime() + minutes * 60 * 1000)
+/*
+  When it finishes: the start plus however long it lasts.
+
+  stores/hangout.js and stores/skillSwap.js both use this for hasEnded(), so
+  a hangout or a session stays on the page while it is still going on and
+  drops off once it is over.
+*/
+export function sessionEnd(dateISO, hhmm, durationMinutes) {
+  const start = sessionStart(dateISO, hhmm)
+  return new Date(start.getTime() + Number(durationMinutes) * 60 * 1000)
 }
 
-//session categories
-// Must match the check constraint on skill_sessions.category in
-// supabase/schema.sql (section 8.2) word for word, or inserts are refused.
+//session categories 
+/*
+  The suggestions offered when hosting a session. People may also type their
+  own, so this is a starting list rather than the only allowed answers.
+
+  These used to disagree with the database, which accepted 'Health & fitness',
+  'Arts & music' and 'Other'. Three of the seven tiles were therefore refused
+  on save. They are spelt here exactly as schema.sql section 8 spelt them, so
+  old rows keep matching a tile.
+*/
 export const CATEGORIES = [
   'Tech',
   'Cooking',
@@ -71,6 +91,39 @@ export const CATEGORIES = [
   'Languages',
   'Other',
 ]
+
+/*
+  The longest kind of session someone may type. Long enough for
+  'Traditional kueh making', short enough to still fit on a tile and in the
+  filter list. The database checks the same length
+  (migrations/20261029140000_open_up_session_categories.sql).
+*/
+export const MAX_CATEGORY_LENGTH = 40
+
+/*
+  Tidy up a kind of session someone typed in, so a hand-typed one still
+  matches a host who picked the same thing from the suggestions above.
+
+    'cooking'   -> 'Cooking'      (on the list, so it snaps to it)
+    'COOKING'   -> 'Cooking'
+    'mahjong  club ' -> 'Mahjong club'   (new, so only the spaces are tidied)
+
+  This is the same idea as tidyInterest() in lib/profile.js, and it is what
+  recovers most of what the fixed list used to guarantee: two people teaching
+  the same thing still file it under the same word.
+
+  Returns '' for anything blank, which the caller treats as nothing typed.
+*/
+export function tidyCategory(text) {
+  const words = String(text || '').trim().split(' ').filter((word) => word !== '')
+  const clean = words.join(' ')
+  if (clean === '') return ''
+
+  const known = CATEGORIES.find((name) => name.toLowerCase() === clean.toLowerCase())
+  if (known) return known
+
+  return clean.charAt(0).toUpperCase() + clean.slice(1)
+}
 
 //for weekends-only filter 
 export function isWeekend(iso) {

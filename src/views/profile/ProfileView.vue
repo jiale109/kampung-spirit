@@ -19,6 +19,7 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth.js'
 import { usePointsStore } from '../../stores/points.js'
+import HotspotMap from '../../components/HotspotMap.vue'
 import TelegramConnect from '../../components/TelegramConnect.vue'
 import {
   interests as interestOptions,
@@ -81,6 +82,41 @@ const errors = ref({})
 const saving = ref(false)
 const message = ref('')
 const saveError = ref('')
+
+/*
+  CHANGING THE ADDRESS
+  Sign up makes people choose a real OneMap address, and this must not be the
+  back door round it: the box here used to take any text at all.
+
+  The saved address is shown with a Change button rather than a map, for two
+  reasons. Someone editing only their name should not have to find their block
+  again, and the fourteen people who joined before sign up asked for a real
+  address would otherwise be locked out of their own profile until they
+  re-picked it.
+
+  changingAddress is true only while the map is open. Saving is refused then,
+  because a half-finished change is not an address.
+*/
+const changingAddress = ref(false)
+
+function startChangingAddress() {
+  changingAddress.value = true
+  errors.value.block = ''
+}
+
+function onAddressFound(place) {
+  // The full address is the unambiguous one, and 100 characters is what the
+  // help board's location column takes when block is copied into it
+  form.value.block = String(place.address || place.name).slice(0, 100)
+  changingAddress.value = false
+  errors.value.block = ''
+}
+
+function keepOldAddress() {
+  changingAddress.value = false
+  form.value.block = auth.user.block
+  errors.value.block = ''
+}
 
 /*
   Interests the person typed in themselves, kept beside the fixed list while
@@ -201,6 +237,7 @@ function startEditing() {
   hiddenOptions.value = (auth.user.hidden_interests ?? []).filter((name) =>
     interestOptions.includes(name),
   )
+  changingAddress.value = false
   newInterest.value = ''
   interestError.value = ''
   errors.value = {}
@@ -215,6 +252,7 @@ function stopEditing() {
   saveError.value = ''
   interestError.value = ''
   newInterest.value = ''
+  changingAddress.value = false
 }
 
 function isChosen(name) {
@@ -236,8 +274,11 @@ async function save() {
   if (form.value.name.trim().length < 2) {
     errors.value.name = 'Please write your name.'
   }
-  if (form.value.block.trim().length < 3) {
-    errors.value.block = 'Please write your block and street, like Blk 412 Eunos Cres.'
+  if (changingAddress.value) {
+    errors.value.block =
+      'Please press your block in the list, or press "Keep my old address".'
+  } else if (form.value.block.trim().length < 3) {
+    errors.value.block = 'Please choose your block and street.'
   }
 
   // Stop here if anything is wrong
@@ -373,10 +414,30 @@ async function save() {
         </div>
 
         <div>
-          <label for="block" class="form-label">Block and street</label>
-          <input id="block" v-model="form.block" type="text" class="form-control"
-            :class="{ 'is-invalid': errors.block }" maxlength="80" placeholder="e.g. Blk 412 Eunos Cres" />
-          <div class="invalid-feedback">{{ errors.block }}</div>
+          <div class="form-label">Block and street</div>
+
+          <!-- What is saved now, with a way to change it. No text box: the
+               address has to be a real one neighbours can walk to. -->
+          <div v-if="!changingAddress" class="chosen-address d-flex flex-wrap align-items-center
+            justify-content-between gap-3" data-testid="current-address">
+            <span><strong>{{ form.block }}</strong></span>
+            <button type="button" class="btn btn-outline-secondary flex-shrink-0"
+              data-testid="change-address" @click="startChangingAddress">Change</button>
+          </div>
+
+          <!-- Only while changing it. Not pickable: a home address comes from
+               OneMap, not from a spot tapped on the map. -->
+          <template v-else>
+            <p class="page-subtitle mb-2">
+              Search for your block and press it in the list. Neighbours come here to help you.
+            </p>
+            <HotspotMap label="Find your block" @select="onAddressFound" />
+            <button type="button" class="btn btn-outline-secondary mt-3"
+              data-testid="keep-address" @click="keepOldAddress">Keep my old address</button>
+          </template>
+
+          <div v-if="errors.block" class="invalid-feedback d-block" role="alert"
+            data-testid="block-error">{{ errors.block }}</div>
         </div>
 
         <!--

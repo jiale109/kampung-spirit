@@ -52,24 +52,40 @@ function choose(place) {
           @keydown.enter.prevent="search" />
       </div>
       <div class="col-auto">
-        <button type="button" class="btn btn-primary" :disabled="searching"
+        <!-- h-100 so the button matches the height of the box beside it -->
+        <button type="button" class="btn btn-primary h-100" :disabled="searching"
           data-testid="place-search-go" @click="search">
           {{ searching ? 'Searching...' : 'Search' }}
         </button>
       </div>
     </div>
 
-    <ul v-if="results.length > 0" class="list-group mt-3" data-testid="place-results">
-      <li v-for="place in results" :key="place.address + place.lat" class="list-group-item">
-        <button type="button" class="btn btn-link p-0 text-start" @click="choose(place)">
-          <strong>{{ place.name }}</strong><br />
-          <span class="page-subtitle">{{ place.address }}</span>
-        </button>
-      </li>
-    </ul>
+    <template v-if="results.length > 0">
+      <p class="page-subtitle mt-3 mb-2">
+        {{ results.length === 1 ? '1 place found' : `${results.length} places found` }}.
+        Press the one you mean.
+      </p>
 
-    <p v-else-if="searched && !searching" class="mt-3 mb-0">
-      No places found. Try part of the name, like "eunos".
+      <!--
+        Bootstrap's actionable list group: the BUTTON is the row, rather than
+        a button inside a row. That matters here, because theme.css makes
+        every .btn a flex box, which laid the name and the address side by
+        side and ignored the line break between them.
+      -->
+      <div class="list-group place-results" data-testid="place-results">
+        <button v-for="place in results" :key="place.address + place.lat" type="button"
+          class="list-group-item list-group-item-action place-result" @click="choose(place)">
+          <span class="place-result-name">{{ place.name }}</span>
+          <!-- OneMap repeats the name as the address for parks and the like,
+               and the same line twice reads as a mistake -->
+          <span v-if="place.address && place.address !== place.name"
+            class="place-result-address">{{ place.address }}</span>
+        </button>
+      </div>
+    </template>
+
+    <p v-else-if="searched && !searching" class="place-empty mt-3 mb-0">
+      No places found. Try part of the name, like &ldquo;eunos&rdquo;.
     </p>
   </div>
 </template>

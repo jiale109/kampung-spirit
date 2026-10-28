@@ -349,6 +349,104 @@ body {
 }
 
 /*
+  The address confirmed on the sign-up page (views/RegisterView.vue). Green,
+  so it reads as "this is settled" rather than as another thing to fill in.
+*/
+.chosen-address {
+  padding: 0.9rem 1.1rem;
+  border: 2px solid var(--ks-teal);
+  border-radius: 0.75rem;
+  background-color: var(--ks-teal-tint);
+  color: var(--ks-ink);
+}
+
+/*
+  The line above the hangout list saying what it has been narrowed to
+  (views/hangouts/HangoutsView.vue). Green rather than grey, so it reads as
+  "something is switched on" rather than as a note.
+*/
+.filter-banner {
+  padding: 0.9rem 1.1rem;
+  border: 2px solid var(--ks-teal);
+  border-radius: 0.75rem;
+  background-color: var(--ks-teal-tint);
+  color: var(--ks-ink);
+}
+
+/*
+  The OneMap search results (components/locationSearch.vue).
+
+  Each row is a Bootstrap list-group button, so hover, press and keyboard
+  focus come free. These rules only set the typography and stack the name
+  above the address, which the list group does not do on its own.
+*/
+.place-results {
+  /*
+    Bootstrap takes a list group's background from --bs-body-bg, which this
+    theme sets to the mint of the page. Inside a white card that came out as
+    a dull green slab, and it was within a shade of the hover colour below,
+    so pressing a row looked like nothing happened. White rows fix both.
+  */
+  --bs-list-group-bg: #fff;
+
+  /*
+    Set Bootstrap's own hover and active colours rather than writing a rule
+    to beat them. Its rule is .list-group-item-action:not(.active):hover,
+    which outranks a plain .place-result:hover, so an override there loses.
+  */
+  --bs-list-group-action-hover-bg: var(--ks-teal-tint);
+  --bs-list-group-action-active-bg: var(--ks-teal-tint);
+
+  /* About five rows. OneMap returns up to ten, and a list that long pushes
+     the rest of the form off the screen on a phone. */
+  max-height: 20rem;
+  overflow-y: auto;
+  border-radius: 0.75rem;
+  border: 2px solid var(--ks-line-strong);
+}
+
+.place-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.85rem 1.1rem;
+  text-align: left;
+  border-width: 0 0 1px 0;
+  border-color: var(--ks-line);
+}
+
+/* No line under the last one: the container draws the outer edge */
+.place-result:last-child {
+  border-bottom: 0;
+}
+
+.place-result-name {
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ks-heading);
+}
+
+.place-result-address {
+  font-size: 0.9rem;
+  line-height: 1.35;
+  color: var(--ks-muted);
+}
+
+/* The address is grey when resting; darken it under the pointer so the whole
+   row reads as one thing being chosen */
+.place-results .place-result:hover .place-result-address,
+.place-results .place-result:focus .place-result-address {
+  color: var(--ks-ink);
+}
+
+.place-empty {
+  padding: 0.85rem 1.1rem;
+  border: 2px dashed var(--ks-line-strong);
+  border-radius: 0.75rem;
+  color: var(--ks-muted);
+}
+
+/*
   An interest someone added themselves, on the profile page.
 
   The cross is laid over the corner of the tile. It only appears once that

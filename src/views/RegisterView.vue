@@ -16,6 +16,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import LandingHero from '../components/LandingHero.vue'
 import PasswordInput from '../components/PasswordInput.vue'
+import HotspotMap from '../components/HotspotMap.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -44,6 +45,32 @@ const form = ref({
   guardianConsent: false,
 })
 const errors = ref({})
+
+/*
+  THE ADDRESS HAS TO BE A REAL ONE
+  Neighbours walk to this address to help someone, so it cannot be typed
+  freehand: "asdf" would send a volunteer nowhere. The block is chosen from
+  OneMap's list of Singapore addresses instead, and the map shows the pin so
+  the person can check it is really their block before carrying on.
+
+  The map here is NOT pickable, unlike the one on the hangout form. Tapping a
+  spot gives coordinates with no name, which is fine for "meet me by the big
+  tree" but not for a home address.
+*/
+const chosenAddress = ref(null)
+
+function onAddressFound(place) {
+  chosenAddress.value = place
+  // The full address is the unambiguous one. 100 characters is what the
+  // help board's location column accepts, and block is copied into it.
+  form.value.block = String(place.address || place.name).slice(0, 100)
+  errors.value.block = ''
+}
+
+function changeAddress() {
+  chosenAddress.value = null
+  form.value.block = ''
+}
 const formError = ref('')
 const busy = ref(false)
 
@@ -100,7 +127,9 @@ function validate() {
   if (!passwordStrong.value) e.password = 'Your password does not meet all the rules below yet.'
   if (!f.passwordAgain) e.passwordAgain = 'Please type your password again.'
   else if (!passwordsMatch.value) e.passwordAgain = 'The two passwords are different. Please type them again.'
-  if (f.block.trim().length < 3) e.block = 'Please write your block and street, like Blk 412 Eunos Cres.'
+  if (!chosenAddress.value || f.block.trim().length < 3) {
+    e.block = 'Please search for your block and press it in the list, so neighbours can find you.'
+  }
 
   if (!birthDate.value) e.birthDate = 'Please choose your day, month and year of birth.'
   else if (age.value < 0 || age.value > 120) e.birthDate = 'Please check the year of birth.'
@@ -203,10 +232,26 @@ async function submit() {
             </div>
 
             <div>
-              <label for="block" class="form-label">Block and street</label>
-              <input id="block" v-model="form.block" type="text" class="form-control" autocomplete="street-address"
-                placeholder="e.g. Blk 412 Eunos Cres" :class="{ 'is-invalid': errors.block }" maxlength="80" />
-              <div class="invalid-feedback">{{ errors.block }}</div>
+              <div class="form-label">Block and street</div>
+              <p class="page-subtitle mb-2">
+                Neighbours come to this address to help you, so please pick it from the list
+                rather than typing it. Searching &ldquo;Blk 412 Eunos Cres&rdquo; works.
+              </p>
+
+              <!-- Shown once a real address has been chosen -->
+              <div v-if="chosenAddress" class="chosen-address d-flex flex-wrap align-items-center
+                justify-content-between gap-3 mb-3" data-testid="chosen-address">
+                <span><strong>{{ form.block }}</strong></span>
+                <button type="button" class="btn btn-outline-secondary flex-shrink-0"
+                  data-testid="change-address" @click="changeAddress">Change</button>
+              </div>
+
+              <!-- No "pickable": a home address must be a real one from OneMap,
+                   not a spot tapped on the map with a name typed beside it -->
+              <HotspotMap label="Find your block" @select="onAddressFound" />
+
+              <div v-if="errors.block" class="invalid-feedback d-block" role="alert"
+                data-testid="block-error">{{ errors.block }}</div>
             </div>
 
             <!-- Separate boxes instead of a date picker, which many seniors find hard to use -->

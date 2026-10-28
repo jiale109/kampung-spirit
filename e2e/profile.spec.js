@@ -312,3 +312,41 @@ test('The name menu still opens fully while the walker is on', async ({ page }) 
   await menu.getByRole('link', { name: 'Profile' }).click()
   await expect(page).toHaveURL(/\/app\/profile$/)
 })
+
+test('The address can only be changed to a real one', async ({ page }) => {
+  await login(page, 'Adult', 'Clarence')
+  await openProfile(page)
+  await page.getByTestId('edit-profile').click()
+
+  // What is saved is shown as settled, not as a box to type in
+  await expect(page.getByTestId('current-address')).toBeVisible()
+  await expect(page.locator('#block')).toHaveCount(0)
+
+  // Editing only the name does not make you find your block again
+  await page.getByLabel('Your name').fill('Clarence Tay')
+  await page.getByTestId('save-profile').click()
+  await expect(page.getByTestId('profile-name')).toHaveText('Clarence Tay')
+
+  // Pressing Change opens the map, and saving half way through is refused
+  await page.getByTestId('edit-profile').click()
+  await page.getByTestId('change-address').click()
+  await expect(page.getByTestId('place-search')).toBeVisible()
+  await page.getByTestId('save-profile').click()
+  await expect(page.getByTestId('block-error')).toBeVisible()
+
+  // Backing out keeps what was there
+  const before = await page.getByTestId('profile-block').textContent()
+  await page.getByTestId('keep-address').click()
+  await page.getByTestId('save-profile').click()
+  await expect(page.getByTestId('profile-block')).toHaveText(before)
+
+  // And a real address from the list is accepted
+  await page.getByTestId('edit-profile').click()
+  await page.getByTestId('change-address').click()
+  await page.getByTestId('place-search').fill('Blk 120 Bishan Street 12')
+  await page.getByTestId('place-search-go').click()
+  await page.getByTestId('place-results').getByRole('button').first().click()
+  await expect(page.getByTestId('current-address')).toContainText('BISHAN')
+  await page.getByTestId('save-profile').click()
+  await expect(page.getByTestId('profile-block')).toContainText('BISHAN')
+})

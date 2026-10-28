@@ -17,6 +17,7 @@ import { useAuthStore } from './auth.js'
 import { usePointsStore } from './points.js'
 import { sessionStart, sessionEnd } from '../lib/skillSwapFormat.js'
 import { supabase } from '../lib/supabase.js'
+import { NEAR_KM, nearPoint as filterNearPoint } from '../lib/nearby.js'
 
 // Must match the duration check in supabase/schema.sql (set in section 7,
 // widened in section 12). Change one, change the other, or the insert is
@@ -122,28 +123,14 @@ export const useHangoutStore = defineStore('hangout', () => {
   }
 
   /*
-    How far from a tapped pin still counts as "here". One kilometre is about
-    a 12 minute walk, which is the sort of distance a resident means when they
-    press a spot on the map.
+    "Near" is worked out in lib/nearby.js, shared with the Help Board and
+    Skill Swaps so all three pages mean the same thing by it. NEAR_KM is
+    re-exported here because HangoutsView.vue reads it off the store.
   */
-  const NEAR_KM = 1
-
-  // Singapore is tiny, so treating a degree as a flat 111 km in both
-  // directions is accurate to a few metres here. No great-circle maths needed.
-  function distanceKm(aLat, aLng, bLat, bLng) {
-    const dLat = (aLat - bLat) * 111
-    const dLng = (aLng - bLng) * 111
-    return Math.sqrt(dLat * dLat + dLng * dLng)
-  }
 
   /** Open hangouts within NEAR_KM of a tapped point, or all when none given. */
   function nearPoint(point) {
-    if (!point || !Number.isFinite(point.lat) || !Number.isFinite(point.lng)) {
-      return openHangouts.value
-    }
-    return openHangouts.value.filter(
-      (h) => distanceKm(h.latitude, h.longitude, point.lat, point.lng) <= NEAR_KM,
-    )
+    return filterNearPoint(openHangouts.value, point)
   }
 
   // ---- actions (each returns { ok, error }) ----

@@ -795,9 +795,13 @@ create table public.skill_sessions (
   host_id uuid not null default auth.uid() references public.profiles(id) on delete cascade,
   title text not null check (length(trim(title)) >= 5),
   description text not null check (length(trim(description)) >= 1),
-  category text not null check (category in
-    ('Tech', 'Cooking', 'Crafts', 'Health & fitness', 'Arts & music', 'Languages', 'Other')),
-  venue text not null check (length(trim(venue)) >= 3),
+  -- Any kind of session, not a fixed list: hosts may type their own, the way
+  -- a resident may add an interest. src/lib/skillSwapFormat.js still offers
+  -- seven suggestions and folds a typed-in one into them where it can.
+  category text not null check (length(trim(category)) between 1 and 40),
+  venue text not null check (length(trim(venue)) >= 3),  -- the place people read
+  latitude numeric,                      -- the pin for venue; null on older sessions
+  longitude numeric,
   session_date date not null,
   session_time time not null,
   duration int not null check (duration in (30, 60, 90, 120, 150, 180)),
@@ -806,6 +810,18 @@ create table public.skill_sessions (
   created_at timestamptz not null default now()
 );
  
+-- Both empty, or both inside Singapore (the same box as help_requests)
+alter table public.skill_sessions add constraint skill_sessions_inside_singapore
+  check (
+    (latitude is null and longitude is null)
+    or (
+      -- "is not null" is not spare: a CHECK passes when it evaluates to NULL,
+      -- so without it a row with a latitude and no longitude slipped through
+      latitude is not null and longitude is not null
+      and latitude between 1.1 and 1.6 and longitude between 103.5 and 104.2
+    )
+  );
+
 create index on public.skill_sessions (status, session_date);
 create index on public.skill_sessions (host_id);
  
@@ -869,7 +885,8 @@ create policy "See who has a place"
 -- The browser may only add a session with these columns. Joining, leaving,
 -- cancelling and completing go through the functions in 8.4.
 revoke insert, update, delete on public.skill_sessions from anon, authenticated;
-grant insert (title, description, category, venue, session_date, session_time, duration, capacity)
+grant insert (title, description, category, venue, latitude, longitude,
+              session_date, session_time, duration, capacity)
   on public.skill_sessions to authenticated;
  
 revoke insert, update, delete on public.skill_session_attendees from anon, authenticated;
@@ -1553,3 +1570,18 @@ alter table public.profiles add column hidden_interests text[] not null default 
 -- Column grants add up rather than replace, so this joins the ones already
 -- granted in sections 2 and 13.
 grant update (hidden_interests) on public.profiles to authenticated;
+
+
+-- ============================================================================
+-- 16. The walking avatar in the navbar
+-- ============================================================================
+-- A resident may have their own avatar stroll along the top bar. Off for
+-- everybody until they switch it on in Edit profile, because movement that
+-- starts on its own has to be something people can turn off (WCAG 2.2.2).
+--
+-- src/stores/auth.js reads this column in PROFILE_COLUMNS, so a project
+-- without it cannot load a profile at all and nobody can log in.
+
+alter table public.profiles add column show_walker boolean not null default false;
+
+grant update (show_walker) on public.profiles to authenticated;

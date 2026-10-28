@@ -30,7 +30,39 @@ export function uniqueEmail() {
 // Supabase, so each test creates what it needs (see postRequest below).
 // By default every test gets new accounts. With { keepAccounts: true } the
 // accounts from earlier tests are reused (call forgetAccounts() to start over).
+/*
+  Sign up now makes people CHOOSE their block from OneMap rather than type it,
+  so every test that signs up would otherwise call a live government API.
+
+  This answers any OneMap search with one result that echoes what was searched
+  for, which keeps the stored block predictable. It is installed by resetApp,
+  so no spec has to know about it.
+
+  Playwright matches routes in reverse order of registration, so a spec that
+  wants its own answer (fakeOneMap, fakeOneMapEmpty) just registers one later
+  and wins.
+*/
+export async function stubOneMap(page) {
+  await page.route('**/elastic/search*', (route) => {
+    const searched = new URL(route.request().url()).searchParams.get('searchVal') || 'Eunos'
+    const name = searched.toUpperCase()
+    route.fulfill({
+      json: {
+        found: 1,
+        results: [{
+          SEARCHVAL: name,
+          ADDRESS: name,
+          POSTAL: '409412',
+          LATITUDE: '1.3200',
+          LONGITUDE: '103.9035',
+        }],
+      },
+    })
+  })
+}
+
 export async function resetApp(page, { keepAccounts = false } = {}) {
+  await stubOneMap(page)
   if (!keepAccounts) accounts.clear()
   posted.length = 0
   await page.goto('/landing')
@@ -45,7 +77,15 @@ export async function fillSignUp(page, { name, email, birthYear, block = 'Blk 41
   await page.getByLabel('Email', { exact: true }).fill(email)
   await page.getByLabel('Password', { exact: true }).fill(TEST_PASSWORD)
   await page.getByLabel('Type your password again').fill(TEST_PASSWORD)
-  await page.getByLabel('Block and street').fill(block)
+  /*
+    The block is chosen from OneMap's list now, not typed. stubOneMap (in
+    resetApp) echoes whatever was searched for, so the account still ends up
+    with the block this helper was given.
+  */
+  await page.getByTestId('place-search').fill(block)
+  await page.getByTestId('place-search-go').click()
+  await page.getByTestId('place-results').getByRole('button').first().click()
+  await expect(page.getByTestId('chosen-address')).toBeVisible()
   await page.getByLabel('Day').selectOption('5')
   await page.getByLabel('Month').selectOption({ label: 'March' })
   await page.getByLabel('Year').fill(String(birthYear))

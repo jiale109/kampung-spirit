@@ -91,7 +91,7 @@ function doWithdraw() {
             viewer="helper">
             <template #actions>
               <span v-if="request.status === 'completed'" class="request-success">
-                ✔ You earned {{ request.points }} points
+                 You earned {{ request.points }} points
               </span>
               <span v-if="request.status === 'cancelled'" class="request-note">The senior cancelled this request.</span>
             </template>

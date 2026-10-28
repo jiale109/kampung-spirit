@@ -113,7 +113,7 @@ onMounted(store.load)
             <template #actions>
               <button v-if="request.status === 'pending_confirmation'" class="btn btn-primary btn-lg"
                 data-testid="confirm" :disabled="busy !== ''" @click="confirmDone(request)">
-                {{ busy === `confirm-${request.id}` ? 'Saving…' : `✔ Yes, ${request.helperName} helped me` }}
+                {{ busy === `confirm-${request.id}` ? 'Saving…' : `Yes, ${request.helperName} helped me` }}
               </button>
               <router-link v-if="request.status === 'open'" :to="`/app/requests/edit/${request.id}`"
                 class="btn btn-outline-primary">Edit</router-link>

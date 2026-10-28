@@ -8,7 +8,7 @@ import { MAX_ACTIVE_TASKS } from '../lib/points.js'
 
 
 const COLUMNS = `id, title, description, category, difficulty, duration, points, is_physical, status,
-  requester_id, helper_id, needed_at, location, created_at,
+  requester_id, helper_id, needed_at, location, latitude, longitude, created_at,
   requester:profiles!requester_id(name, block),
   helper:profiles!helper_id(name)`
 
@@ -30,6 +30,9 @@ function fromRow(r) {
     helperName: r.helper?.name ?? null,
     neededAt: new Date(r.needed_at).getTime(),
     location: r.location,
+    // numeric columns come back as strings; null on older requests without a pin
+    latitude: r.latitude == null ? null : Number(r.latitude),
+    longitude: r.longitude == null ? null : Number(r.longitude),
     createdAt: new Date(r.created_at).getTime(),
   }
 }
@@ -102,21 +105,40 @@ export const useHelpRequestStore = defineStore('helpRequest', () => {
     return error ? { ok: false, error: error.message } : { ok: true }
   }
 
-  const createRequest = (d) =>
-    run(supabase.from('help_requests').insert({
-      title: d.title, description: d.description, category: d.category,
-      difficulty: d.difficulty, duration: d.duration, is_physical: d.isPhysical,
-      needed_at: new Date(d.neededAt).toISOString(),
-      location: d.location.trim(),
-    }))
+  // The pin for the meeting place, checked like stores/hangout.js does, so the
+  // person gets a clear message instead of a raw database error
+  function checkPin(d) {
+    const latitude = Number(d.latitude)
+    const longitude = Number(d.longitude)
+    if (d.latitude == null || d.longitude == null || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return { ok: false, error: 'We could not put that place on the map. Please search for it again.' }
+    }
+    // The same box the database checks (schema.sql, help_requests)
+    if (latitude < 1.1 || latitude > 1.6 || longitude < 103.5 || longitude > 104.2) {
+      return { ok: false, error: 'That place is not in Singapore. Please choose somewhere closer to home.' }
+    }
+    return { ok: true, latitude, longitude }
+  }
 
-  const updateRequest = (id, d) =>
-    run(supabase.from('help_requests').update({
-      title: d.title, description: d.description, category: d.category,
-      difficulty: d.difficulty, duration: d.duration, is_physical: d.isPhysical,
-      needed_at: new Date(d.neededAt).toISOString(),
-      location: d.location.trim(),
-    }).eq('id', id))
+  const toRow = (d, pin) => ({
+    title: d.title, description: d.description, category: d.category,
+    difficulty: d.difficulty, duration: d.duration, is_physical: d.isPhysical,
+    needed_at: new Date(d.neededAt).toISOString(),
+    location: d.location.trim(),
+    latitude: pin.latitude, longitude: pin.longitude,
+  })
+
+  async function createRequest(d) {
+    const pin = checkPin(d)
+    if (!pin.ok) return pin
+    return run(supabase.from('help_requests').insert(toRow(d, pin)))
+  }
+
+  async function updateRequest(id, d) {
+    const pin = checkPin(d)
+    if (!pin.ok) return pin
+    return run(supabase.from('help_requests').update(toRow(d, pin)).eq('id', id))
+  }
 
   const cancelRequest = (id) => run(supabase.rpc('cancel_help_request', { request_id: id }))
   const markDone = (id) => run(supabase.rpc('mark_task_done', { request_id: id }))

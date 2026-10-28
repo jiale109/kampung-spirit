@@ -241,11 +241,18 @@ create table public.help_requests (
   is_physical boolean not null default false,
   needed_at timestamptz not null,        -- when the requester needs the help
   location text not null check (length(trim(location)) between 1 and 100),  -- where the helper meets the requester
+  latitude numeric,                      -- the pin for location; null on older requests
+  longitude numeric,
   points int not null default 0,
   status text not null default 'open'
     check (status in ('open', 'accepted', 'pending_confirmation', 'completed', 'cancelled')),
   physical_warning_ack_at timestamptz,   -- when the helper confirmed the physical warning
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Both empty, or both inside Singapore (the same box as the hangouts check)
+  constraint help_requests_inside_singapore check (
+    (latitude is null and longitude is null)
+    or (latitude between 1.1 and 1.6 and longitude between 103.5 and 104.2)
+  )
 );
 
 create index on public.help_requests (status);
@@ -293,8 +300,8 @@ create policy "Edit your own request while it is open"
 -- The browser may only write these columns. Status changes go through the
 -- functions in section 5, which check the rules.
 revoke insert, update, delete on public.help_requests from anon, authenticated;
-grant insert (title, description, category, difficulty, duration, is_physical, needed_at, location) on public.help_requests to authenticated;
-grant update (title, description, category, difficulty, duration, is_physical, needed_at, location) on public.help_requests to authenticated;
+grant insert (title, description, category, difficulty, duration, is_physical, needed_at, location, latitude, longitude) on public.help_requests to authenticated;
+grant update (title, description, category, difficulty, duration, is_physical, needed_at, location, latitude, longitude) on public.help_requests to authenticated;
 
 create table public.points_ledger (
   id uuid primary key default gen_random_uuid(),

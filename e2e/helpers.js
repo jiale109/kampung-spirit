@@ -129,14 +129,26 @@ export function futureTime(daysFromNow = 2, hour = 15) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`
 }
 
-// Fill in the request form (does not press the button)
+// Choose the meeting place on the request form through the map search
+// (OneMap is mocked, see mockOneMap). The name box is filled in by the search.
+export async function choosePlace(page, search = 'Eunos') {
+  if (!mockedPages.has(page)) await mockOneMap(page)
+  await page.getByTestId('place-search').fill(search)
+  await page.getByTestId('place-search-go').click()
+  await page.getByTestId('place-results').getByRole('button').first().click()
+}
+
+// Fill in the request form (does not press the button).
+// place is what to search for on the map (null to leave the map alone), and
+// location is then typed into the name box (null to keep the search's name).
 export async function fillRequest(page, { title, category = 'Tech', details = 'Please help me with this, thank you.',
-  difficulty = 'Easy', duration = '30 min', neededAt = futureTime(), location = 'Eunos CC entrance' }) {
+  difficulty = 'Easy', duration = '30 min', neededAt = futureTime(), place = 'Eunos', location = 'Eunos CC entrance' }) {
   await page.getByLabel('Short title').fill(title)
   await page.getByRole('button', { name: new RegExp(category) }).click()
   await page.getByLabel('Details').fill(details)
   await page.getByLabel('When do you need help?').fill(neededAt)
-  await page.getByLabel('Where do you need help?').fill(location)
+  if (place !== null) await choosePlace(page, place)
+  if (location !== null) await page.getByLabel('What is this place called?').fill(location)
   await page.getByLabel('How hard?').selectOption(difficulty)
   await page.getByLabel('How long?').selectOption({ label: duration })
 }
@@ -226,7 +238,9 @@ export const EUNOS_CC = {
   LATITUDE: '1.32964',
   LONGITUDE: '103.90538',
 }
+const mockedPages = new WeakSet()
 export async function mockOneMap(page) {
+  mockedPages.add(page)
   const searches = { count: 0 }
   await page.route('**/api/common/elastic/search**', async (route) => {
     searches.count++

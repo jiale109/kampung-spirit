@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { categories, difficulties, durations, calcPoints, categoryClass } from '../lib/points.js'
 import { useAuthStore } from '../stores/auth.js'
 import ConfirmModal from './ConfirmModal.vue'
+import HotspotMap from './HotspotMap.vue'
 
 
 const props = defineProps({
@@ -48,9 +49,64 @@ const form = ref({
   duration: props.request?.duration ?? 30,
   neededAt: props.request ? toInputValue(props.request.neededAt) : '',
   location: props.request?.location ?? '',
+  // The pin for the place, chosen on the map the same way as components/HangoutForm.vue.
+  // Older requests have none, so they start empty and the form asks for one.
+  latitude: props.request?.latitude ?? null,
+  longitude: props.request?.longitude ?? null,
   isPhysical: props.request?.isPhysical ?? false,
 })
 const errors = ref({})
+
+/*
+  WHERE TO MEET (same idea as components/HangoutForm.vue)
+  Search OneMap and press a place, or tap the map. Either way a pin appears,
+  so the senior can see they picked the right spot. A search fills in the
+  name; a tap leaves the name for the senior to write. The name box below
+  the map is what helpers read, and stays editable ("Use my block" too).
+*/
+const savedPlace = props.request && Number.isFinite(props.request.latitude) ? [{
+  // HotspotMap puts the name into the popup as HTML, so escape it
+  name: `Saved place: ${escapeHtml(props.request.location)}`,
+  latitude: props.request.latitude,
+  longitude: props.request.longitude,
+}] : []
+const needsPin = props.request && savedPlace.length === 0
+
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
+}
+
+// The name the last search filled in, so a tap on the map only clears that
+// one (it would label the wrong place) and never something the senior typed
+let searchedName = null
+
+function setPin(lat, lng) {
+  form.value.latitude = lat
+  form.value.longitude = lng
+  errors.value.place = ''
+}
+
+// A place picked from the OneMap search: it comes with a name
+function onPlaceFound(place) {
+  setPin(place.lat, place.lng)
+  form.value.location = place.name.slice(0, 100)
+  searchedName = form.value.location
+  errors.value.location = ''
+}
+
+// A spot tapped on the map: coordinates only, so the senior names it
+function onPlacePicked(point) {
+  setPin(point.lat, point.lng)
+  if (form.value.location === searchedName) form.value.location = ''
+  searchedName = null
+}
+
+// Pressing the saved pin (when editing) chooses it again
+function onSavedPlace(place) {
+  setPin(place.latitude, place.longitude)
+}
+
+const hasPin = computed(() => Number.isFinite(form.value.latitude) && Number.isFinite(form.value.longitude))
 
 // What the form started with, so Cancel only asks when something was changed
 const startValues = JSON.stringify(form.value)
@@ -68,12 +124,14 @@ const describedBy = (...ids) => ids.filter(Boolean).join(' ') || undefined
 // The fields in the order they appear, so focus goes to the first one with an error
 const categoryGroup = ref(null)
 const neededAtInput = ref(null)
+const placeGroup = ref(null)
 const locationInput = ref(null)
 const descriptionInput = ref(null)
 const titleInput = ref(null)
 const fieldOrder = [
   ['category', () => categoryGroup.value.querySelector('button')],
   ['neededAt', () => neededAtInput.value],
+  ['place', () => placeGroup.value.querySelector('#place-search')],
   ['location', () => locationInput.value],
   ['description', () => descriptionInput.value],
   ['title', () => titleInput.value],
@@ -92,6 +150,8 @@ async function submit() {
   const neededAt = new Date(form.value.neededAt).getTime()
   if (!form.value.neededAt || Number.isNaN(neededAt)) errors.value.neededAt = 'Please choose the day and time you need help.'
   else if (neededAt < Date.now()) errors.value.neededAt = 'This time has already passed. Please choose a later time.'
+
+  if (!hasPin.value) errors.value.place = 'Please choose where to meet: search for a place, or tap the map.'
 
   const location = form.value.location.trim()
   if (!location) errors.value.location = 'Please write where you need help, for example your block or the CC.'
@@ -155,19 +215,32 @@ function cancel() {
         <div id="needed-at-error" class="invalid-feedback">{{ errors.neededAt }}</div>
       </div>
 
-      <div>
-        <label for="location" class="form-label">Where do you need help?</label>
-        <div id="location-hint" class="form-text mt-0 mb-2">
+      <div ref="placeGroup" role="group" aria-labelledby="where-label" aria-describedby="location-hint">
+        <div id="where-label" class="form-label">Where do you need help?</div>
+        <div id="location-hint" class="form-text mt-0 mb-3">
           This is where you and your helper will meet. No need for your unit number.
         </div>
+        <p v-if="needsPin" class="mb-3" data-testid="needs-pin">
+          This request has no pin on the map yet. Please choose the place on the map before saving.
+        </p>
+
+        <HotspotMap label="Find the place" pickable :places="savedPlace"
+          hint="Search for a place, or tap the map to put the pin exactly where you mean."
+          @select="onPlaceFound" @pick="onPlacePicked" @marker="onSavedPlace" />
+        <div v-if="errors.place" id="place-error" class="invalid-feedback d-block" role="alert"
+          data-testid="place-error">{{ errors.place }}</div>
+        <p v-if="hasPin" class="form-text mb-0" data-testid="pin-chosen">A pin is on the map for this place.</p>
+
+        <label for="location" class="form-label mt-3">What is this place called?</label>
         <input id="location" ref="locationInput" v-model="form.location" type="text" class="form-control"
           :class="{ 'is-invalid': errors.location }" maxlength="100" placeholder="e.g. Eunos CC entrance"
-          :aria-describedby="describedBy('location-hint', errors.location && 'location-error')"
-          :aria-invalid="!!errors.location" required />
+          :aria-describedby="describedBy('location-name-hint', errors.location && 'location-error')"
+          :aria-invalid="!!errors.location" required @input="errors.location = ''" />
         <div id="location-error" class="invalid-feedback">{{ errors.location }}</div>
+        <div id="location-name-hint" class="form-text">Your helper will see this name, so make it easy to find.</div>
         <!-- Only copies the block in; the person can still change it -->
         <button v-if="auth.user?.block" type="button" class="btn btn-outline-secondary mt-2"
-          @click="form.location = auth.user.block">Use my block</button>
+          @click="form.location = auth.user.block; errors.location = ''">Use my block</button>
       </div>
 
       <div>

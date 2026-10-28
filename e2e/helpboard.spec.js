@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import {
   resetApp, forgetAccounts, login, logout, switchTo, card, openCard, uniqueTitle, futureTime, fillRequest,
-  postRequest, rememberRequest, acceptCard, markTaskDone, tidyUp, mockOneMap,
+  postRequest, rememberRequest, acceptCard, markTaskDone, tidyUp, mockOneMap, choosePlace,
 } from './helpers.js'
 
 // Each group signs up one senior and one youth and reuses them (Supabase limits
@@ -12,6 +12,8 @@ test.beforeEach(async ({ page }) => { await resetApp(page, { keepAccounts: true 
 test.afterEach(async ({ browser }) => { await tidyUp(browser) })
 
 const PHYSICAL_BOX = 'This needs physical effort (for example lifting or a long walk)'
+const PLACE_NAME = 'What is this place called?'
+const PLACE_ERROR = 'Please choose where to meet: search for a place, or tap the map.'
 
 // Change what the Help Board loads, e.g. only this test's requests (the data is shared)
 async function changeLoadedRequests(page, change) {
@@ -30,7 +32,8 @@ test.describe('Posting a request', () => {
     const title = uniqueTitle('Fix my TV settings')
     const newTitle = uniqueTitle('Fix my TV language')
     const neededAt = futureTime(3, 15)
-    const place = page.getByLabel('Where do you need help?')
+    const place = page.getByLabel(PLACE_NAME)
+    const formMap = page.getByTestId('hotspot-map')
 
     await login(page, 'Senior', 'Mdm Tan')
     await page.getByRole('link', { name: '+ Ask for Help' }).first().click()
@@ -40,10 +43,13 @@ test.describe('Posting a request', () => {
     rememberRequest(title)
     await expect((await openCard(page, title)).getByTestId('needed-at')).toContainText('3:00 PM')
 
-    // Edit: the form starts filled in, including the time and the place
+    // Edit: the form starts filled in, including the time, the place and its saved pin
     await (await openCard(page, title)).getByRole('link', { name: 'Edit' }).click()
     await expect(page.getByLabel('When do you need help?')).toHaveValue(neededAt)
     await expect(place).toHaveValue('Blk 412 void deck')
+    await expect(formMap.locator('.leaflet-interactive')).toHaveCount(1)
+    await expect(page.getByTestId('pin-chosen')).toBeVisible()
+    await expect(page.getByTestId('needs-pin')).toHaveCount(0)
     await page.getByLabel('Short title').fill(newTitle)
     await place.fill('Eunos CC entrance')
     await page.getByRole('button', { name: 'Save changes' }).click()
@@ -61,7 +67,7 @@ test.describe('Posting a request', () => {
 
   test('The form helps while writing, and a blank title is made for you', async ({ page }) => {
     const post = page.getByRole('button', { name: 'Post request' })
-    const place = page.getByLabel('Where do you need help?')
+    const place = page.getByLabel(PLACE_NAME)
     const placeError = page.getByText('Please write where you need help, for example your block or the CC.')
     const detailsBox = page.getByLabel('Details')
     const counter = page.getByTestId('details-count')
@@ -363,49 +369,78 @@ test.describe('My Tasks', () => {
 test.describe('Map', () => {
   test.beforeAll(forgetAccounts)
 
-  test('"View map" shows where to meet, closes with Escape or the dark area, and says when a place is not found', async ({ page }) => {
+  test('A senior searches for a place, posts, and "View map" shows that pin without searching again', async ({ page }) => {
     const searches = await mockOneMap(page)
     const title = uniqueTitle('Walk with me to the CC')
-    const notFound = uniqueTitle('Help me at the bus stop')
     const dialog = page.getByRole('dialog')
     const leaflet = dialog.locator('.leaflet-container')
 
     await login(page, 'Senior', 'Mr Lim')
-    await postRequest(page, { title, location: 'Eunos CC entrance' })
-    await postRequest(page, { title: notFound, location: 'Bus stop near my home' })
-    expect(searches.count).toBe(0)   // OneMap is not asked when the list loads
+    await page.goto('/app/requests/create')
+    await fillRequest(page, { title, place: null, location: null })
 
-    // A place OneMap knows
+    // The search puts a pin on the map and fills in the name
+    await choosePlace(page, 'Eunos')
+    await expect(page.getByTestId('hotspot-map').locator('.leaflet-interactive')).toHaveCount(1)
+    await expect(page.getByTestId('pin-chosen')).toBeVisible()
+    await expect(page.getByLabel(PLACE_NAME)).toHaveValue('EUNOS COMMUNITY CLUB')
+    await page.getByRole('button', { name: 'Post request' }).click()
+    await expect(page).toHaveURL(/\/app\/requests$/)
+    rememberRequest(title)
+    const searchesSoFar = searches.count
+
+    // The modal shows the saved pin and the name, and does not ask OneMap
     const found = await openCard(page, title)
     await found.getByTestId('view-map').click()
     await expect(dialog).toContainText('Where to meet')
-    await expect(dialog.getByTestId('map-location')).toContainText('Eunos CC entrance')
-    await expect(dialog.getByRole('button', { name: 'Close' })).toBeFocused()
+    await expect(dialog.getByTestId('map-location')).toHaveText('Meeting place: EUNOS COMMUNITY CLUB.')
+    await expect(dialog.getByRole('button', { name: 'Close', exact: true })).toBeFocused()
     await expect(dialog.getByTestId('request-map')).toBeVisible()
-    await expect(leaflet).toHaveCount(1)
-    await expect(dialog.getByTestId('map-match')).toContainText('EUNOS COMMUNITY CLUB')
-    await expect(dialog.getByTestId('map-match')).toContainText('180 BEDOK RESERVOIR ROAD')
-    await expect(dialog).toContainText('This is our best match. Please check the details with the requester.')
-    expect(searches.count).toBe(1)
+    await expect(dialog.locator('.leaflet-interactive')).toHaveCount(1)
+    await expect(dialog.locator('.leaflet-popup')).toContainText('EUNOS COMMUNITY CLUB')
+    expect(searches.count).toBe(searchesSoFar)
 
     // Escape closes it, but not the card behind it
     await page.keyboard.press('Escape')
     await expect(dialog).toHaveCount(0)
     await expect(found.locator('.request-toggle')).toHaveAttribute('aria-expanded', 'true')
 
-    // Second time: still one map with the one circle marker; clicking the dark area closes it
+    // Second time: still one map; clicking the dark area closes it
     await found.getByTestId('view-map').click()
     await expect(leaflet).toHaveCount(1)
-    await expect(dialog.locator('.leaflet-interactive')).toHaveCount(1)
     await page.locator('.modal').click({ position: { x: 5, y: 5 } })
     await expect(dialog).toHaveCount(0)
+  })
 
-    // A place OneMap cannot find shows a message instead of a map
-    await (await openCard(page, notFound)).getByTestId('view-map').click()
-    await expect(dialog.getByTestId('map-not-found')).toHaveText(
-      'We could not find this place on the map. The meeting place is: Bus stop near my home.')
+  test('Posting without choosing a place shows the place error and focuses the search', async ({ page }) => {
+    await login(page, 'Senior', 'Mr Lim')
+    await page.goto('/app/requests/create')
+    await fillRequest(page, { title: uniqueTitle('Help me at the bus stop'), place: null })
+    await page.getByRole('button', { name: 'Post request' }).click()
+    await expect(page.getByTestId('place-error')).toHaveText(PLACE_ERROR)
+    await expect(page.getByTestId('place-search')).toBeFocused()
+    await expect(page).toHaveURL(/\/app\/requests\/create$/)
+  })
+
+  test('An older request without a pin shows only the meeting place, and editing asks for a pin', async ({ page }) => {
+    const title = uniqueTitle('Help me at my block')
+    const dialog = page.getByRole('dialog')
+
+    await login(page, 'Senior', 'Mr Lim')
+    await postRequest(page, { title, location: 'Blk 410 void deck' })
+
+    // Pretend it was posted before requests had a pin
+    await changeLoadedRequests(page, (rows) => rows.map((r) => (r.title === title ? { ...r, latitude: null, longitude: null } : r)))
+    await page.reload()
+    await (await openCard(page, title)).getByTestId('view-map').click()
+    await expect(dialog.getByTestId('map-location')).toHaveText('Meeting place: Blk 410 void deck.')
     await expect(dialog.getByTestId('request-map')).toHaveCount(0)
-    await dialog.getByRole('button', { name: 'Close' }).click()
-    await expect(dialog).toHaveCount(0)
+    await expect(dialog.locator('.leaflet-container')).toHaveCount(0)
+    await dialog.getByRole('button', { name: 'Close', exact: true }).click()
+
+    await (await openCard(page, title)).getByRole('link', { name: 'Edit' }).click()
+    await expect(page.getByTestId('needs-pin')).toBeVisible()
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await expect(page.getByTestId('place-error')).toHaveText(PLACE_ERROR)
   })
 })

@@ -118,14 +118,21 @@ const chosenLabel = computed(() => (props.modelValue ? formatDate(props.modelVal
 <template>
   <div class="day-picker" :class="{ 'is-invalid-box': invalid }" data-testid="day-picker">
 
-    <!-- Which month we are looking at -->
+    <!--
+      Which month we are looking at.
+
+      The arrows are single characters, so they use .month-nav rather than
+      btn-lg: a worded button's side padding is what pushed the month name off
+      a 320px phone, especially with "Use large text" on.
+    -->
     <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
-      <button type="button" class="btn btn-outline-secondary btn-lg" :disabled="!canGoBack"
+      <button type="button" class="btn btn-outline-secondary month-nav" :disabled="!canGoBack"
         aria-label="Previous month" data-testid="previous-month" @click="showMonth(-1)">&lsaquo;</button>
 
-      <strong class="fs-4 text-center" aria-live="polite" data-testid="month-label">{{ monthLabel }}</strong>
+      <strong class="month-label text-center" aria-live="polite"
+        data-testid="month-label">{{ monthLabel }}</strong>
 
-      <button type="button" class="btn btn-outline-secondary btn-lg" :disabled="!canGoForward"
+      <button type="button" class="btn btn-outline-secondary month-nav" :disabled="!canGoForward"
         aria-label="Next month" data-testid="next-month" @click="showMonth(1)">&rsaquo;</button>
     </div>
 

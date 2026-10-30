@@ -154,4 +154,12 @@ onUnmounted(() => {
 .landing-tagline {
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
 }
+@media (min-width: 992px) {
+  .landing-hero--photos {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    align-self: flex-start;
+  }
+}
 </style>

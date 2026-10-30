@@ -122,10 +122,10 @@ function validate() {
   const f = form.value
   const e = {}
 
-  if (f.name.trim().length < 2) e.name = 'Please write your name.'
-  if (!looksLikeEmail(f.email)) e.email = 'Please write your email, like name@example.com.'
+  if (f.name.trim().length < 2) e.name = 'Please enter your name.'
+  if (!looksLikeEmail(f.email)) e.email = 'Please enter your email, like name@example.com.'
   if (!passwordStrong.value) e.password = 'Your password does not meet all the rules below yet.'
-  if (!f.passwordAgain) e.passwordAgain = 'Please type your password again.'
+  if (!f.passwordAgain) e.passwordAgain = 'Please enter your password again.'
   else if (!passwordsMatch.value) e.passwordAgain = 'The two passwords are different. Please type them again.'
   if (!chosenAddress.value || f.block.trim().length < 3) {
     e.block = 'Please search for your block and press it in the list, so neighbours can find you.'
@@ -136,8 +136,8 @@ function validate() {
   else if (age.value < MIN_AGE) e.birthDate = `You need to be at least ${MIN_AGE} years old to join.`
 
   if (isMinor.value) {
-    if (f.guardianName.trim().length < 2) e.guardianName = "Please write your parent or guardian's name."
-    if (!looksLikeEmail(f.guardianEmail)) e.guardianEmail = "Please write your parent or guardian's email."
+    if (f.guardianName.trim().length < 2) e.guardianName = "Please enter your parent or guardian's name."
+    if (!looksLikeEmail(f.guardianEmail)) e.guardianEmail = "Please enter your parent or guardian's email."
     else if (f.guardianEmail.trim().toLowerCase() === f.email.trim().toLowerCase()) {
       e.guardianEmail = "Please use your parent or guardian's own email, not yours."
     }

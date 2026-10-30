@@ -531,6 +531,54 @@ body {
 }
 
 /*
+  The button inside a green banner ("Show all places", "Change").
+
+  flex-shrink-0 in the markup stops it being squashed next to the sentence,
+  which is right on a laptop. On a 320px phone with large text the sentence
+  wraps above it and the button is then wider than what is left, so it has to
+  be allowed to shrink and wrap its own words once it is on its own line.
+*/
+.filter-banner .btn,
+.chosen-address .btn {
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+}
+
+/*
+  The month row above the calendar.
+
+  A square arrow instead of btn-lg. btn-lg's 1.75rem of side padding is meant
+  for a worded button; on a single character it is just width, and two of them
+  plus the month name did not fit a 320px phone - worse with large text, where
+  every rem is 27px rather than 22px.
+
+  3rem square is still a proper tap target (66px at the normal size), and the
+  month name is allowed to shrink between them rather than push them out.
+*/
+.month-nav {
+  --bs-btn-padding-x: 0;
+  width: 3rem;
+  min-width: 3rem;
+  flex-shrink: 0;
+}
+
+.month-label {
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+/* On the narrowest phones the name matters more than its size */
+@media (max-width: 420px) {
+  .month-label {
+    font-size: 1.15rem;
+  }
+}
+
+/*
   The calendar in components/DayPicker.vue.
 
   Seven columns is one more than Bootstrap's row-cols- utilities go up to, so

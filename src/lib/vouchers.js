@@ -1,9 +1,11 @@
 // Category filter pills
 export const voucherTypes = [
   { name: 'All' },
+  { name: 'Drinks' },
   { name: 'Kopitiam' },
-  { name: 'Supermarket'},
   { name: 'Pharmacy' },
+  { name: 'Supermarket' },
+  { name: 'Travel' },
 ]
 
 // Catalog of vouchers 
@@ -11,11 +13,10 @@ export const vouchers = [
   {
     id: 'v1',
     merchant: '7-Eleven',
-    branch: 'Eunos MRT Station',
     type: 'Supermarket',
     title: '$2 off any purchase',
     cost: 50,
-    logo: '/images/merchants/7eleven.png', //  points to public/images/merchants/7eleven.png
+    logo: '/images/merchants/7eleven.png',
     bg: '#008163',
     description: 'Get $2 off your purchase at 7-Eleven.',
     terms: 'Minimum spend of $4. Valid for 30 days.',
@@ -23,7 +24,6 @@ export const vouchers = [
   {
     id: 'v2',
     merchant: 'FairPrice',
-    branch: 'Blk 418 Eunos Crescent',
     type: 'Supermarket',
     title: '$5 Grocery Voucher',
     cost: 150,
@@ -35,7 +35,6 @@ export const vouchers = [
   {
     id: 'v3',
     merchant: 'Kimly Kopitiam',
-    branch: 'Blk 416 Eunos Crescent',
     type: 'Kopitiam',
     title: 'Free Kopi / Teh with Toast',
     cost: 30,
@@ -47,7 +46,6 @@ export const vouchers = [
   {
     id: 'v4',
     merchant: 'Cold Storage',
-    branch: 'PLQ Mall (Near Eunos)',
     type: 'Supermarket',
     title: '$10 Grocery Voucher',
     cost: 250,
@@ -59,7 +57,6 @@ export const vouchers = [
   {
     id: 'v5',
     merchant: 'Unity Pharmacy',
-    branch: 'Eunos Crescent',
     type: 'Pharmacy',
     title: '$5 wellness & medicine discount',
     cost: 140,
@@ -69,9 +66,19 @@ export const vouchers = [
     terms: 'Show digital voucher at counter before payment.',
   },
   {
+    id: 'v6',
+    merchant: 'Koufu',
+    type: 'Kopitiam',
+    title: '$2.50 off set meal',
+    cost: 55,
+    logo: '/images/merchants/koufu.png',
+    bg: 'white',
+    description: 'Enjoy $2.50 off any set meal or drinks at participating Koufu food court stalls.',
+    terms: 'Valid with a minimum spend of $5. Present code at stall counter before paying.',
+  },
+  {
     id: 'v7',
     merchant: 'Guardian',
-    branch: 'Geylang Serai / Eunos',
     type: 'Pharmacy',
     title: '$3 Guardian Voucher',
     cost: 80,
@@ -79,5 +86,61 @@ export const vouchers = [
     bg: '#FF7E27',
     description: 'Get $3 off your purchase at Guardian',
     terms: 'Present code at checkout. Valid for 30 days.',
+  },
+  {
+    id: 'v8',
+    merchant: 'KOI Thé',
+    type: 'Drinks',
+    title: '$1.50 off any beverage',
+    cost: 40,
+    logo: '/images/merchants/koi.png',
+    bg: 'white',
+    description: 'Enjoy $1.50 off any medium or large handcrafted tea at KOI.',
+    terms: 'Valid at all KOI Thé and Express outlets in Singapore.',
+  },
+  {
+    id: 'v9',
+    merchant: 'Boost Juice',
+    type: 'Drinks',
+    title: '$2.50 off Original Smoothie',
+    cost: 65,
+    logo: '/images/merchants/boost.png',
+    bg: 'white',
+    description: 'Get $2.50 off any original size fruit smoothie or crush at Boost.',
+    terms: 'Valid at all Boost Juice Singapore stores. Cannot be combined with other offers.',
+  },
+  {
+    id: 'v10',
+    merchant: 'Chagee',
+    type: 'Drinks',
+    title: '$3 off Fresh Milk Tea',
+    cost: 75,
+    logo: '/images/merchants/chagee.png',
+    bg: 'white',
+    description: 'Enjoy $3 off any large Fresh Milk Tea series beverage at Chagee.',
+    terms: 'Valid for takeaway or dine-in. One voucher per transaction.',
+  },
+
+  {
+    id: 'v11',
+    merchant: 'Grab',
+    type: 'Travel',
+    title: '$3 off GrabRide',
+    cost: 80,
+    logo: '/images/merchants/grab.png',
+    bg: 'white',
+    description: 'Save $3 on any JustGrab, GrabCar, or Standard Taxi ride.',
+    terms: 'Valid for Singapore rides only. Apply code in the Grab app before booking.',
+  },
+  {
+    id: 'v12',
+    merchant: 'Gojek',
+    type: 'Travel',
+    title: '$5 off GoCar ride',
+    cost: 130,
+    logo: '/images/merchants/gojek.png',
+    bg: 'white',
+    description: 'Enjoy $5 off your next GoCar or GoCar XL trip anywhere in Singapore.',
+    terms: 'Valid for GoCar trips in Singapore. Enter code in Gojek app before booking.',
   },
 ]

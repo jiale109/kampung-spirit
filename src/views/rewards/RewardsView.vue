@@ -70,8 +70,12 @@ const message = ref('')
 const error = ref('')
 
 // Filter by voucher type
+// Filter by voucher type and sort alphabetically by merchant name
 const filteredVouchers = computed(() => {
-  return vouchers.filter((v) => selectedType.value === 'All' || v.type === selectedType.value)
+  return vouchers
+    .filter((v) => selectedType.value === 'All' || v.type === selectedType.value)
+    .slice()
+    .sort((a, b) => a.merchant.localeCompare(b.merchant))
 })
 
 // Generates a Google Maps link to search for nearby outlets

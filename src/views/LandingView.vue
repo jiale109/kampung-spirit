@@ -20,7 +20,7 @@ const busy = ref(false)
 async function submit() {
   error.value = ''
   if (!form.value.email.trim() || !form.value.password) {
-    error.value = 'Please write your email and password.'
+    error.value = 'Please enter your email and password.'
     return
   }
 

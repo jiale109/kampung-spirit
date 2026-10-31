@@ -2,9 +2,12 @@
 import { ref, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { categories, difficulties, durations, calcPoints, categoryClass } from '../lib/points.js'
+import { todayISO, dateFromToday, toISO, sessionStart, formatTime, TIME_OPTIONS } from '../lib/skillSwapFormat.js'
 import { useAuthStore } from '../stores/auth.js'
+import { checkText } from '../lib/contentRules.js'
 import ConfirmModal from './ConfirmModal.vue'
 import HotspotMap from './HotspotMap.vue'
+import DayPicker from './DayPicker.vue'
 
 
 const props = defineProps({
@@ -23,11 +26,16 @@ const ALWAYS_PHYSICAL = ['Lifting', 'Companion Walk']
 const DETAILS_MAX = 240
 const TITLE_MAX = 80
 
-// A time in milliseconds -> 'YYYY-MM-DDTHH:mm' in local time, the format a datetime-local input uses
-function toInputValue(ms) {
+// The day is picked on the calendar in components/DayPicker.vue and the time from a list,
+// the same as components/HangoutForm.vue: from today up to two months ahead
+const FIRST_DAY = todayISO()
+const LAST_DAY = dateFromToday(60)
+
+// A saved time in milliseconds -> 'HH:mm' in local time, the value the time list uses
+function toTime(ms) {
   const d = new Date(ms)
   const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 // "Tech help: Please help me set up..." from the category and the start of the details.
@@ -41,19 +49,27 @@ function makeTitle(category, details) {
   return `${lastSpace > category.length + 6 ? cut.slice(0, lastSpace) : cut}…`
 }
 
+// A new request starts on the next time in the list that is still ahead today,
+// or tomorrow at 9:00 am once today's last time has gone
+const nextToday = TIME_OPTIONS.find((t) => sessionStart(FIRST_DAY, t.value) > new Date())
+const firstFree = nextToday ? { date: FIRST_DAY, time: nextToday.value } : { date: dateFromToday(1), time: '09:00' }
+
 const form = ref({
   title: props.request?.title ?? '',
   description: props.request?.description ?? '',
   category: props.request?.category ?? '',
   difficulty: props.request?.difficulty ?? 'Easy',
   duration: props.request?.duration ?? 30,
-  neededAt: props.request ? toInputValue(props.request.neededAt) : '',
+  date: props.request ? toISO(new Date(props.request.neededAt)) : firstFree.date,
+  time: props.request ? toTime(props.request.neededAt) : firstFree.time,
   location: props.request?.location ?? '',
   // The pin for the place, chosen on the map the same way as components/HangoutForm.vue.
   // Older requests have none, so they start empty and the form asks for one.
   latitude: props.request?.latitude ?? null,
   longitude: props.request?.longitude ?? null,
   isPhysical: props.request?.isPhysical ?? false,
+  // Help inside the requester's home. Under-18s cannot accept these (schema.sql, accept_help_request)
+  atHome: props.request?.atHome ?? false,
 })
 const errors = ref({})
 
@@ -113,7 +129,16 @@ const startValues = JSON.stringify(form.value)
 const changed = computed(() => JSON.stringify(form.value) !== startValues)
 const confirmLeave = ref(false)
 
-const earliest = toInputValue(Date.now())
+// A request saved at a time the list does not have (e.g. 7:15 am) keeps it as an extra choice,
+// so editing shows the saved time instead of an empty box
+const timeOptions = TIME_OPTIONS.some((t) => t.value === form.value.time)
+  ? TIME_OPTIONS
+  : [...TIME_OPTIONS, { value: form.value.time, label: formatTime(form.value.time) }]
+      .sort((a, b) => a.value.localeCompare(b.value))
+
+// The words the safety check reads: title, details and place together (the database checks the same)
+const safetyCheck = computed(() =>
+  checkText(`${form.value.title} ${form.value.description} ${form.value.location}`))
 
 const previewPoints = computed(() => calcPoints(form.value.difficulty, form.value.duration))
 const alwaysPhysical = computed(() => ALWAYS_PHYSICAL.includes(form.value.category))
@@ -123,17 +148,19 @@ const describedBy = (...ids) => ids.filter(Boolean).join(' ') || undefined
 
 // The fields in the order they appear, so focus goes to the first one with an error
 const categoryGroup = ref(null)
-const neededAtInput = ref(null)
+const dayGroup = ref(null)
 const placeGroup = ref(null)
 const locationInput = ref(null)
 const descriptionInput = ref(null)
 const titleInput = ref(null)
 const fieldOrder = [
   ['category', () => categoryGroup.value.querySelector('button')],
-  ['neededAt', () => neededAtInput.value],
+  ['neededAt', () => dayGroup.value],
   ['place', () => placeGroup.value.querySelector('#place-search')],
   ['location', () => locationInput.value],
   ['description', () => descriptionInput.value],
+  // A blocked phrase can be in any of the three boxes, but the message shows on Details
+  ['safety', () => descriptionInput.value],
   ['title', () => titleInput.value],
 ]
 
@@ -146,10 +173,11 @@ async function submit() {
   if (!form.value.category) errors.value.category = 'Please choose a category.'
   if (form.value.description.trim().length < 10) errors.value.description = 'Please describe what you need (at least 10 characters).'
 
-  // new Date('YYYY-MM-DDTHH:mm') reads the value as local time
-  const neededAt = new Date(form.value.neededAt).getTime()
-  if (!form.value.neededAt || Number.isNaN(neededAt)) errors.value.neededAt = 'Please choose the day and time you need help.'
+  // The day and time together, in local time, as milliseconds (what the store expects)
+  const neededAt = form.value.date ? sessionStart(form.value.date, form.value.time).getTime() : null
+  if (!form.value.date) errors.value.neededAt = 'Please choose the day you need help.'
   else if (neededAt < Date.now()) errors.value.neededAt = 'This time has already passed. Please choose a later time.'
+  else if (form.value.date > LAST_DAY) errors.value.neededAt = 'Please choose a day within the next two months.'
 
   if (!hasPin.value) errors.value.place = 'Please choose where to meet: search for a place, or tap the map.'
 
@@ -157,6 +185,9 @@ async function submit() {
   if (!location) errors.value.location = 'Please write where you need help, for example your block or the CC.'
   else if (location.length > 100) errors.value.location = 'Please keep the place to 100 characters or fewer.'
 
+  const [blocked] = safetyCheck.value.blocked
+  if (blocked) errors.value.safety = `For everyone's safety, requests cannot include "${blocked}". Please change it and try again.`
+  else if (safetyCheck.value.contact.length) errors.value.safety = 'Please keep contact details out of requests. Talk through the app instead.'
 
   if (Object.keys(errors.value).length > 0) {
     await nextTick()
@@ -185,6 +216,10 @@ function cancel() {
   <form class="card" novalidate @submit.prevent="submit">
     <div class="card-body p-4 d-grid gap-4">
 
+      <p class="alert alert-light safety-tip mb-0" data-testid="safety-tip">
+        Stay safe: meet in a place you are comfortable with. Never share your OTP, passwords or bank details.
+      </p>
+
       <div ref="categoryGroup" role="group" aria-labelledby="category-label"
         :aria-invalid="!!errors.category" :aria-describedby="describedBy(errors.category && 'category-error')">
         <div id="category-label" class="form-label">Category</div>
@@ -207,12 +242,28 @@ function cancel() {
         </div>
       </div>
 
-      <div>
-        <label for="needed-at" class="form-label">When do you need help?</label>
-        <input id="needed-at" ref="neededAtInput" v-model="form.neededAt" type="datetime-local" class="form-control"
-          :class="{ 'is-invalid': errors.neededAt }" :min="earliest" required
-          :aria-invalid="!!errors.neededAt" :aria-describedby="describedBy(errors.neededAt && 'needed-at-error')" />
-        <div id="needed-at-error" class="invalid-feedback">{{ errors.neededAt }}</div>
+      <div role="group" aria-labelledby="needed-at-label" class="d-grid gap-3">
+        <div id="needed-at-label" class="form-label mb-0">When do you need help?</div>
+
+        <!-- Focused (and scrolled to) when the day or time has an error -->
+        <div ref="dayGroup" role="group" aria-labelledby="date-label" tabindex="-1"
+          :aria-invalid="!!errors.neededAt" :aria-describedby="describedBy(errors.neededAt && 'needed-at-error')">
+          <div id="date-label" class="form-label">Which day?</div>
+          <DayPicker v-model="form.date" :min="FIRST_DAY" :max="LAST_DAY"
+            :invalid="!!errors.neededAt" @update:model-value="errors.neededAt = ''" />
+          <div v-if="errors.neededAt" id="needed-at-error" class="invalid-feedback d-block" role="alert">{{ errors.neededAt }}</div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <label for="time" class="form-label">What time?</label>
+            <select id="time" v-model="form.time" class="form-select" :class="{ 'is-invalid': errors.neededAt }"
+              :aria-invalid="!!errors.neededAt" :aria-describedby="describedBy(errors.neededAt && 'needed-at-error')"
+              @change="errors.neededAt = ''">
+              <option v-for="t in timeOptions" :key="t.value" :value="t.value">{{ t.label }}</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div ref="placeGroup" role="group" aria-labelledby="where-label" aria-describedby="location-hint">
@@ -240,16 +291,23 @@ function cancel() {
         <div id="location-name-hint" class="form-text">Your helper will see this name, so make it easy to find.</div>
         <!-- Only copies the block in; the person can still change it -->
         <button v-if="auth.user?.block" type="button" class="btn btn-outline-secondary mt-2"
-          @click="form.location = auth.user.block; errors.location = ''">Use my block</button>
+          @click="form.location = auth.user.block; form.atHome = true; errors.location = ''">Use my address</button>
+        <!-- "Use my address" ticks this; the person can untick it, e.g. to meet downstairs -->
+        <div class="form-check physical-check mt-2">
+          <input id="at-home" v-model="form.atHome" type="checkbox" class="form-check-input" />
+          <label for="at-home" class="form-check-label">This help is inside my home</label>
+        </div>
       </div>
 
       <div>
         <label for="description" class="form-label">Details</label>
         <textarea id="description" ref="descriptionInput" v-model="form.description" rows="4" class="form-control"
-          :class="{ 'is-invalid': errors.description }" :maxlength="DETAILS_MAX"
-          :aria-invalid="!!errors.description"
-          :aria-describedby="describedBy(errors.description && 'description-error', 'description-count')"></textarea>
-        <div id="description-error" class="invalid-feedback">{{ errors.description }}</div>
+          :class="{ 'is-invalid': errors.description || errors.safety }" :maxlength="DETAILS_MAX"
+          :aria-invalid="!!(errors.description || errors.safety)"
+          :aria-describedby="describedBy((errors.description || errors.safety) && 'description-error', 'description-count')"></textarea>
+        <div id="description-error" class="invalid-feedback" data-testid="description-error">
+          {{ errors.description || errors.safety }}
+        </div>
         <div id="description-count" class="form-text" data-testid="details-count">
           {{ form.description.length }} / {{ DETAILS_MAX }}
         </div>
@@ -287,6 +345,13 @@ function cancel() {
         </div>
       </div>
 
+      <!-- Allowed, but a calm reminder while the text mentions passwords, OTPs, money and so on -->
+      <p v-if="safetyCheck.warnings.length && !safetyCheck.blocked.length" class="alert alert-light safety-tip mb-0"
+        role="status" data-testid="safety-reminder">
+        Reminder: never share your Singpass password, OTP, PIN or bank details with a helper.
+        Helpers will never ask you for money.
+      </p>
+
       <div class="form-actions">
         <button type="button" class="btn btn-lg btn-outline-secondary" @click="cancel">Cancel</button>
         <button type="submit" class="btn btn-lg btn-primary" :disabled="busy">{{ busy ? 'Saving…' : submitLabel }}</button>
@@ -300,6 +365,12 @@ function cancel() {
 </template>
 
 <style scoped>
+/* Safety tips: small and calm, not a warning */
+.safety-tip {
+  font-size: 0.95rem;
+  border-color: var(--bs-border-color);
+}
+
 /* Bootstrap's checkbox is small; make it and its label easier to tap */
 .physical-check {
   display: flex;

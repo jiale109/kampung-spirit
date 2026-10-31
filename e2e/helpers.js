@@ -160,7 +160,7 @@ export function uniqueTitle(text) {
   return `${text} ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 }
 
-// A local time daysFromNow days ahead, in the format the "When" input takes: 'YYYY-MM-DDTHH:mm'
+// A local time daysFromNow days ahead, as 'YYYY-MM-DDTHH:mm' (fillRequest splits it into day and time)
 export function futureTime(daysFromNow = 2, hour = 15) {
   const d = new Date()
   d.setDate(d.getDate() + daysFromNow)
@@ -178,6 +178,26 @@ export async function choosePlace(page, search = 'Eunos') {
   await page.getByTestId('place-results').getByRole('button').first().click()
 }
 
+// Choose 'YYYY-MM-DDTHH:mm' on the request form: press the day on the calendar
+// (stepping back or forward a month at a time until it is shown), then pick the time
+export async function chooseDayAndTime(page, neededAt) {
+  const [date, time] = neededAt.split('T')
+  const day = page.getByTestId(`day-${date}`)
+  const monthLabel = page.getByTestId('month-label')
+  // Only days of the month shown have a button, so any one of them says which month that is
+  const shownDay = page.getByTestId('day-picker').locator('[data-testid^="day-"]').first()
+  await expect(monthLabel).toBeVisible()
+  // The calendar covers about two months, so a few steps is always enough
+  for (let steps = 0; steps < 3 && (await day.count()) === 0; steps++) {
+    const shownMonth = (await shownDay.getAttribute('data-testid')).slice('day-'.length, 'day-YYYY-MM'.length)
+    const before = await monthLabel.textContent()
+    await page.getByTestId(date.slice(0, 7) < shownMonth ? 'previous-month' : 'next-month').click()
+    await expect(monthLabel).not.toHaveText(before)
+  }
+  await day.click()
+  await page.getByLabel('What time?').selectOption(time)
+}
+
 // Fill in the request form (does not press the button).
 // place is what to search for on the map (null to leave the map alone), and
 // location is then typed into the name box (null to keep the search's name).
@@ -186,7 +206,7 @@ export async function fillRequest(page, { title, category = 'Tech', details = 'P
   await page.getByLabel('Short title').fill(title)
   await page.getByRole('button', { name: new RegExp(category) }).click()
   await page.getByLabel('Details').fill(details)
-  await page.getByLabel('When do you need help?').fill(neededAt)
+  await chooseDayAndTime(page, neededAt)
   if (place !== null) await choosePlace(page, place)
   if (location !== null) await page.getByLabel('What is this place called?').fill(location)
   await page.getByLabel('How hard?').selectOption(difficulty)
@@ -285,7 +305,8 @@ export async function mockOneMap(page) {
   await page.route('**/api/common/elastic/search**', async (route) => {
     searches.count++
     const searchVal = new URL(route.request().url()).searchParams.get('searchVal') ?? ''
-    const results = searchVal.includes('Eunos') ? [EUNOS_CC] : []
+    // lib/onemap.js sends the search in small letters ('eunos'), so ignore capitals
+    const results = searchVal.toLowerCase().includes('eunos') ? [EUNOS_CC] : []
     await route.fulfill({ json: { found: results.length, totalNumPages: 1, pageNum: 1, results } })
   })
   await page.route('**/maps/tiles/**', (route) => route.abort())

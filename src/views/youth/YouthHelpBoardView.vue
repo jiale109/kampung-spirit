@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useHelpRequestStore, isPastTime, formatNeededAt } from '../../stores/helpRequest.js'
 import { categories, MAX_ACTIVE_TASKS } from '../../lib/points.js'
+import { useAuthStore } from '../../stores/auth.js'
 import EmptyState from '../../components/EmptyState.vue'
 import RequestCard from '../../components/RequestCard.vue'
 import ConfirmModal from '../../components/ConfirmModal.vue'
@@ -9,6 +10,31 @@ import HotspotMap from '../../components/HotspotMap.vue'
 import { NEAR_KM, nearPoint, countWithoutPin, placeMarkers } from '../../lib/nearby.js'
 
 const store = useHelpRequestStore()
+const auth = useAuthStore()
+
+// Under-18s (guardian needed) cannot accept requests inside a home, or ones that start
+// before 8 am or end after 7 pm. The database refuses these too (schema.sql, accept_help_request),
+// so here the card just says why instead of showing "I can help".
+const isMinor = computed(() => !!auth.user && auth.user.guardian_status !== 'not_needed')
+
+// Minutes after midnight in Singapore time (UTC+8 all year, no daylight saving)
+function singaporeMinutes(ms) {
+  const d = new Date(ms + 8 * 60 * 60 * 1000)
+  return d.getUTCHours() * 60 + d.getUTCMinutes()
+}
+const EIGHT_AM = 8 * 60
+const SEVEN_PM = 19 * 60
+
+function minorLimit(request) {
+  if (!isMinor.value) return ''
+  if (request.atHome) return "For your safety, under-18s cannot help inside someone's home."
+  // Start from 8 am and end by 7 pm. Starting from 7 pm is refused too, so a late
+  // task that ends after midnight cannot slip through (same as the database).
+  const start = singaporeMinutes(request.neededAt)
+  const end = start + request.duration
+  if (start < EIGHT_AM || start >= SEVEN_PM || end > SEVEN_PM) return 'For your safety, under-18s can only help between 8 am and 7 pm.'
+  return ''
+}
 
 const selectedCategory = ref('')
 const sortBy = ref('soonest')
@@ -156,6 +182,15 @@ async function doAccept(request, physicalOk) {
       </span>
     </div>
 
+    <div class="alert alert-light safety-tip">
+      <p class="mb-2" data-testid="safety-tip">
+        Helping safely: never ask for or accept money, OTPs, passwords or bank details. If something feels wrong, do not go.
+      </p>
+      <p class="mb-0" data-testid="safety-tip-guardian">
+        Tell a parent or guardian where you are going. Bring a friend if you can. If anything feels wrong, leave and tell someone.
+      </p>
+    </div>
+
     <div v-if="mapReady" class="card mb-4">
       <div class="card-body p-4 vstack gap-3">
         <h2 class="page-title fs-4">Where help is needed</h2>
@@ -245,7 +280,8 @@ async function doAccept(request, physicalOk) {
     <div v-else class="request-list">
       <RequestCard v-for="request in filteredRequests" :key="request.id" :request="request" hide-status compact show-waiting>
         <template #actions>
-          <button class="btn btn-primary btn-lg" data-testid="accept" :disabled="store.atLimit || busyId !== null"
+          <p v-if="minorLimit(request)" class="minor-note mb-0" data-testid="minor-note">{{ minorLimit(request) }}</p>
+          <button v-else class="btn btn-primary btn-lg" data-testid="accept" :disabled="store.atLimit || busyId !== null"
             @click="accept(request)">
             {{ busyId === request.id ? 'Saving…' : 'I can help' }}
           </button>
@@ -260,6 +296,16 @@ async function doAccept(request, physicalOk) {
 </template>
 
 <style scoped>
+/* Small and calm, not a warning */
+.safety-tip {
+  font-size: 0.95rem;
+  border-color: var(--bs-border-color);
+}
+
+.minor-note {
+  font-weight: 600;
+}
+
 .request-count {
   min-height: 1.5em;               
   margin-bottom: 1.5rem;

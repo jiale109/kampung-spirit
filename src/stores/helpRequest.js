@@ -8,7 +8,7 @@ import { MAX_ACTIVE_TASKS } from '../lib/points.js'
 
 
 const COLUMNS = `id, title, description, category, difficulty, duration, points, is_physical, status,
-  requester_id, helper_id, needed_at, location, latitude, longitude, created_at,
+  requester_id, helper_id, needed_at, location, latitude, longitude, at_home, created_at,
   requester:profiles!requester_id(name, block),
   helper:profiles!helper_id(name)`
 
@@ -33,6 +33,7 @@ function fromRow(r) {
     // numeric columns come back as strings; null on older requests without a pin
     latitude: r.latitude == null ? null : Number(r.latitude),
     longitude: r.longitude == null ? null : Number(r.longitude),
+    atHome: r.at_home,
     createdAt: new Date(r.created_at).getTime(),
   }
 }
@@ -126,6 +127,7 @@ export const useHelpRequestStore = defineStore('helpRequest', () => {
     needed_at: new Date(d.neededAt).toISOString(),
     location: d.location.trim(),
     latitude: pin.latitude, longitude: pin.longitude,
+    at_home: !!d.atHome,
   })
 
   async function createRequest(d) {
@@ -149,11 +151,22 @@ export const useHelpRequestStore = defineStore('helpRequest', () => {
  
   const confirmDone = (id) => run(supabase.rpc('confirm_help_done', { request_id: id }))
 
+  // Only your own cancelled requests can be deleted (schema.sql). When that rule
+  // stops it, Supabase deletes nothing but gives no error, so ask for the deleted
+  // row back and check that there was one.
+  async function deleteRequest(id) {
+    let deleted = []
+    const result = await run(supabase.from('help_requests').delete().eq('id', id).select('id')
+      .then((response) => { deleted = response.data ?? []; return response }))
+    if (result.ok && deleted.length === 0) return { ok: false, error: 'This request can no longer be deleted.' }
+    return result
+  }
+
   return {
     requests, loading, loadError,
     myRequests, openRequests, myTasks, activeCount, atLimit,
     getRequestById, load,
-    createRequest, updateRequest, cancelRequest, confirmDone,
+    createRequest, updateRequest, cancelRequest, confirmDone, deleteRequest,
     acceptRequest, markDone, withdrawFromTask,
   }
 })

@@ -67,6 +67,29 @@ async function doCancel() {
   }
 }
 
+// Only cancelled requests can be deleted; completed ones stay for the helper's record
+const requestToDelete = ref(null)
+
+async function doDelete() {
+  const id = requestToDelete.value
+  requestToDelete.value = null
+  message.value = ''
+  error.value = ''
+  busy.value = `delete-${id}`
+  try {
+    const result = await store.deleteRequest(id)
+    if (result.ok) {
+      message.value = 'Request deleted.'
+      await nextTick()
+      successAlert.value?.focus()
+    } else {
+      error.value = result.error
+    }
+  } finally {
+    busy.value = ''
+  }
+}
+
 onMounted(store.load)
 </script>
 
@@ -133,7 +156,14 @@ onMounted(store.load)
         <h2 id="past-heading" class="h4 fw-bold mb-3">Past</h2>
         <div class="request-list">
           <RequestCard v-for="request in pastRequests" :key="request.id" :request="request" :show-requester="false"
-            viewer="requester" />
+            viewer="requester">
+            <template v-if="request.status === 'cancelled'" #actions>
+              <button class="btn btn-outline-danger" data-testid="delete" :disabled="busy !== ''"
+                @click="requestToDelete = request.id">
+                {{ busy === `delete-${request.id}` ? 'Saving…' : 'Delete' }}
+              </button>
+            </template>
+          </RequestCard>
         </div>
       </section>
     </template>
@@ -142,6 +172,11 @@ onMounted(store.load)
       :message="cancelMessage"
       confirm-label="Yes, cancel" cancel-label="Keep it" danger testid="confirm-cancel"
       @confirm="doCancel" @cancel="requestToCancel = null" />
+
+    <ConfirmModal v-if="requestToDelete" title="Delete this request?"
+      message="It will be removed for good. This cannot be undone."
+      confirm-label="Delete" cancel-label="Keep it" danger testid="confirm-delete"
+      @confirm="doDelete" @cancel="requestToDelete = null" />
   </div>
 </template>
 

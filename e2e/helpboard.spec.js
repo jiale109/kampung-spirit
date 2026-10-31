@@ -2,7 +2,9 @@ import { test, expect } from '@playwright/test'
 import {
   resetApp, forgetAccounts, login, logout, switchTo, card, openCard, uniqueTitle, futureTime, fillRequest,
   postRequest, rememberRequest, acceptCard, markTaskDone, tidyUp, mockOneMap, choosePlace,
+  postAndAccept, confirmTaskDone,
 } from './helpers.js'
+import { formatDate } from '../src/lib/skillSwapFormat.js'
 
 // Each group signs up one senior and one youth and reuses them (Supabase limits
 // sign-ups). A test that needs a brand-new account uses a name new to its group.
@@ -45,7 +47,8 @@ test.describe('Posting a request', () => {
 
     // Edit: the form starts filled in, including the time, the place and its saved pin
     await (await openCard(page, title)).getByRole('link', { name: 'Edit' }).click()
-    await expect(page.getByLabel('When do you need help?')).toHaveValue(neededAt)
+    await expect(page.getByTestId(`day-${neededAt.split('T')[0]}`)).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByLabel('What time?')).toHaveValue('15:00')
     await expect(place).toHaveValue('Blk 412 void deck')
     await expect(formMap.locator('.leaflet-interactive')).toHaveCount(1)
     await expect(page.getByTestId('pin-chosen')).toBeVisible()
@@ -65,6 +68,18 @@ test.describe('Posting a request', () => {
     await expect(card(page, newTitle).getByText('Cancelled')).toBeVisible()
   })
 
+  test('Editing a request starts with its saved day and time chosen', async ({ page }) => {
+    const title = uniqueTitle('Help me read a letter')
+    const neededAt = futureTime(4, 10)
+
+    await login(page, 'Senior', 'Mdm Tan')
+    await postRequest(page, { title, neededAt })
+    await (await openCard(page, title)).getByRole('link', { name: 'Edit' }).click()
+    await expect(page.getByTestId(`day-${neededAt.split('T')[0]}`)).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByTestId('chosen-day')).toContainText(formatDate(neededAt.split('T')[0]))
+    await expect(page.getByLabel('What time?')).toHaveValue('10:00')
+  })
+
   test('The form helps while writing, and a blank title is made for you', async ({ page }) => {
     const post = page.getByRole('button', { name: 'Post request' })
     const place = page.getByLabel(PLACE_NAME)
@@ -80,10 +95,12 @@ test.describe('Posting a request', () => {
     await login(page, 'Senior', 'Mdm Tan')
     await page.goto('/app/requests/create')
 
-    // 1. Empty form: errors show, and focus goes to Category (the first field)
+    // 1. Empty form: errors show, and focus goes to Category (the first field).
+    // The day and time start filled in (the next free time), so they have no error.
     await post.click()
     await expect(page.getByText('Please choose a category.')).toBeVisible()
-    await expect(page.getByText('Please choose the day and time you need help.')).toBeVisible()
+    await expect(page.getByTestId('chosen-day')).toBeVisible()
+    await expect(page.locator('#needed-at-error')).toHaveCount(0)
     const group = page.getByRole('group', { name: 'Category' })
     await expect(group).toHaveAttribute('aria-invalid', 'true')
     await expect(group.getByRole('button').first()).toBeFocused()
@@ -95,9 +112,10 @@ test.describe('Posting a request', () => {
     await expect(page.getByTestId('always-physical')).toHaveText('This task needs physical effort.')
     await expect(physicalBox).toHaveCount(0)
 
-    // 3. "Use my block" fills in the block
-    await page.getByRole('button', { name: 'Use my block' }).click()
-    await expect(place).toHaveValue('Blk 412 Eunos Cres')
+    // 3. "Use my address" fills in the block
+    await page.getByRole('button', { name: 'Use my address' }).click()
+    // Sign-up picks the block from OneMap, which spells it out: 'Blk 412 Eunos Cres' -> '412 EUNOS CRESCENT'
+    await expect(place).toHaveValue('412 EUNOS CRESCENT')
 
     // 4. The place is required (not just spaces)
     await fillRequest(page, { title: uniqueTitle('Help me fill a form'), location: '   ' })
@@ -105,11 +123,18 @@ test.describe('Posting a request', () => {
     await expect(placeError).toBeVisible()
     await expect(page).toHaveURL(onForm)
 
-    // 5. A time in the past is rejected
-    await fillRequest(page, { title: uniqueTitle('Fix my TV settings'), neededAt: '2020-01-01T10:00' })
+    // 5. A time in the past is rejected: today at 8:00 am, with the clock set to 9 pm today
+    // (the calendar leaves out earlier days, so today is the only day that can be in the past)
+    const tonight = new Date()
+    tonight.setHours(21, 0, 0, 0)
+    await page.clock.setFixedTime(tonight)
+    await fillRequest(page, { title: uniqueTitle('Fix my TV settings'), neededAt: `${futureTime(0).split('T')[0]}T08:00` })
     await post.click()
     await expect(page.getByText('This time has already passed. Please choose a later time.')).toBeVisible()
+    await expect(page.getByTestId('day-picker').locator('..')).toBeFocused()
     await expect(page).toHaveURL(onForm)
+    // Back to the real time, so posting below does not look like an expired login to Supabase
+    await page.clock.setFixedTime(new Date())
 
     // 6. The details counter updates while typing
     await detailsBox.fill(typed)
@@ -128,6 +153,123 @@ test.describe('Posting a request', () => {
     await expect(page).toHaveURL(/\/app\/requests$/)
     rememberRequest(details)
     await expect(card(page, details).locator('.request-toggle')).toHaveText(`Tech help: ${details}`)
+  })
+
+  test('A request with a blocked phrase shows the safety message on Details and is not posted', async ({ page }) => {
+    const title = uniqueTitle('Help me with my nephew')
+    const details = page.getByLabel('Details')
+
+    await login(page, 'Senior', 'Mdm Tan')
+    await page.goto('/app/requests/create')
+    await expect(page.getByTestId('safety-tip')).toContainText('Stay safe: meet in a place you are comfortable with.')
+    await fillRequest(page, { title, details: `Please help me send money to my nephew ${Date.now()}` })
+    await page.getByRole('button', { name: 'Post request' }).click()
+
+    await expect(page.getByTestId('description-error')).toHaveText(
+      `For everyone's safety, requests cannot include "send money". Please change it and try again.`)
+    await expect(details).toBeFocused()
+    await expect(details).toHaveAttribute('aria-invalid', 'true')
+    await expect(page).toHaveURL(/\/app\/requests\/create$/)
+
+    // Not posted: My Requests does not have it
+    await page.goto('/app/requests')
+    await expect(page.getByTestId('active-requests').or(page.getByText('You have not asked for help yet'))).toBeVisible()
+    await expect(card(page, title)).toHaveCount(0)
+  })
+
+  test('Mentioning a password shows a calm reminder, and the request still posts', async ({ page }) => {
+    const title = uniqueTitle('Reset my Singpass')
+    const reminder = page.getByTestId('safety-reminder')
+
+    await login(page, 'Senior', 'Mdm Tan')
+    await page.goto('/app/requests/create')
+    await expect(reminder).toHaveCount(0)
+    await fillRequest(page, { title, details: 'Help me reset my Singpass password' })
+    await expect(reminder).toHaveText(
+      'Reminder: never share your Singpass password, OTP, PIN or bank details with a helper. Helpers will never ask you for money.')
+
+    await page.getByRole('button', { name: 'Post request' }).click()
+    await expect(page).toHaveURL(/\/app\/requests$/)
+    rememberRequest(title)
+    await expect(card(page, title)).toBeVisible()
+  })
+
+  test('Asking a helper to come alone is blocked with the safety message', async ({ page }) => {
+    await login(page, 'Senior', 'Mdm Tan')
+    await page.goto('/app/requests/create')
+    await fillRequest(page, { title: uniqueTitle('Help me move a chair'), details: `Please come alone to help me ${Date.now()}` })
+    await page.getByRole('button', { name: 'Post request' }).click()
+    await expect(page.getByTestId('description-error')).toHaveText(
+      `For everyone's safety, requests cannot include "come alone". Please change it and try again.`)
+    await expect(page.getByLabel('Details')).toBeFocused()
+    await expect(page).toHaveURL(/\/app\/requests\/create$/)
+  })
+
+  test('A phone number or "whatsapp me" is blocked with the contact details message', async ({ page }) => {
+    const post = page.getByRole('button', { name: 'Post request' })
+    const error = page.getByTestId('description-error')
+    const message = 'Please keep contact details out of requests. Talk through the app instead.'
+
+    await login(page, 'Senior', 'Mdm Tan')
+    await page.goto('/app/requests/create')
+    await fillRequest(page, { title: uniqueTitle('Help me with my phone'), details: 'Please call me at 9123 4567 to arrange' })
+    await post.click()
+    await expect(error).toHaveText(message)
+    await expect(page.getByLabel('Details')).toBeFocused()
+
+    await page.getByLabel('Details').fill('Please whatsapp me to arrange a time')
+    await post.click()
+    await expect(error).toHaveText(message)
+    await expect(page).toHaveURL(/\/app\/requests\/create$/)
+  })
+
+  test('Everyday words like "Instagram" and "gift card" can be posted; "gift card" shows the reminder', async ({ page }) => {
+    const instagram = uniqueTitle('Help me set up Instagram')
+    const giftCard = uniqueTitle('Help me buy groceries')
+    const reminder = page.getByTestId('safety-reminder')
+
+    await login(page, 'Senior', 'Mdm Tan')
+    await page.goto('/app/requests/create')
+    await fillRequest(page, { title: instagram, details: 'Help me set up Instagram on my phone' })
+    await expect(reminder).toHaveCount(0)
+    await page.getByRole('button', { name: 'Post request' }).click()
+    await expect(page).toHaveURL(/\/app\/requests$/)
+    rememberRequest(instagram)
+    await expect(card(page, instagram)).toBeVisible()
+
+    await page.goto('/app/requests/create')
+    await fillRequest(page, { title: giftCard, details: 'I will pay with my gift card at the shop' })
+    await expect(reminder).toBeVisible()
+    await page.getByRole('button', { name: 'Post request' }).click()
+    await expect(page).toHaveURL(/\/app\/requests$/)
+    rememberRequest(giftCard)
+    await expect(card(page, giftCard)).toBeVisible()
+  })
+
+  test('"Use my address" ticks "This help is inside my home", and the card says so', async ({ page }) => {
+    const title = uniqueTitle('Help me hang a curtain')
+    const atHome = page.getByLabel('This help is inside my home')
+
+    await login(page, 'Senior', 'Mdm Tan')
+    await page.goto('/app/requests/create')
+    await fillRequest(page, { title })
+    await expect(atHome).not.toBeChecked()
+    await page.getByRole('button', { name: 'Use my address' }).click()
+    await expect(atHome).toBeChecked()
+    // It can still be unticked
+    await atHome.uncheck()
+    await expect(atHome).not.toBeChecked()
+    await atHome.check()
+
+    await page.getByRole('button', { name: 'Post request' }).click()
+    await expect(page).toHaveURL(/\/app\/requests$/)
+    rememberRequest(title)
+    // The senior's own card says it is their home
+    await expect((await openCard(page, title)).getByTestId('at-home')).toHaveText('At your home')
+
+    // Editing starts with it ticked
+    await card(page, title).getByRole('link', { name: 'Edit' }).click()
+    await expect(atHome).toBeChecked()
   })
 
   test('An "Other" request shows a hint, and its physical box stays ticked', async ({ page }) => {
@@ -151,6 +293,14 @@ test.describe('Posting a request', () => {
 
 test.describe('Youth Help Board', () => {
   test.beforeAll(forgetAccounts)
+
+  test('The Help Board shows a safety tip for helpers', async ({ page }) => {
+    await login(page, 'Youth', 'Wei Jie')
+    await expect(page.getByTestId('safety-tip')).toHaveText(
+      'Helping safely: never ask for or accept money, OTPs, passwords or bank details. If something feels wrong, do not go.')
+    await expect(page.getByTestId('safety-tip-guardian')).toHaveText(
+      'Tell a parent or guardian where you are going. Bring a friend if you can. If anything feels wrong, leave and tell someone.')
+  })
 
   test('Youth can filter by category, and an empty category says so', async ({ page }) => {
     const lifting = uniqueTitle('Carry gas tank')
@@ -198,7 +348,7 @@ test.describe('Youth Help Board', () => {
     }
     const shownPoints = async () => {   // the points on these two cards, top to bottom
       const stats = await page.locator('.request-card', { hasText: String(stamp) }).getByTestId('card-stats').allTextContents()
-      return stats.map((text) => Number(text.match(/⭐ (\d+) pts/)[1]))
+      return stats.map((text) => Number(text.match(/(\d+) pts/)[1]))
     }
 
     await expect(sortBy).toHaveValue('soonest')
@@ -226,7 +376,7 @@ test.describe('Youth Help Board', () => {
     await changeLoadedRequests(page, (rows) => rows.map((r) => (r.title === old ? { ...r, created_at: threeDaysAgo } : r)))
     await login(page, 'Youth', 'Wei Jie')
     await page.mouse.move(0, 0)
-    await expect(card(page, old).getByTestId('card-stats')).toHaveText('⭐ 30 pts · 45 min · Medium effort')
+    await expect(card(page, old).getByTestId('card-stats')).toContainText('30 pts · 45 min · Medium effort')
     await expect(card(page, old).getByTestId('accept')).toBeHidden() // still closed
     await expect(card(page, old).getByTestId('waiting')).toHaveText('Waiting for a helper for 3 days')
     await expect(card(page, fresh)).toBeVisible()
@@ -266,6 +416,24 @@ test.describe('Accepting', () => {
     await alert.getByRole('link', { name: 'View My Tasks' }).click()
     await expect(page).toHaveURL(/\/app\/tasks$/)
     await expect(card(page, title)).toBeVisible()
+  })
+
+  test('A youth aged 18 or over can still accept a request inside a home', async ({ page }) => {
+    const title = uniqueTitle('Help me fix my fan')
+
+    await login(page, 'Senior', 'Mdm Fatimah')
+    await page.goto('/app/requests/create')
+    await fillRequest(page, { title })
+    await page.getByRole('button', { name: 'Use my address' }).click()
+    await page.getByRole('button', { name: 'Post request' }).click()
+    await expect(page).toHaveURL(/\/app\/requests$/)
+    rememberRequest(title)
+
+    await switchTo(page, 'Youth', 'Aisha')
+    await expect((await openCard(page, title)).getByTestId('at-home')).toHaveText("At the requester's home")
+    await expect(card(page, title).getByTestId('minor-note')).toHaveCount(0)
+    await acceptCard(page, title)
+    await expect(page.getByTestId('accept-success')).toContainText(`You accepted "${title}".`)
   })
 
   test('Youth is limited to 2 active tasks; withdrawing puts a task back on the Help Board', async ({ page }) => {
@@ -362,6 +530,51 @@ test.describe('My Tasks', () => {
     await page.getByRole('link', { name: 'My Tasks', exact: true }).click()
     await expect(inList('past-tasks', toComplete)).toContainText('Done, points earned')
     await expect(inList('active-tasks', toComplete)).toHaveCount(0)
+  })
+
+  test('A senior can delete a cancelled request from Past, after confirming', async ({ page }) => {
+    const title = uniqueTitle('Help me post a parcel')
+    const inPast = page.getByTestId('past-requests').locator('.request-card', { hasText: title })
+    const dialog = page.getByRole('dialog')
+
+    await login(page, 'Senior', 'Uncle Raj')
+    await postRequest(page, { title })
+    await (await openCard(page, title)).getByTestId('cancel').click()
+    await page.getByTestId('confirm-cancel').click()
+    await expect(inPast).toContainText('Cancelled')
+
+    // "Keep it" leaves it in Past
+    await (await openCard(page, title)).getByTestId('delete').click()
+    await expect(dialog).toContainText('Delete this request?')
+    await expect(dialog).toContainText('It will be removed for good. This cannot be undone.')
+    await dialog.getByRole('button', { name: 'Keep it' }).click()
+    await expect(dialog).toHaveCount(0)
+    await expect(inPast).toHaveCount(1)
+
+    // "Delete" removes it, says so, and it stays gone after a reload
+    await inPast.getByTestId('delete').click()
+    await page.getByTestId('confirm-delete').click()
+    const message = page.getByTestId('confirm-success')
+    await expect(message).toHaveText(/Request deleted\./)
+    await expect(message).toBeFocused()
+    await expect(card(page, title)).toHaveCount(0)
+    // Wait for the list (or the empty page, if that was the last request) before checking
+    await page.reload()
+    await expect(page.getByTestId('active-requests').or(page.getByText('You have not asked for help yet'))).toBeVisible()
+    await expect(card(page, title)).toHaveCount(0)
+  })
+
+  test('A completed request in Past has no Delete button', async ({ page }) => {
+    const title = uniqueTitle('Help me read my bill')
+    const inPast = page.getByTestId('past-requests').locator('.request-card', { hasText: title })
+
+    await postAndAccept(page, { senior: 'Uncle Raj', youth: 'Siti', request: { title } })
+    await markTaskDone(page, title)
+    await switchTo(page, 'Senior', 'Uncle Raj')
+    await confirmTaskDone(page, title)
+    await expect(inPast).toContainText('Done')
+    await openCard(page, title)
+    await expect(inPast.getByTestId('delete')).toHaveCount(0)
   })
 })
 

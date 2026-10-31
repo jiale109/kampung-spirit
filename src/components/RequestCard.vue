@@ -90,6 +90,10 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
             <button type="button" class="btn btn-outline-primary" data-testid="view-map"
               @click="showMap = true">View map</button>
           </div>
+          <!-- showRequester is false on the requester's own board, so it is their home -->
+          <p v-if="request.atHome" class="mb-0" data-testid="at-home">
+            {{ showRequester ? "At the requester's home" : 'At your home' }}
+          </p>
 
           <!-- A compact card already shows these on the closed card -->
           <dl v-if="!compact" class="request-facts">

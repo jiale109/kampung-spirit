@@ -243,6 +243,7 @@ create table public.help_requests (
   location text not null check (length(trim(location)) between 1 and 100),  -- where the helper meets the requester
   latitude numeric,                      -- the pin for location; null on older requests
   longitude numeric,
+  at_home boolean not null default false,  -- help inside the requester's home (under-18s cannot accept)
   points int not null default 0,
   status text not null default 'open'
     check (status in ('open', 'accepted', 'pending_confirmation', 'completed', 'cancelled')),
@@ -278,6 +279,79 @@ create trigger help_requests_fill_in
   before insert or update of difficulty, duration, category, is_physical on public.help_requests
   for each row execute procedure public.help_requests_fill_in();
 
+-- The phrases a request may not include. Must match src/lib/contentRules.js
+-- (BLOCKED_PHRASES): small letters, single spaces and apostrophes only.
+create function public.blocked_phrases()
+returns text[]
+language sql
+immutable
+set search_path = ''
+as $$
+  select array[
+    -- Asking for codes and passwords
+    'send me your otp', 'tell me your otp', 'give me your otp', 'share your otp',
+    'your singpass password', 'your bank password', 'your pin number',
+    'bank account number', 'credit card number',
+    -- Asking for money
+    'transfer money', 'send money', 'paynow me', 'pay me', 'pay upfront',
+    -- Asking a helper to keep secrets or be alone
+    'come alone', 'don''t tell your parents', 'dont tell your parents', 'don''t tell anyone',
+    'our secret', 'keep this between us', 'keep it secret',
+    'send me a photo', 'send me pics', 'send pics',
+    -- Clearly offensive words
+    'fuck', 'fucking', 'bitch', 'asshole', 'cheebye'
+  ]
+$$;
+
+-- Contact details are not allowed in requests (people talk through the app).
+-- Must match CONTACT_PHRASES in src/lib/contentRules.js.
+create function public.contact_phrases()
+returns text[]
+language sql
+immutable
+set search_path = ''
+as $$
+  select array['whatsapp me', 'telegram me', 'add me on', 'dm me']
+$$;
+
+-- The same check as checkText() in src/lib/contentRules.js, so a request sent
+-- around the form is stopped too. Whole words only (\m and \M mark the start and
+-- end of a word), so 'pay me' does not match 'pay medical bills'.
+-- Phone: 8 digits starting with 6, 8 or 9, maybe +65 in front and a space or dash
+-- in the middle, not part of a longer number. Email: something@something.something
+create function public.help_requests_check_text()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  t text;
+  phrase text;
+begin
+  -- Small letters, single spaces, and curly apostrophes as straight ones
+  t := regexp_replace(replace(lower(new.title || ' ' || new.description || ' ' || new.location), '’', ''''),
+                      '\s+', ' ', 'g');
+  foreach phrase in array public.blocked_phrases() loop
+    if t ~ ('\m' || phrase || '\M') then
+      raise exception 'For everyone''s safety, requests cannot include "%". Please change it and try again.', phrase;
+    end if;
+  end loop;
+
+  if t ~ '(^|[^0-9])(\+65 ?)?[689][0-9]{3}[ -]?[0-9]{4}([^0-9]|$)'
+     or t ~ '[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+'
+     or exists (select 1 from unnest(public.contact_phrases()) p where t ~ ('\m' || p || '\M')) then
+    raise exception 'Please keep contact details out of requests. Talk through the app instead.';
+  end if;
+  return new;
+end;
+$$;
+
+revoke execute on function public.help_requests_check_text() from public, anon, authenticated;
+
+create trigger help_requests_check_text
+  before insert or update of title, description, location on public.help_requests
+  for each row execute procedure public.help_requests_check_text();
+
 alter table public.help_requests enable row level security;
 
 create policy "See open requests and your own"
@@ -300,8 +374,15 @@ create policy "Edit your own request while it is open"
 -- The browser may only write these columns. Status changes go through the
 -- functions in section 5, which check the rules.
 revoke insert, update, delete on public.help_requests from anon, authenticated;
-grant insert (title, description, category, difficulty, duration, is_physical, needed_at, location, latitude, longitude) on public.help_requests to authenticated;
-grant update (title, description, category, difficulty, duration, is_physical, needed_at, location, latitude, longitude) on public.help_requests to authenticated;
+grant insert (title, description, category, difficulty, duration, is_physical, needed_at, location, latitude, longitude, at_home) on public.help_requests to authenticated;
+grant update (title, description, category, difficulty, duration, is_physical, needed_at, location, latitude, longitude, at_home) on public.help_requests to authenticated;
+
+-- A requester may delete their own request, but only once it is cancelled.
+-- Completed requests stay: the helper's record and points history depend on them.
+create policy "Delete your own cancelled request"
+  on public.help_requests for delete to authenticated
+  using (requester_id = (select auth.uid()) and status = 'cancelled');
+grant delete on public.help_requests to authenticated;
 
 create table public.points_ledger (
   id uuid primary key default gen_random_uuid(),
@@ -354,6 +435,21 @@ begin
   select * into mine from public.profile_private where id = me;
   if public.age_in_years(mine.birth_date) < 18 and mine.guardian_verified_at is null then
     raise exception 'Your parent or guardian needs to confirm your account before you can help.';
+  end if;
+
+  -- Under-18s: never inside someone's home, and only between 8 am and 7 pm
+  -- (Singapore time), start to end. Must match minorLimit() in src/views/youth/YouthHelpBoardView.vue
+  if public.age_in_years(mine.birth_date) < 18 then
+    if req.at_home then
+      raise exception 'For your safety, under-18s cannot help inside someone''s home.';
+    end if;
+    -- Start from 8 am, and end (start + duration) by 7 pm. Starting from 7 pm is
+    -- refused too, so a late task that ends after midnight cannot slip through.
+    if (req.needed_at at time zone 'Asia/Singapore')::time < time '08:00'
+       or (req.needed_at at time zone 'Asia/Singapore')::time >= time '19:00'
+       or ((req.needed_at + make_interval(mins => req.duration)) at time zone 'Asia/Singapore')::time > time '19:00' then
+      raise exception 'For your safety, under-18s can only help between 8 am and 7 pm.';
+    end if;
   end if;
 
   select count(*) into active_count from public.help_requests

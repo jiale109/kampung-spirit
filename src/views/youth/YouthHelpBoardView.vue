@@ -191,7 +191,7 @@ async function doAccept(request, physicalOk) {
         <label for="category-filter" class="form-label">Filter by category</label>
         <select id="category-filter" v-model="selectedCategory" class="form-select">
           <option value="">All Categories</option>
-          <option v-for="c in categories" :key="c.name" :value="c.name">{{ c.icon }} {{ c.name }}</option>
+          <option v-for="c in categories" :key="c.name" :value="c.name">{{ c.name }}</option>
         </select>
       </div>
       <div class="col-sm-6">

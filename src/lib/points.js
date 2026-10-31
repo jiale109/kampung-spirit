@@ -15,12 +15,12 @@
 // Settings for help requests, and the points rules.
 
 export const categories = [
-  { name: 'Tech', icon: '📱' },
-  { name: 'Grocery', icon: '🛒' },
-  { name: 'Lifting', icon: '📦' },
-  { name: 'Translation', icon: '🗣️' },
-  { name: 'Companion Walk', icon: '🚶' },
-  { name: 'Other', icon: '🤝' },
+  { name: 'Tech', icon: '/images/icons/tech.png' },
+  { name: 'Grocery', icon: '/images/icons/grocery.png' },
+  { name: 'Lifting', icon: '/images/icons/lift.png' },
+  { name: 'Translation', icon: '/images/icons/translate.png' },
+  { name: 'Companion Walk', icon: '/images/icons/walk.png' },
+  { name: 'Other', icon: '/images/icons/others.png' },
 ]
 
 // "Companion Walk" -> "cat-companion-walk" (used by theme.css to colour each category)

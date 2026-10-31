@@ -192,7 +192,9 @@ function cancel() {
           <div v-for="c in categories" :key="c.name" class="col">
             <button type="button" class="btn choice-tile w-100" :class="[categoryClass(c.name), { active: form.category === c.name }]"
               :aria-pressed="form.category === c.name" @click="form.category = c.name">
-              <span class="category-icon" aria-hidden="true">{{ c.icon }}</span> {{ c.name }}
+              <span class="category-icon" aria-hidden="true">
+                 <img :src="c.icon" class="category-icon-img" alt="" />
+              </span> {{ c.name }}
             </button>
           </div>
         </div>

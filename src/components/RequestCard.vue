@@ -90,7 +90,7 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
         </div>
       </div>
       <!-- Only visible when the card is open -->
-      <div :id="detailsId" >
+      <div class="request-details">
         <div class="request-details-inner">
           <p class="request-desc">{{ request.description }}</p>
 

@@ -114,8 +114,9 @@ test.describe('Posting a request', () => {
 
     // 3. "Use my address" fills in the block
     await page.getByRole('button', { name: 'Use my address' }).click()
-    // Sign-up picks the block from OneMap, which spells it out: 'Blk 412 Eunos Cres' -> '412 EUNOS CRESCENT'
-    await expect(place).toHaveValue('412 EUNOS CRESCENT')
+    // Sign-up picks the block off OneMap, which spells it out in full:
+    // 'Blk 412 Eunos Cres' -> '412 EUNOS CRESCENT SINGAPORE 400412' (BLK_412 in helpers.js)
+    await expect(place).toHaveValue('412 EUNOS CRESCENT SINGAPORE 400412')
 
     // 4. The place is required (not just spaces)
     await fillRequest(page, { title: uniqueTitle('Help me fill a form'), location: '   ' })

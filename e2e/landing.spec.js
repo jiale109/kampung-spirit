@@ -44,7 +44,7 @@ test('A wrong password shows a plain message', async ({ page }) => {
 test('The sign-up form explains what is missing', async ({ page }) => {
   await page.goto('/register')
   await page.getByRole('button', { name: 'Create account' }).click()
-  await expect(page.getByText('Please write your name.')).toBeVisible()
+  await expect(page.getByText('Please enter your name.')).toBeVisible()
   await expect(page.getByText('Please choose your day, month and year of birth.')).toBeVisible()
   await expect(page).toHaveURL(/\/register$/)
 })
@@ -61,7 +61,7 @@ test('Under 18s must give a parent or guardian and their consent', async ({ page
   await expect(page.getByTestId('guardian-section')).toBeVisible()
 
   await page.getByRole('button', { name: 'Create account' }).click()
-  await expect(page.getByText("Please write your parent or guardian's name.")).toBeVisible()
+  await expect(page.getByText("Please enter your parent or guardian's name.")).toBeVisible()
   await expect(page.getByText('Your parent or guardian needs to agree before you can join.')).toBeVisible()
 
   await page.getByLabel("Parent or guardian's name").fill('Mdm Siti')

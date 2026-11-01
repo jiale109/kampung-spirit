@@ -31,38 +31,37 @@ export function uniqueEmail() {
 // By default every test gets new accounts. With { keepAccounts: true } the
 // accounts from earlier tests are reused (call forgetAccounts() to start over).
 /*
-  Sign up now makes people CHOOSE their block from OneMap rather than type it,
-  so every test that signs up would otherwise call a live government API.
+  'Which day?' is the calendar in components/DayPicker.vue, not a <select>,
+  so a day is PRESSED rather than chosen from a list. 0 is today, 1 is
+  tomorrow, and so on.
 
-  This answers any OneMap search with one result that echoes what was searched
-  for, which keeps the stored block predictable. It is installed by resetApp,
-  so no spec has to know about it.
-
-  Playwright matches routes in reverse order of registration, so a spec that
-  wants its own answer (fakeOneMap, fakeOneMapEmpty) just registers one later
-  and wins.
+  This lives here because the hangout form and the skill swap form both use
+  that calendar. For a date further out use chooseDayAndTime() below, which
+  walks whole months; this one steps forward at most once, which is all that
+  today or tomorrow ever needs.
 */
-export async function stubOneMap(page) {
-  await page.route('**/elastic/search*', (route) => {
-    const searched = new URL(route.request().url()).searchParams.get('searchVal') || 'Eunos'
-    const name = searched.toUpperCase()
-    route.fulfill({
-      json: {
-        found: 1,
-        results: [{
-          SEARCHVAL: name,
-          ADDRESS: name,
-          POSTAL: '409412',
-          LATITUDE: '1.3200',
-          LONGITUDE: '103.9035',
-        }],
-      },
-    })
-  })
+export function dayFromToday(n) {
+  const d = new Date()
+  d.setDate(d.getDate() + n)
+  const pad = (x) => String(x).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+export async function chooseDay(page, n) {
+  const iso = dayFromToday(n)
+  let cell = page.getByTestId(`day-${iso}`)
+  if ((await cell.count()) === 0) {
+    await page.getByTestId('next-month').click()
+    cell = page.getByTestId(`day-${iso}`)
+  }
+  await cell.click()
 }
 
 export async function resetApp(page, { keepAccounts = false } = {}) {
-  await stubOneMap(page)
+  // Sign up makes people choose their block from OneMap, so every test that
+  // signs up would otherwise call a live government API. This also stops the
+  // map downloading its tiles.
+  await mockOneMap(page)
   if (!keepAccounts) accounts.clear()
   posted.length = 0
   await page.goto('/landing')
@@ -77,25 +76,68 @@ export async function fillSignUp(page, { name, email, birthYear, block = 'Blk 41
   await page.getByLabel('Email', { exact: true }).fill(email)
   await page.getByLabel('Password', { exact: true }).fill(TEST_PASSWORD)
   await page.getByLabel('Type your password again').fill(TEST_PASSWORD)
-  /*
-    The block is chosen from OneMap's list now, not typed. stubOneMap (in
-    resetApp) echoes whatever was searched for, so the account still ends up
-    with the block this helper was given.
-  */
-  await page.getByTestId('place-search').fill(block)
-  await page.getByTestId('place-search-go').click()
-  await page.getByTestId('place-results').getByRole('button').first().click()
+  // The block is chosen from OneMap's list now, not typed
+  await choosePlace(page, block)
   await expect(page.getByTestId('chosen-address')).toBeVisible()
   await page.getByLabel('Day').selectOption('5')
   await page.getByLabel('Month').selectOption({ label: 'March' })
   await page.getByLabel('Year').fill(String(birthYear))
 }
 
+/*
+  Supabase lets one address create only 30 accounts in any 5 minutes, and a
+  whole run needs more than twice that. Being turned away for it is nothing to
+  do with the test: wait for the window to roll on and try the same person
+  again. Nothing below waits unless the limit has actually been hit, so a run
+  that stays under it is no slower than before.
+
+  Better, if you can: raise the limit (Supabase -> Authentication -> Rate
+  Limits), or point .env at a Supabase project of your own for testing. Then
+  none of this ever runs.
+*/
+const RATE_LIMIT_ALERT = 'Too many accounts have been created'
+const SIGNUP_TRIES = 6
+
 export async function signUp(page, { name, birthYear, block }) {
-  const email = uniqueEmail()
-  await fillSignUp(page, { name, email, birthYear, block })
-  await page.getByRole('button', { name: 'Create account' }).click()
-  return email
+  for (let attempt = 1; ; attempt++) {
+    const email = uniqueEmail()
+    await fillSignUp(page, { name, email, birthYear, block })
+    await page.getByRole('button', { name: 'Create account' }).click()
+
+    /*
+      Two things can happen next, so wait for whichever comes first rather
+      than guessing which to look for: either the account is made and we
+      leave /register, or the alert appears. The .then(ok, fail) pair on each
+      is what stops the one that loses the race rejecting on its own later.
+    */
+    const outcome = await Promise.race([
+      page.waitForURL((url) => !url.pathname.endsWith('/register'), { timeout: 20000 })
+        .then(() => 'made', () => 'unclear'),
+      page.getByText(RATE_LIMIT_ALERT).waitFor({ state: 'visible', timeout: 20000 })
+        .then(() => 'turned away', () => 'unclear'),
+    ])
+
+    // 'unclear' is something else going wrong. Hand it back and let the test say
+    // what it expected, rather than hiding a real fault behind a retry.
+    if (outcome !== 'turned away') return email
+
+    /*
+      Give up loudly rather than quietly. Returning an email for an account
+      that was never made would file it under this person's name, and every
+      later test in the file would then try to log in to something that does
+      not exist - a confusing failure a long way from its cause.
+    */
+    if (attempt === SIGNUP_TRIES) {
+      throw new Error(
+        `Supabase turned away ${SIGNUP_TRIES} sign-ups in a row for "${name}". It allows `
+        + '30 in any 5 minutes from one address. Raise it under Authentication -> Rate '
+        + 'Limits, or point .env at a Supabase project of your own for testing.',
+      )
+    }
+
+    // Some randomness, so workers waiting together do not all come back at once
+    await page.waitForTimeout(20000 + Math.floor(Math.random() * 15000))
+  }
 }
 
 export async function loginWith(page, email, password = TEST_PASSWORD) {
@@ -298,6 +340,41 @@ export const EUNOS_CC = {
   LATITUDE: '1.32964',
   LONGITUDE: '103.90538',
 }
+
+// The HDB block the tests sign up from. Real OneMap indexes it the way it is
+// written here, not as 'Blk 412 Eunos Cres': expandAddress() in lib/onemap.js
+// is what turns one into the other, and this fixture is what proves it.
+export const BLK_412 = {
+  SEARCHVAL: '412 EUNOS CRESCENT',
+  ADDRESS: '412 EUNOS CRESCENT SINGAPORE 400412',
+  POSTAL: '400412',
+  LATITUDE: '1.32278',
+  LONGITUDE: '103.90304',
+}
+
+// Somewhere on the other side of the island, for a test that MOVES house:
+// a new address has to be far enough away to be plainly a different place.
+export const BLK_120_BISHAN = {
+  SEARCHVAL: '120 BISHAN STREET 12',
+  ADDRESS: '120 BISHAN STREET 12 SINGAPORE 570120',
+  POSTAL: '570120',
+  LATITUDE: '1.35098',
+  LONGITUDE: '103.84851',
+}
+
+/*
+  Answer each search with the place it actually asked for, rather than one
+  fixed reply for everything. The block is looked at first because its name
+  has 'eunos' in it too, so the other way round it could never be found.
+*/
+function placesFor(searchVal) {
+  const search = searchVal.toLowerCase()
+  if (search.includes('eunos cres') || search.includes('412')) return [BLK_412]
+  if (search.includes('eunos')) return [EUNOS_CC]
+  if (search.includes('bishan')) return [BLK_120_BISHAN]
+  return []
+}
+
 const mockedPages = new WeakSet()
 export async function mockOneMap(page) {
   mockedPages.add(page)
@@ -306,7 +383,7 @@ export async function mockOneMap(page) {
     searches.count++
     const searchVal = new URL(route.request().url()).searchParams.get('searchVal') ?? ''
     // lib/onemap.js sends the search in small letters ('eunos'), so ignore capitals
-    const results = searchVal.toLowerCase().includes('eunos') ? [EUNOS_CC] : []
+    const results = placesFor(searchVal)
     await route.fulfill({ json: { found: results.length, totalNumPages: 1, pageNum: 1, results } })
   })
   await page.route('**/maps/tiles/**', (route) => route.abort())

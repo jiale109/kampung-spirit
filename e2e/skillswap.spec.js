@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { resetApp, login, uniqueTitle } from './helpers.js'
+import { resetApp, login, uniqueTitle, chooseDay, choosePlace } from './helpers.js'
 
 // Each test signs up its own adult and hosts sessions with unique titles, so the
 // tests do not depend on what is already in Supabase.
@@ -19,9 +19,17 @@ async function hostSession(page, { title, category }) {
   await page.getByLabel('Name of your session').fill(title)
   await page.getByLabel('What will people learn?').fill('Come along and learn something new together.')
   await page.getByRole('button', { name: category, exact: true }).click()
-  await page.getByLabel('Where will it be?').fill('Eunos CC, Level 2')
-  // The second day in the list, so the time can never have passed already
-  await page.getByLabel('Which day?').selectOption({ index: 1 })
+
+  /*
+    The venue is chosen on the map now, not typed: search OneMap, press the
+    result, then name the place. stubOneMap (in resetApp) answers the search,
+    so this does not call the live service.
+  */
+  await choosePlace(page, 'Eunos CC')
+  await page.getByTestId('swap-venue').fill('Eunos CC, Level 2')
+
+  // Tomorrow, so the time can never have passed already
+  await chooseDay(page, 1)
   await page.getByRole('button', { name: 'Share my session' }).click()
   await expect(page).toHaveURL(/\/app\/skill-swaps(\?|$)/)
 }

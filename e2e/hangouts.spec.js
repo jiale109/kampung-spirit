@@ -12,36 +12,13 @@
   whether those services are up or not.
 */
 import { test, expect } from '@playwright/test'
-import { resetApp, login, logout, card, openCard } from './helpers.js'
+import { resetApp, login, logout, card, openCard, dayFromToday, chooseDay } from './helpers.js'
 
 // A different title each run, so old rows in the shared project cannot match
 const stamp = () => Date.now().toString().slice(-6)
 
-/*
-  The day is chosen from the calendar in components/DayPicker.vue, so it is
-  PRESSED rather than typed. 0 is today, 1 is tomorrow, and so on.
-*/
-function dayFromToday(n) {
-  const d = new Date()
-  d.setDate(d.getDate() + n)
-  const pad = (x) => String(x).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
-
-/*
-  Press that day on the calendar. A day a week or two out can fall in the
-  month after the one showing, so step forward once if it is not there yet.
-*/
-async function chooseDay(page, n) {
-  const iso = dayFromToday(n)
-  let cell = page.getByTestId(`day-${iso}`)
-  if ((await cell.count()) === 0) {
-    await page.getByTestId('next-month').click()
-    cell = page.getByTestId(`day-${iso}`)
-  }
-  await cell.click()
-  await expect(page.getByTestId('chosen-day')).toBeVisible()
-}
+// dayFromToday and chooseDay now live in helpers.js: the skill swap form uses
+// the same calendar, so the two specs share one copy.
 
 // OneMap's reply, cut down to what lib/onemap.js reads
 function onemapResult(name, lat, lng) {
@@ -136,8 +113,15 @@ function slotWithinForecast() {
   return null
 }
 
+/*
+  keepAccounts, like helpboard.spec.js: the accounts made earlier in this file
+  are logged into again instead of a new pair being signed up for every test.
+  Every test still starts logged out, and every hangout still carries a stamp()
+  of its own, so nothing here can see another test's rows. It saves about a
+  dozen sign-ups, which is what Supabase actually rations.
+*/
 test.beforeEach(async ({ page }) => {
-  await resetApp(page)
+  await resetApp(page, { keepAccounts: true })
 })
 
 test('A resident can propose a hangout at a place found on OneMap', async ({ page }) => {
@@ -283,8 +267,12 @@ test('Searching for a place filters the list to near it', async ({ page }) => {
 
 test('A search that finds nothing cannot be saved', async ({ page }) => {
   // OneMap only indexes Singapore, so a foreign search simply finds nothing
-  await fakeOneMapEmpty(page)
+  // Sign up FIRST. The sign-up form now picks the block off OneMap as well,
+  // so an empty stub would leave the new account with nowhere to live. Routes
+  // are matched newest first, so the empty stub put on here still wins for
+  // every search the test itself makes.
   await login(page, 'Adult', 'Clarence')
+  await fakeOneMapEmpty(page)
   await page.getByRole('link', { name: 'Hangouts' }).click()
   await page.getByRole('link', { name: 'Propose a hangout' }).first().click()
 
@@ -302,8 +290,12 @@ test('A search that finds nothing cannot be saved', async ({ page }) => {
 test('A spot can be tapped straight onto the map and named', async ({ page }) => {
   // Nothing is searched for here: the point is choosing a place OneMap cannot
   // name, like a particular void deck.
-  await fakeOneMapEmpty(page)
+  // Sign up FIRST. The sign-up form now picks the block off OneMap as well,
+  // so an empty stub would leave the new account with nowhere to live. Routes
+  // are matched newest first, so the empty stub put on here still wins for
+  // every search the test itself makes.
   await login(page, 'Adult', 'Clarence')
+  await fakeOneMapEmpty(page)
   await page.getByRole('link', { name: 'Hangouts' }).click()
   await page.getByRole('link', { name: 'Propose a hangout' }).first().click()
 
@@ -326,8 +318,12 @@ test('A spot can be tapped straight onto the map and named', async ({ page }) =>
 })
 
 test('A pin with no name cannot be saved', async ({ page }) => {
-  await fakeOneMapEmpty(page)
+  // Sign up FIRST. The sign-up form now picks the block off OneMap as well,
+  // so an empty stub would leave the new account with nowhere to live. Routes
+  // are matched newest first, so the empty stub put on here still wins for
+  // every search the test itself makes.
   await login(page, 'Adult', 'Clarence')
+  await fakeOneMapEmpty(page)
   await page.getByRole('link', { name: 'Hangouts' }).click()
   await page.getByRole('link', { name: 'Propose a hangout' }).first().click()
 
@@ -360,7 +356,16 @@ test('Pressing a marker on the map filters the list to that place', async ({ pag
     that a filter went on and can be taken off again. The place name itself
     is covered by the search test above.
   */
-  await page.getByTestId('hotspot-map').locator('.leaflet-interactive').first().click()
+  /*
+    force, because markers can sit on top of one another. HotspotMap fits the
+    map around every marker, so once a hangout is proposed somewhere far off
+    (Bishan, say) it zooms out until the Eunos ones are a few pixels apart -
+    and they are circles of radius 10. Playwright then refuses to press a
+    marker it can see is covered, and waits for it to come clear, which it
+    never does. Any marker will do here, so press it and move on.
+  */
+  await page.getByTestId('hotspot-map').locator('.leaflet-interactive').first()
+    .click({ force: true })
   await expect(page.getByTestId('clear-filter')).toBeVisible()
 
   await page.getByTestId('clear-filter').click()
@@ -369,12 +374,22 @@ test('Pressing a marker on the map filters the list to that place', async ({ pag
 })
 
 test('A place with no hangouts says so and offers to propose one', async ({ page }) => {
-  await fakeOneMap(page, 'Eunos Link Park', 1.3245, 103.9085)
+  /*
+    Tuas, the far west: about 28 km from this estate, so nothing can be within
+    the kilometre that counts as "near" in lib/nearby.js.
+
+    This used to tap the corner of the map at (30, 30) instead. That is where
+    Leaflet keeps its + and - buttons, so the tap only ever zoomed the map in,
+    and the list below was never filtered at all. Searching asks the same
+    question without depending on where anything happens to be drawn.
+  */
+  await fakeOneMap(page, 'Tuas Lamp Post', 1.3200, 103.6500)
   await login(page, 'Adult', 'Clarence')
   await page.getByRole('link', { name: 'Hangouts' }).click()
 
-  // Tap a corner of the map, far from anything that has a hangout
-  await page.getByTestId('hotspot-map').click({ position: { x: 30, y: 30 } })
+  await page.getByTestId('place-search').fill('tuas lamp post')
+  await page.getByTestId('place-search-go').click()
+  await page.getByTestId('place-results').getByRole('button').first().click()
 
   await expect(page.getByText(/Sorry, there are no hangouts at/)).toBeVisible()
   await expect(page.getByTestId('propose-instead')).toBeVisible()

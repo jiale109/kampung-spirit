@@ -507,8 +507,17 @@ async function save() {
                 would never reach it. It is placed on the corner with CSS.
               -->
               <div class="interest-tile-wrap">
+                <!--
+                  aria-label is not spare. .choice-tile.active draws a tick with
+                  CSS (content: '\2713' in theme.css), and generated content
+                  counts towards a button's name, so a chosen tile would be
+                  called 'Gardening ✓' instead of 'Gardening'. Saying the
+                  name outright keeps it steady whether it is on or off, and
+                  aria-pressed below is what carries the state.
+                -->
                 <button type="button" class="btn choice-tile w-100" :class="{ active: isChosen(option) }"
-                  :aria-pressed="isChosen(option)" @click="toggleInterest(option)">{{ option }}</button>
+                  :aria-label="option" :aria-pressed="isChosen(option)"
+                  @click="toggleInterest(option)">{{ option }}</button>
                 <button v-if="!isChosen(option)" type="button"
                   class="interest-remove" :aria-label="`Remove ${option} from the list`"
                   :data-testid="`remove-${option}`" @click="removeOption(option)">&times;</button>

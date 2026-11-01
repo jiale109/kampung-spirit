@@ -175,7 +175,15 @@ test('Your own interests are saved, and come back with their crosses', async ({ 
   await expect(page.getByTestId('remove-Lion dance')).toBeVisible()
   await page.getByTestId('remove-Lion dance').click()
   await page.getByTestId('save-profile').click()
-  await expect(page.getByTestId('profile-interests')).not.toContainText('Lion dance')
+  /*
+    Not .not.toContainText() on profile-interests: 'Lion dance' was the only
+    interest, so taking it off leaves the list empty and ProfileView drops the
+    whole <ul> (v-if="myInterests.length > 0") for the "none yet" line instead.
+    An expectation ABOUT an element that is not there can never pass, so ask
+    the question that holds either way - is this word anywhere on the page.
+  */
+  await expect(page.getByText('Lion dance')).toHaveCount(0)
+  await expect(page.getByText('You have not chosen any interests yet.')).toBeVisible()
 })
 
 test('A suggestion taken off the list stays off next time', async ({ page }) => {
@@ -316,6 +324,9 @@ test('The name menu still opens fully while the walker is on', async ({ page }) 
 test('The address can only be changed to a real one', async ({ page }) => {
   await login(page, 'Adult', 'Clarence')
   await openProfile(page)
+  // Read the saved address BEFORE the form is opened: profile-block belongs to
+  // the reading view, so it is not on the page while the form is up
+  const before = await page.getByTestId('profile-block').textContent()
   await page.getByTestId('edit-profile').click()
 
   // What is saved is shown as settled, not as a box to type in
@@ -335,7 +346,6 @@ test('The address can only be changed to a real one', async ({ page }) => {
   await expect(page.getByTestId('block-error')).toBeVisible()
 
   // Backing out keeps what was there
-  const before = await page.getByTestId('profile-block').textContent()
   await page.getByTestId('keep-address').click()
   await page.getByTestId('save-profile').click()
   await expect(page.getByTestId('profile-block')).toHaveText(before)

@@ -54,8 +54,14 @@ test('A request waiting for the senior to confirm stays open', async ({ page }) 
   await logout(page)
 
   await login(page, 'Youth', 'Wei Jie')
+  // "I can help" asks "Can you make it?" before it accepts anything, so the
+  // confirm has to be pressed too or the task never reaches My Tasks
   await (await openCard(page, title)).getByTestId('accept').click()
-  await page.getByRole('link', { name: 'My Tasks' }).click()
+  await page.getByTestId('confirm-accept').click()
+  await expect(page.getByTestId('accept-success')).toBeVisible()
+  // exact, because the success panel that just appeared carries a
+  // "View My Tasks" button as well as the navbar's "My Tasks" link
+  await page.getByRole('link', { name: 'My Tasks', exact: true }).click()
   await (await openCard(page, title)).getByTestId('mark-done').click()
   await logout(page)
 

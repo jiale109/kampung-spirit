@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:e2e": "playwright test",
-    "seed:demo": "node scripts/seed-demo.js"
+    "seed:demo": "node scripts/seed-demo.js",
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
@@ -22,6 +23,7 @@
   "devDependencies": {
     "@playwright/test": "^1.50.0",
     "@vitejs/plugin-vue": "^6.0.0",
-    "vite": "^7.0.0"
+    "vite": "^7.0.0",
+    "vitest": "^2.1.8"
   }
 }

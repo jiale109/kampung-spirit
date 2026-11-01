@@ -89,7 +89,19 @@ export const useAuthStore = defineStore('auth', () => {
       if (error.code === 'email_address_invalid') {
         return { ok: false, error: 'Please check your email address.' }
       }
-      // Most likely the database refused the details (age or guardian rules)
+      if (error.code === 'over_request_rate_limit' || error.code === 'over_email_send_rate_limit' || error.status === 429) {
+        return {
+          ok: false,
+          error: 'Too many accounts have been created from here just now. Please wait a minute and try again.',
+        }
+      }
+      /*
+        Anything else is most likely the database refusing the details (the age
+        or guardian rules). The person gets one plain sentence, but the real
+        reason goes to the console: without it a refused sign-up can only be
+        guessed at, which is exactly what happened to a whole e2e run.
+      */
+      console.error('Sign-up refused by Supabase:', error.code ?? error.status, '-', error.message)
       return { ok: false, error: 'We could not create your account. Please check your details and try again.' }
     }
 

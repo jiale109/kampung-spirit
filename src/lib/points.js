@@ -28,10 +28,7 @@ export function categoryClass(name) {
   return 'cat-' + name.toLowerCase().replace(/\s+/g, '-')
 }
 
-// Harder tasks are worth more points
 export const difficulties = { Easy: 1, Medium: 2, Hard: 3 }
-
-// Estimated time choices, in minutes
 export const durations = [15, 30, 45, 60, 90, 120]
 
 // A youth can only have this many active tasks at once
@@ -53,6 +50,6 @@ export function pointsForHangout(durationMinutes = 60) {
 export function pointsForSkillSwap(durationMinutes = 60) {
   return Math.round(30 * (durationMinutes / 60))
 }
-// Monthly community challenge target 
+
 export const COMMUNITY_TARGET = 10000
 export const COMMUNITY_BONUS = 50

@@ -944,6 +944,7 @@ body {
   align-items: center;
   gap: 0.65rem;
   font-weight: 700;
+  font-size: 1.2rem;
   color: var(--cat);
 }
 
@@ -1167,13 +1168,7 @@ body {
   line-height: 1.4;
 }
 
-.status-pill::before {
-  content: '';
-  width: 0.55rem;
-  height: 0.55rem;
-  border-radius: 50%;
-  background: currentColor;
-}
+
 
 .status-open { --pill-bg: #dcf0e2; --pill-ink: #1c5a2d; }
 .status-accepted { --pill-bg: #d9ebf7; --pill-ink: #164565; }

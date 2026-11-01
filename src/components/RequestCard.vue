@@ -1,10 +1,11 @@
 <script setup>
-import { ref, computed, useId } from 'vue'
+import { ref, computed } from 'vue'
 import CategoryBadge from './CategoryBadge.vue'
 import StatusBadge from './StatusBadge.vue'
 import RequestMapModal from './RequestMapModal.vue'
-import { categoryClass } from '../lib/points.js'
+import { categoryClass, categories } from '../lib/points.js'
 import { formatNeededAt } from '../stores/helpRequest.js'
+
 
 const props = defineProps({
   request: { type: Object, required: true },
@@ -24,11 +25,10 @@ const props = defineProps({
   showWaiting: { type: Boolean, default: false },
 })
 
+const categoryIcon = computed(() => categories.find((c) => c.name === props.request.category)?.icon)
 
 const pinned = ref(false)
 const expanded = computed(() => props.open || pinned.value)
-
-const detailsId = useId()
 
 // The map is only drawn when someone presses "View map", never when the list loads
 const showMap = ref(false)
@@ -47,48 +47,57 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
 </script>
 
 <template>
-  <article class="card request-card" :class="[categoryClass(request.category), { 'is-expanded': expanded, 'is-compact': compact }]">
+  <article class="card request-card"
+    :class="[categoryClass(request.category), { 'is-expanded': expanded, 'is-compact': compact }]">
     <div class="card-body">
+      <div class="request-main-row">
+        <div class="request-main-content">
+          <!-- Always visible -->
+          <div class="request-top">
+            <CategoryBadge :category="request.category" :show-icon="false" />
+            <StatusBadge v-if="!hideStatus" :status="request.status" :viewer="viewer" />
+          </div>
 
-      <!-- Always visible -->
-      <div class="request-top">
-        <CategoryBadge :category="request.category" />
-        <StatusBadge v-if="!hideStatus" :status="request.status" :viewer="viewer" />
+          <h2 class="request-title">
+            <button type="button" class="request-toggle" :aria-expanded="expanded"
+              @click="pinned = !pinned">{{ request.title }}</button>
+          </h2>
+
+          <p v-if="compact" class="request-stats" data-testid="card-stats">
+            <img src="/images/coin.svg" class="point-coin-img" alt="" />
+            {{ request.points }} pts · {{ request.duration }} min · {{ request.difficulty }} effort
+          </p>
+
+          <p class="request-summary" data-testid="card-summary">
+            <span data-testid="needed-at">{{ neededAtText }}</span>
+            · <span data-testid="location">{{ request.location }}</span>
+          </p>
+
+          <p v-if="showWaiting && request.status === 'open' && waitingDays >= 2" class="request-waiting"
+            data-testid="waiting">
+            Waiting for a helper for {{ waitingDays }} days
+          </p>
+
+          <div v-if="$slots.notice" class="request-notice">
+            <slot name="notice" />
+          </div>
+          <span v-if="!open" class="request-hint" >{{ expanded ? 'Hide details ▴' : 'Show details ▾'
+            }}</span>
+        </div>
+        <!-- Right: Category illustration -->
+        <div v-if="categoryIcon" class="request-card-art-wrap" aria-hidden="true">
+          <img :src="categoryIcon" class="request-card-art" alt="" />
+        </div>
       </div>
-
-      <h2 class="request-title">
-        <button type="button" class="request-toggle" :aria-expanded="expanded" :aria-controls="detailsId"
-          @click="pinned = !pinned">{{ request.title }}</button>
-      </h2>
-
-      <p v-if="compact" class="request-stats" data-testid="card-stats">
-           <img src="/images/coin.svg" class="point-coin-img" alt="" />
-         {{ request.points }} pts · {{ request.duration }} min · {{ request.difficulty }} effort
-      </p>
-
-      <p class="request-summary" data-testid="card-summary">
-        <span data-testid="needed-at">{{ neededAtText }}</span>
-        · <span data-testid="location">{{ request.location }}</span>
-      </p>
-
-      <p v-if="showWaiting && request.status === 'open' && waitingDays >= 2" class="request-waiting" data-testid="waiting">
-        Waiting for a helper for {{ waitingDays }} days
-      </p>
-
-      <div v-if="$slots.notice" class="request-notice">
-        <slot name="notice" />
-      </div>
-      <span v-if="!open" class="request-hint" aria-hidden="true">{{ expanded ? 'Hide details ▴' : 'Show details ▾' }}</span>
-
       <!-- Only visible when the card is open -->
-      <div :id="detailsId" class="request-details">
+      <div :id="detailsId" >
         <div class="request-details-inner">
           <p class="request-desc">{{ request.description }}</p>
 
           <div class="request-place">
             <span>Meeting place: <strong>{{ request.location }}</strong></span>
-            <button type="button" class="btn btn-outline-primary" data-testid="view-map"
-              @click="showMap = true">View map</button>
+            <button type="button" class="btn btn-outline-primary" data-testid="view-map" @click="showMap = true">View
+              map</button>
           </div>
           <!-- showRequester is false on the requester's own board, so it is their home -->
           <p v-if="request.atHome" class="mb-0" data-testid="at-home">
@@ -116,10 +125,9 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
             <span v-if="showHelper && request.helperName">Helper: <strong>{{ request.helperName }}</strong></span>
           </p>
 
-          <ol v-if="inProgress" class="progress-steps" aria-label="Progress">
+          <ol v-if="inProgress" class="progress-steps" >
             <li v-for="(step, i) in steps" :key="step"
-              :class="{ 'is-done': i <= currentStep, 'is-current': i === currentStep }"
-              :aria-current="i === currentStep ? 'step' : undefined">
+              :class="{ 'is-done': i <= currentStep, 'is-current': i === currentStep }">
               {{ step }}
             </li>
           </ol>
@@ -141,7 +149,6 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
 </template>
 
 <style scoped>
-
 .request-card:hover,
 .request-card:focus-within {
   border-color: var(--ks-line-strong);
@@ -201,5 +208,49 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
   background: var(--ks-amber-bg);
   color: var(--ks-amber-ink);
   font-weight: 600;
+}
+
+.request-main-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.request-main-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.request-card-art-wrap {
+  flex-shrink: 0;
+  pointer-events: none;
+  /* Clicking image still toggles card */
+}
+
+.request-card-art {
+  width: 8.5rem;
+  height: 8.5rem;
+  border-radius: 1.5rem;
+  object-fit: cover;
+  image-rendering: pixelated;
+  display: block;
+}
+
+@media (max-width: 576px) {
+  .request-card-art {
+    width: 6rem;
+    height: 6rem;
+    border-radius: 1rem;
+  }
+}
+.request-top {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start; 
+  gap: 10px;
 }
 </style>

@@ -175,5 +175,22 @@ export const useAuthStore = defineStore('auth', () => {
     await supabase.auth.signOut()
   }
 
-  return { user, ready, homePath, init, register, login, updateProfile, logout }
+  // Delete your own account for good: the login, the profile and everything
+  // that belongs to it (supabase/schema.sql, section 17). Signs out after.
+  async function deleteAccount() {
+    if (!user.value) return { ok: false, error: 'Please log in again.' }
+
+    const { error } = await supabase.rpc('delete_my_account')
+    if (error) {
+      console.error('Could not delete account:', error)
+      return { ok: false, error: 'We could not delete your account. Please try again.' }
+    }
+
+    user.value = null
+    // The login no longer exists, so only clear it from this browser
+    await supabase.auth.signOut({ scope: 'local' })
+    return { ok: true }
+  }
+
+  return { user, ready, homePath, init, register, login, updateProfile, logout, deleteAccount }
 })

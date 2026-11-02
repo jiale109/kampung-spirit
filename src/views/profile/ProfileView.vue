@@ -12,15 +12,18 @@
   database only lets a user change name, block, interests and large_text on
   their own row (supabase/schema.sql section 2).
 
-  STILL LEFT: "Delete my account" (the browser cannot delete a Supabase Auth
-  user, so it needs a security definer function or an Edge Function; talk to
-  Reuben first), and an e2e test for editing the profile.
+  "Delete my account" asks first in a ConfirmModal, then calls
+  delete_my_account() through auth.deleteAccount() (schema.sql section 17).
+
+  STILL LEFT: an e2e test for editing the profile.
 */
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth.js'
 import { usePointsStore } from '../../stores/points.js'
 import HotspotMap from '../../components/HotspotMap.vue'
 import TelegramConnect from '../../components/TelegramConnect.vue'
+import ConfirmModal from '../../components/ConfirmModal.vue'
 import {
   interests as interestOptions,
   applyLargeText,
@@ -35,6 +38,7 @@ import {
 
 const auth = useAuthStore()
 const points = usePointsStore()
+const router = useRouter()
 
 // The database works the age group out from the birth date, so it is read
 // only here. Plain words, because "youth" on its own means little.
@@ -312,6 +316,27 @@ async function save() {
     saveError.value = result.error
   }
 }
+
+// Deleting the account. Nothing happens until they say yes in the modal.
+const confirmingDelete = ref(false)
+const deleting = ref(false)
+const deleteError = ref('')
+
+async function deleteAccount() {
+  confirmingDelete.value = false
+  deleteError.value = ''
+  deleting.value = true
+  const result = await auth.deleteAccount()
+  deleting.value = false
+
+  if (result.ok) {
+    // Large text belonged to the account, so the landing page goes back to normal
+    applyLargeText(false)
+    router.push('/landing')
+  } else {
+    deleteError.value = result.error
+  }
+}
 </script>
 
 <template>
@@ -399,6 +424,26 @@ async function save() {
       </div>
 
       <TelegramConnect />
+
+      <div class="card" data-testid="delete-account-card">
+        <div class="card-body p-4">
+          <h2 class="page-title fs-4">Delete my account</h2>
+          <p class="page-subtitle mb-3">
+            This removes your profile, your requests, the hangouts and skill swaps you host, and your points.
+            It cannot be undone.
+          </p>
+          <div v-if="deleteError" class="alert alert-danger" role="alert">{{ deleteError }}</div>
+          <button type="button" class="btn btn-outline-danger btn-lg" data-testid="delete-account"
+            :disabled="deleting" @click="confirmingDelete = true">
+            {{ deleting ? 'Deleting...' : 'Delete my account' }}
+          </button>
+        </div>
+      </div>
+
+      <ConfirmModal v-if="confirmingDelete" title="Delete your account?"
+        message="Your profile, requests, hangouts, skill swaps and points will be gone for good. You will need to sign up again to use Kampung Spirit."
+        confirm-label="Yes, delete my account" cancel-label="No, keep it" danger testid="confirm-delete-account"
+        @confirm="deleteAccount" @cancel="confirmingDelete = false" />
 
     </div>
 

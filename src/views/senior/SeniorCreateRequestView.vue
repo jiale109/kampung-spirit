@@ -3,9 +3,11 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHelpRequestStore } from '../../stores/helpRequest.js'
 import RequestForm from '../../components/RequestForm.vue'
+import { useTelegramPrompt } from '../../composables/useTelegramPrompt.js'
 
 const router = useRouter()
 const store = useHelpRequestStore()
+const { askToLinkTelegram } = useTelegramPrompt()
 
 const error = ref('')
 const busy = ref(false)
@@ -14,8 +16,12 @@ async function save(data) {
   busy.value = true
   try {
     const result = await store.createRequest(data)
-    if (result.ok) router.push('/app/requests')
-    else error.value = result.error
+    if (result.ok) {
+      askToLinkTelegram('request')
+      router.push('/app/requests')
+    } else {
+      error.value = result.error
+    }
   } finally {
     busy.value = false
   }

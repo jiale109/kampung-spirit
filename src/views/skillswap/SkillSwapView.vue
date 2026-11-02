@@ -26,6 +26,7 @@ import SkillSwapCard from '../../components/SkillSwapCard.vue'
 import HotspotMap from '../../components/HotspotMap.vue'
 import { NEAR_KM, isNearPoint, countWithoutPin, placeMarkers } from '../../lib/nearby.js'
 import { useSkillSwapStore } from '../../stores/skillSwap.js'
+import { useTelegramPrompt } from '../../composables/useTelegramPrompt.js'
 import {
   formatDate,
   dateFromToday,
@@ -37,6 +38,7 @@ import {
 
 const route = useRoute()
 const store = useSkillSwapStore()
+const { askToLinkTelegram } = useTelegramPrompt()
 
 //selected filter
 const filter = ref('all') // all | hosting | going
@@ -237,7 +239,10 @@ async function act(call, okText) {
   busy.value = false
 }
  
-const onJoin = (s) => act(() => store.rsvp(s.id), `You have a place in “${s.title}”.`)
+async function onJoin(s) {
+  await act(() => store.rsvp(s.id), `You have a place in “${s.title}”.`)
+  if (notice.value?.kind === 'ok') askToLinkTelegram('joinSkillSwap')
+}
 const onLeave = (s) => act(() => store.cancelRsvp(s.id), `Your place in “${s.title}” is cancelled.`)
  
 function onCancel(s) {

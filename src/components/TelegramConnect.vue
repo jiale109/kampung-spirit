@@ -6,12 +6,19 @@
        checks every few seconds and switches to 3 by itself once they tap Start.
     3. Connected: "Send me a test message" and "Disconnect Telegram"
   See lib/telegram.js for what each button calls.
+
+  compact: used inside TelegramPrompt.vue. No card, no heading, and once
+  connected only says so (no test or disconnect buttons). Emits "linked" when
+  the person finishes connecting.
 */
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '../stores/auth.js'
 import {
   BOT_USERNAME, LINK_MINUTES, getTelegramLink, createStartLink, sendTestMessage, disconnectTelegram,
 } from '../lib/telegram.js'
+
+defineProps({ compact: { type: Boolean, default: false } })
+const emit = defineEmits(['linked'])
 
 const auth = useAuthStore()
 
@@ -41,6 +48,7 @@ async function refresh() {
   if (linked.value && startUrl.value) {
     stopWaiting()
     message.value = 'Telegram is connected. We sent you a welcome message there.'
+    emit('linked')
   }
 }
 
@@ -95,13 +103,15 @@ onUnmounted(stopWaiting)
 </script>
 
 <template>
-  <div class="card" data-testid="telegram-card">
-    <div class="card-body p-4">
-      <h2 class="page-title fs-4">Telegram updates</h2>
-      <p class="page-subtitle mb-3">
-        Get a message on Telegram when a neighbour accepts your request, when someone joins your skill swap
-        or hangout, and a reminder the day before.
-      </p>
+  <div :class="{ card: !compact }" data-testid="telegram-card">
+    <div :class="{ 'card-body p-4': !compact }">
+      <template v-if="!compact">
+        <h2 class="page-title fs-4">Telegram updates</h2>
+        <p class="page-subtitle mb-3">
+          Get a message on Telegram when a neighbour accepts your request, when someone joins your skill swap
+          or hangout, and a reminder the day before.
+        </p>
+      </template>
 
       <div v-if="message" class="alert alert-success" role="status">{{ message }}</div>
       <div v-if="error" class="alert alert-danger" role="alert">{{ error }}</div>
@@ -112,8 +122,8 @@ onUnmounted(stopWaiting)
 
       <!-- 3. Connected -->
       <template v-else-if="linked">
-        <p class="mb-3 fw-bold" data-testid="telegram-status">✓ Telegram is connected</p>
-        <div class="d-flex flex-wrap gap-3">
+        <p class="fw-bold" :class="compact ? 'mb-0' : 'mb-3'" data-testid="telegram-status">✓ Telegram is connected</p>
+        <div v-if="!compact" class="d-flex flex-wrap gap-3">
           <button type="button" class="btn btn-outline-primary btn-lg" :disabled="busy" @click="test">
             Send me a test message
           </button>

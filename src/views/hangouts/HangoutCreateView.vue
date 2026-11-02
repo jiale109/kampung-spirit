@@ -8,17 +8,23 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHangoutStore } from '../../stores/hangout.js'
 import HangoutForm from '../../components/HangoutForm.vue'
+import { useTelegramPrompt } from '../../composables/useTelegramPrompt.js'
 
 const router = useRouter()
 const store = useHangoutStore()
+const { askToLinkTelegram } = useTelegramPrompt()
 
 const error = ref('')
 
 async function save(data) {
   error.value = ''
   const result = await store.createHangout(data)
-  if (result.ok) router.push('/app/hangouts')
-  else error.value = result.error
+  if (result.ok) {
+    askToLinkTelegram('hostHangout')
+    router.push('/app/hangouts')
+  } else {
+    error.value = result.error
+  }
 }
 </script>
 

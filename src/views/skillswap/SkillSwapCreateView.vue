@@ -3,10 +3,12 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SkillSwapForm from '../../components/SkillSwapForm.vue'
 import { useSkillSwapStore } from '../../stores/skillSwap.js'
+import { useTelegramPrompt } from '../../composables/useTelegramPrompt.js'
 
 const route = useRoute()
 const router = useRouter()
 const store = useSkillSwapStore()
+const { askToLinkTelegram } = useTelegramPrompt()
 
 const serverError = ref('')
 
@@ -25,6 +27,7 @@ async function onSubmit(data) {
     serverError.value = result.error
     return
   }
+  askToLinkTelegram('hostSkillSwap')
   router.push({ path: listPath.value, query: { created: '1' } })
 }
 </script>

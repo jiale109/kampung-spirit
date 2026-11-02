@@ -7,10 +7,12 @@ import EmptyState from '../../components/EmptyState.vue'
 import RequestCard from '../../components/RequestCard.vue'
 import ConfirmModal from '../../components/ConfirmModal.vue'
 import HotspotMap from '../../components/HotspotMap.vue'
+import { useTelegramPrompt } from '../../composables/useTelegramPrompt.js'
 import { NEAR_KM, nearPoint, countWithoutPin, placeMarkers } from '../../lib/nearby.js'
 
 const store = useHelpRequestStore()
 const auth = useAuthStore()
+const { askToLinkTelegram } = useTelegramPrompt()
 
 // Under-18s (guardian needed) cannot accept requests inside a home, or ones that start
 // before 8 am or end after 7 pm. The database refuses these too (schema.sql, accept_help_request),
@@ -157,6 +159,7 @@ async function doAccept(request, physicalOk) {
     const result = await store.acceptRequest(request.id, physicalOk)
     if (result.ok) {
       acceptedTitle.value = request.title
+      askToLinkTelegram('accept')
     } else {
       error.value = result.error
     }

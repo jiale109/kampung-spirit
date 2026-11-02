@@ -6,6 +6,7 @@ import { useHelpRequestStore } from '../stores/helpRequest.js'
 import { usePointsStore } from '../stores/points.js'
 import { applyLargeText, avatarSrc, avatarWalkSrc } from '../lib/profile.js'
 import BrandMark from '../components/BrandMark.vue'
+import TelegramPrompt from '../components/TelegramPrompt.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -139,4 +140,7 @@ async function logout() {
       <router-view />
     </div>
   </main>
+
+  <!-- "Get updates on Telegram?" after posting, hosting, joining or accepting -->
+  <TelegramPrompt />
 </template>

@@ -23,8 +23,10 @@ import { sessionStart } from '../../lib/skillSwapFormat.js'
 import EmptyState from '../../components/EmptyState.vue'
 import HangoutCard from '../../components/HangoutCard.vue'
 import HotspotMap from '../../components/HotspotMap.vue'
+import { useTelegramPrompt } from '../../composables/useTelegramPrompt.js'
 
 const store = useHangoutStore()
+const { askToLinkTelegram } = useTelegramPrompt()
 
 /*
   Two ways to narrow the list, and only one is ever on:
@@ -134,8 +136,12 @@ async function join(hangout) {
   message.value = ''
   error.value = ''
   const result = await store.joinHangout(hangout.id)
-  if (result.ok) message.value = `You are going to "${hangout.title}". See you there!`
-  else error.value = result.error
+  if (result.ok) {
+    message.value = `You are going to "${hangout.title}". See you there!`
+    askToLinkTelegram('joinHangout')
+  } else {
+    error.value = result.error
+  }
 }
 
 async function leave(hangout) {

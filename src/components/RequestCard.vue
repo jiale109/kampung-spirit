@@ -49,46 +49,62 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
 <template>
   <article class="card request-card"
     :class="[categoryClass(request.category), { 'is-expanded': expanded, 'is-compact': compact }]">
-    <div class="card-body">
-      <div class="request-main-row">
-        <div class="request-main-content">
-          <!-- Always visible -->
-          <div class="request-top">
+      
+    <div class="card-body p-3 p-md-4">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-center align-items-md-center gap-3">
+        
+        <div class="d-flex flex-column gap-2 flex-grow-1 min-w-0" style="min-width: 0;">
+          
+          <!-- category title -->
+          <div class="d-flex flex-wrap align-items-center gap-2 text-center text-md-start justify-content-center justify-content-md-start">
             <CategoryBadge :category="request.category" :show-icon="false" />
-            <StatusBadge v-if="!hideStatus" :status="request.status" :viewer="viewer" />
+
+            <!-- display on mobile -->
+            <div v-if="categoryIcon" class="d-md-none my-2 text-center w-100">
+              <img :src="categoryIcon" class="request-card-art mx-auto" alt="" />
+            </div>
+
+            <!-- status pill -->
+            <StatusBadge v-if="!hideStatus" :status="request.status" :viewer="viewer" class="request-status-pill py-1 px-3" />
           </div>
 
-          <h2 class="request-title">
-            <button type="button" class="request-toggle" :aria-expanded="expanded"
-              @click="pinned = !pinned">{{ request.title }}</button>
-          </h2>
+          <!-- Main Text -->
+          <div class="d-flex flex-column gap-1 text-start">
+            <h2 class="request-title">
+              <button type="button" class="request-toggle" :aria-expanded="expanded"
+                @click="pinned = !pinned">{{ request.title }}</button>
+            </h2>
 
-          <p v-if="compact" class="request-stats" data-testid="card-stats">
-            <img src="/images/coin.svg" class="point-coin-img" alt="" />
-            {{ request.points }} pts · {{ request.duration }} min · {{ request.difficulty }} effort
-          </p>
+            <p v-if="compact" class="request-stats" data-testid="card-stats">
+              <img src="/images/coin.svg" class="point-coin-img" alt="" />
+              {{ request.points }} pts · {{ request.duration }} min · {{ request.difficulty }} effort
+            </p>
 
-          <p class="request-summary" data-testid="card-summary">
-            <span data-testid="needed-at">{{ neededAtText }}</span>
-            · <span data-testid="location">{{ request.location }}</span>
-          </p>
+            <p class="request-stats" data-testid="card-summary">
+              <span data-testid="needed-at">{{ neededAtText }}</span>
+              · <span data-testid="location">{{ request.location }}</span>
+            </p>
 
-          <p v-if="showWaiting && request.status === 'open' && waitingDays >= 2" class="request-waiting"
-            data-testid="waiting">
-            Waiting for a helper for {{ waitingDays }} days
-          </p>
+            <p v-if="showWaiting && request.status === 'open' && waitingDays >= 2" class="request-waiting"
+              data-testid="waiting">
+              Waiting for a helper for {{ waitingDays }} days
+            </p>
 
-          <div v-if="$slots.notice" class="request-notice">
-            <slot name="notice" />
+            <div v-if="$slots.notice" class="request-notice">
+              <slot name="notice" />
+            </div>
+
+            <span v-if="!open" class="request-hint">{{ expanded ? 'Hide details ▴' : 'Show details ▾' }}</span>
           </div>
-          <span v-if="!open" class="request-hint" >{{ expanded ? 'Hide details ▴' : 'Show details ▾'
-            }}</span>
         </div>
-        <!-- Right: Category illustration -->
-        <div v-if="categoryIcon" class="request-card-art-wrap" aria-hidden="true">
+
+        <!--display on laptop scrren -->
+        <div v-if="categoryIcon" class="d-none d-md-block flex-shrink-0 align-self-md-center" aria-hidden="true">
           <img :src="categoryIcon" class="request-card-art" alt="" />
         </div>
+        
       </div>
+
       <!-- Only visible when the card is open -->
       <div class="request-details">
         <div class="request-details-inner">
@@ -149,22 +165,16 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
 </template>
 
 <style scoped>
+
+.request-card {
+  overflow: hidden;
+}
+
 .request-card:hover,
 .request-card:focus-within {
   border-color: var(--ks-line-strong);
   border-left-color: var(--cat);
   box-shadow: 0 6px 18px rgba(10, 60, 60, 0.14);
-}
-
-.request-place {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 1rem;
-}
-
-.request-place .btn {
-  min-height: 3rem;
 }
 
 .request-summary {
@@ -184,7 +194,14 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
   color: var(--ks-heading);
 }
 
-/* Compact: a little less space around and between the lines, same text size */
+.request-place {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+/* Compact Mode (Youth Help Board) */
 .request-card.is-compact .card-body {
   gap: 0.35rem;
   padding: 0.9rem 1.25rem;
@@ -194,7 +211,7 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
   gap: 0.75rem;
 }
 
-/* Sits above the stretched title button, so its buttons can be pressed */
+/* Notice / Urgent Alert Box */
 .request-notice {
   position: relative;
   z-index: 1;
@@ -210,47 +227,35 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
   font-weight: 600;
 }
 
-.request-main-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1.25rem;
+.request-status-pill {
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+  word-break: normal;
 }
 
-.request-main-content {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+@media (min-width: 768px) {
+  .request-status-pill {
+    white-space: nowrap;
+  }
 }
 
-.request-card-art-wrap {
-  flex-shrink: 0;
-  pointer-events: none;
-  /* Clicking image still toggles card */
+@media (min-width: 992px) {
+  .request-card-art {
+    width: 7.5rem;
+    height: 7.5rem;
+  }
 }
 
 .request-card-art {
-  width: 8.5rem;
-  height: 8.5rem;
-  border-radius: 1.5rem;
+  width: 6rem;
+  height: 6rem;
+  border-radius: 1.25rem;
   object-fit: cover;
   image-rendering: pixelated;
   display: block;
+  pointer-events: none;
 }
 
-@media (max-width: 576px) {
-  .request-card-art {
-    width: 6rem;
-    height: 6rem;
-    border-radius: 1rem;
-  }
-}
-.request-top {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start; 
-  gap: 10px;
-}
+
 </style>

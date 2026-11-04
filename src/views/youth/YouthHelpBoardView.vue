@@ -175,7 +175,7 @@ async function doAccept(request, physicalOk) {
 
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-header page-accent-aqua">
       <div>
         <h1 class="page-title">Help your neighbours</h1>
         <p class="page-subtitle">Pick a request you can help with.</p>

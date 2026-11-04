@@ -95,7 +95,7 @@ onMounted(store.load)
 
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-header page-accent-amber">
       <div>
         <h1 class="page-title">Hello, {{ auth.user.name }}</h1>
         <p class="page-subtitle">Your help requests</p>

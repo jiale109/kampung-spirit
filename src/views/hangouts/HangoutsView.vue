@@ -171,7 +171,7 @@ async function complete(hangout) {
 
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-header page-accent-rose">
       <div>
         <h1 class="page-title">Hangouts</h1>
         <p class="page-subtitle">Casual meet-ups at your estate's favourite spots.</p>

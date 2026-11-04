@@ -274,7 +274,7 @@ onMounted(() => {
 
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-header page-accent-green">
       <div>
         <h1 class="page-title">Skill Swaps</h1>
         <p class="page-subtitle">Small sessions where neighbours teach each other.</p>

@@ -32,11 +32,20 @@ const avatarInitial = computed(() => auth.user.name[0].toUpperCase())
   hidden from screen readers. theme.css also stops it for anyone whose
   computer asks for less movement (prefers-reduced-motion).
 */
-// The two frames of the stride. Both come out '' until a gender and a skin
-// tone have been chosen, which is what showWalker below checks.
-const walkerStill = computed(() =>
+/*
+  The avatar the person built in Edit profile. It does two jobs: their
+  picture on the chip at the right of the navbar, and the standing frame of
+  the walker below.
+
+  '' until they have chosen BOTH a gender and a skin tone. The chip then
+  falls back to the first letter of their name, and the walker is not drawn
+  at all - see showWalker.
+*/
+const avatarPicture = computed(() =>
   avatarSrc(auth.user.age_group, auth.user.gender, auth.user.skin_tone),
 )
+
+// The other half of the stride: the same person mid-step
 const walkerStep = computed(() =>
   avatarWalkSrc(auth.user.age_group, auth.user.gender, auth.user.skin_tone),
 )
@@ -44,7 +53,7 @@ const walkerStep = computed(() =>
 // Declared AFTER the two above, because it reads one of them. A computed body
 // does not run until something looks at it, so the other order happens to
 // work, but only by luck: reading this during setup would then blow up.
-const showWalker = computed(() => auth.user.show_walker === true && walkerStill.value !== '')
+const showWalker = computed(() => auth.user.show_walker === true && avatarPicture.value !== '')
 
 // "Use large text" from the profile page (see lib/profile.js). Applied when a
 // logged-in page opens, and taken off again when this layout closes, so the
@@ -89,7 +98,7 @@ async function logout() {
     -->
     <div v-if="showWalker" class="walker-track" aria-hidden="true" data-testid="walker">
       <div class="walker">
-        <img :src="walkerStill" class="walker-frame walker-frame-1" alt="" />
+        <img :src="avatarPicture" class="walker-frame walker-frame-1" alt="" />
         <img :src="walkerStep" class="walker-frame walker-frame-2" alt="" />
       </div>
     </div>
@@ -107,36 +116,36 @@ async function logout() {
         <ul class="navbar-nav me-auto">
           <!-- Ask for help (the old Senior home page) -->
           <li class="nav-item">
-            <router-link class="nav-link" to="/app/requests" active-class="active">My Requests</router-link>
+            <router-link class="nav-link nav-pixel-amber" to="/app/requests" active-class="active">My Requests</router-link>
           </li>
           <!-- Help others (the old Youth home page). exact so it is not lit up on every /app page -->
           <li class="nav-item">
-            <router-link class="nav-link" to="/app" exact-active-class="active">Help Board</router-link>
+            <router-link class="nav-link nav-pixel-aqua" to="/app" exact-active-class="active">Help Board</router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/app/tasks" active-class="active">My Tasks</router-link>
+            <router-link class="nav-link nav-pixel-blue" to="/app/tasks" active-class="active">My Tasks</router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/app/hangouts" active-class="active">Hangouts</router-link>
+            <router-link class="nav-link nav-pixel-rose" to="/app/hangouts" active-class="active">Hangouts</router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/app/skill-swaps" active-class="active">Skill Swaps</router-link>
+            <router-link class="nav-link nav-pixel-green" to="/app/skill-swaps" active-class="active">Skill Swaps</router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/app/rewards" active-class="active">Rewards</router-link>
+            <router-link class="nav-link nav-pixel-violet" to="/app/rewards" active-class="active">Rewards</router-link>
           </li>
         </ul>
 
-        <!-- Points + name dropdown -->
+        <!-- The name chip. The points counter lives inside the menu it opens. -->
         <ul class="navbar-nav ms-auto align-items-lg-center gap-2 gap-lg-3">
-          <li class="nav-item">
-            
-            <span class="points-pill" data-testid="points"><img src="/images/coin.svg" class="point-coin-img" alt="" />{{ points.myPoints }} pts</span>
-          </li>
           <li class="nav-item dropdown">
             <a class="nav-link user-toggle dropdown-toggle d-flex align-items-center gap-2" href="#" role="button"
               data-bs-toggle="dropdown" aria-expanded="false">
-              <span class="avatar-circle" aria-hidden="true">{{ avatarInitial }}</span>
+              <!-- Their own avatar, or the first letter of their name until they build one -->
+              <span class="avatar-frame" aria-hidden="true">
+                <img v-if="avatarPicture" :src="avatarPicture" class="avatar-portrait" alt="" />
+                <span v-else class="avatar-initial">{{ avatarInitial }}</span>
+              </span>
               <span class="user-name" data-testid="username">{{ auth.user.name }}</span>
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
@@ -144,6 +153,8 @@ async function logout() {
                 <div class="dropdown-header">
                   <div class="fw-bold">{{ auth.user.name }}</div>
                   <div class="menu-meta">{{ auth.user.block }}</div>
+                  <span class="points-pill" data-testid="points"><img src="/images/coin.svg"
+                    class="point-coin-img" alt="" />{{ points.myPoints }} pts</span>
                 </div>
               </li>
               <li><hr class="dropdown-divider" /></li>

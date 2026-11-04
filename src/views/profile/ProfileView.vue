@@ -341,7 +341,7 @@ async function deleteAccount() {
 
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-header page-accent-gold">
       <div>
         <h1 class="page-title">Profile</h1>
         <p class="page-subtitle">Your details, interests and points.</p>

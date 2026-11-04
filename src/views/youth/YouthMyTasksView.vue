@@ -42,7 +42,7 @@ function doWithdraw() {
 
 <template>
   <div>
-    <div class="page-header">
+    <div class="page-header page-accent-blue">
       <h1 class="page-title">My Tasks</h1>
     </div>
 

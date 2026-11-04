@@ -793,7 +793,81 @@ body {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 0.75rem;
+  /*
+    1rem, not the 0.75rem it was. These buttons now draw a dark ring 0.1875rem
+    outside the border and a second copy 0.25rem down and right, so 0.625rem
+    of any gap is frame before a single pixel of background shows. At 0.75rem
+    that left under 3px between them.
+  */
+  gap: 1rem;
+}
+
+/*
+  The row of buttons that ends a form: Cancel beside Post request / Propose
+  hangout / Share my session. Framed like the button in the page header, so
+  the start and the end of a job look like the same app.
+
+  Scoped to .form-actions, so the ordinary buttons elsewhere on these pages
+  ("Use my address", "Clear choice", the category tiles) are untouched.
+*/
+.form-actions .btn {
+  --cta-accent: #f2c14e;
+  font-weight: 700;
+  border-radius: 0.45rem;
+  box-shadow:
+    0 0 0 0.1875rem #06101a,
+    0.25rem 0.25rem 0 0.1875rem #06101a;
+  transition: background-color 0.12s, box-shadow 0.12s;
+}
+
+/* The one that finishes the job */
+.form-actions .btn-primary {
+  color: #fff;
+  background: #10202f;
+  border: 0.1875rem solid var(--cta-accent);
+}
+
+.form-actions .btn-primary:hover,
+.form-actions .btn-primary:focus-visible {
+  color: #fff;
+  background: #17324a;
+  box-shadow:
+    0 0 0 0.1875rem #06101a,
+    0.25rem 0.25rem 0 0.1875rem #06101a,
+    0 0 1.1rem 0.15rem var(--cta-accent);
+}
+
+/* Cancel: the same frame, but plain white, so it never competes */
+.form-actions .btn-outline-secondary {
+  color: var(--ks-ink);
+  background: #fff;
+  border: 0.1875rem solid #06101a;
+}
+
+.form-actions .btn-outline-secondary:hover,
+.form-actions .btn-outline-secondary:focus-visible {
+  color: var(--ks-ink);
+  background: var(--ks-teal-tint);
+}
+
+/*
+  Greyed out while saving. This is not decoration: RequestForm disables its
+  submit button and changes the label to "Saving…" while the request is in
+  flight, and the rules above would otherwise have painted that over in full
+  gold - a button that looks pressable while it is refusing presses, which
+  invites a second press and a second request. Bootstrap's opacity: .65 is
+  dropped in favour of saying it in colour, which survives on a bright phone
+  screen where a slightly faded button does not.
+*/
+.form-actions .btn:disabled,
+.form-actions .btn.disabled {
+  opacity: 1;
+  color: #e4e9ee;
+  background: #525d68;
+  border-color: #8a949e;
+  box-shadow:
+    0 0 0 0.1875rem #06101a,
+    0.25rem 0.25rem 0 0.1875rem #06101a;
 }
 
 @media (max-width: 575.98px) {
@@ -857,6 +931,36 @@ form.d-grid {
 }
 
 .app-navbar .navbar-brand {
+  /*
+    The village icon and the words sit on one line, centred against each
+    other. BrandMark.vue asks for vertical-align: middle, which does not mean
+    what it sounds like: it lines the image's middle up with the text's
+    BASELINE PLUS HALF ITS X-HEIGHT, not with the middle of the text. The
+    icon is a good deal taller than the words, so that half an x-height left
+    it sitting about 3px low. Centring the two as flex items lines up their
+    middles exactly - no number to tune, and nothing to redo if the font or
+    the icon size changes. (.landing-brand already does this.)
+  */
+  display: inline-flex;
+  align-items: center;
+  /*
+    These two fix something older than the pixel navbar. At 320px with "Use
+    large text" on, the 64px icon and "Kampung Spirit" at 38px came to 48px
+    more than the screen and the page scrolled sideways - measured, and it
+    did the same before any of this was flex.
+
+    The cause is Bootstrap's own white-space: nowrap on .navbar-brand, which
+    forbids the name from ever breaking, so it pushed past the edge instead.
+    Allowing a break lets it fall to "Kampung / Spirit" on the narrowest
+    phones and nowhere else; min-width lets the brand be narrower than that
+    name, which a flex item will not do on its own.
+
+    Letting the whole brand wrap instead (flex-wrap) also stops the scroll,
+    but it drops the name under the icon at 320px even when the two fit side
+    by side, which is a worse brand on the smallest screen.
+  */
+  min-width: 0;
+  white-space: normal;
   font-family: var(--ks-font-display);
   font-size: 1.4rem;
   font-weight: 700;
@@ -940,12 +1044,178 @@ form.d-grid {
   }
 }
 
-/* Name + avatar button */
-.app-navbar .user-toggle {
+/*
+  The user chip: a wooden sign carrying the person's own avatar.
+
+  .nav-link is in the selector on purpose. This is a .nav-link too, and
+  section 5's .app-navbar .navbar-nav .nav-link rule has three classes to
+  this one's two, so a plain .app-navbar .user-toggle loses to it and the
+  padding below was being thrown away - the chip came out 92px tall beside
+  67px buttons until the selector was evened up.
+
+  The wood is three stacked backgrounds and no image file: faint dark lines
+  across for the grain, wider pale lines down for the joins between planks,
+  and a top-to-bottom gradient under both to round the sign off. The frame
+  around it is the same one the nav buttons wear.
+*/
+.app-navbar .navbar-nav .nav-link.user-toggle {
   min-width: 0;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 999px;
-  padding: 0.3rem 1rem 0.3rem 0.35rem;
+  gap: 0.5rem;
+  padding: 0.35rem 0.9rem 0.35rem 0.35rem;
+  color: #fff;
+  background:
+    repeating-linear-gradient(0deg, rgba(60, 32, 8, 0.16) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(90deg, rgba(255, 228, 180, 0.05) 0 2px, transparent 2px 23px),
+    linear-gradient(180deg, #a06f38 0%, #8a5722 55%, #704420 100%);
+  border: 0.1875rem solid #4a2a0d;
+  border-radius: 0.45rem;
+  box-shadow:
+    0 0 0 0.1875rem #06101a,
+    0.25rem 0.25rem 0 0.1875rem #06101a;
+  transition: filter 0.12s, box-shadow 0.12s;
+}
+
+/*
+  Hover, keyboard focus and "the menu is open" all look the same. Brightness
+  rather than a second set of colours, so the wood stays wood.
+*/
+.app-navbar .navbar-nav .nav-link.user-toggle:hover,
+.app-navbar .navbar-nav .nav-link.user-toggle:focus-visible,
+.app-navbar .navbar-nav .nav-link.user-toggle[aria-expanded="true"] {
+  filter: brightness(1.18);
+  box-shadow:
+    0 0 0 0.1875rem #06101a,
+    0.25rem 0.25rem 0 0.1875rem #06101a,
+    0 0 1.1rem 0.15rem #f0c04e;
+}
+
+/* Bootstrap draws the little triangle; this turns it over when the menu opens,
+   so the chip says which way things are going as well as lighting up */
+.app-navbar .nav-link.user-toggle.dropdown-toggle::after {
+  margin-left: 0.45rem;
+  transition: transform 0.15s;
+}
+
+.app-navbar .nav-link.user-toggle[aria-expanded="true"].dropdown-toggle::after {
+  transform: rotate(180deg);
+}
+
+/*
+  The portrait. object-fit: cover with object-position: top crops the sprite
+  to its head and shoulders: the artwork is 24x40, so a square frame fills on
+  width and the legs fall off the bottom, which is what a profile picture
+  wants. The walker in the navbar still shows the whole person.
+
+  2rem is the largest that keeps the chip the same height as the buttons
+  beside it. Measured.
+*/
+.avatar-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  overflow: hidden;
+  width: 2rem;
+  height: 2rem;
+  background: #f7edd8;
+  border: 0.1875rem solid #4a2a0d;
+  border-radius: 0.3rem;
+}
+
+.avatar-portrait {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+/* Shown instead, for someone who has not built an avatar yet */
+.avatar-initial {
+  color: var(--ks-teal-dark);
+  font-weight: 700;
+}
+
+/*
+  The counter sits in the menu now, under the address, rather than out in the
+  bar. margin-left is the width of the dark ring the frame draws OUTSIDE its
+  border (0.1875rem): without it the ring starts to the left of the name and
+  the address above, and the three read as not quite lined up.
+*/
+.app-navbar .dropdown-header .points-pill {
+  margin-top: 0.7rem;
+  margin-left: 0.1875rem;
+}
+
+/*
+  ---------------------------------------------------------------------------
+  Keeping the navbar on the screen on a phone
+  ---------------------------------------------------------------------------
+  With the menu open at 320px and "Use large text" on, the page ran 564px
+  wider than the screen. Most of that is older than the pixel navbar; it only
+  showed up once the menu was opened and measured at that size.
+
+  Four things, each measured on its own:
+
+  1. Bootstrap puts white-space: nowrap on .dropdown-header, so an address
+     like "300 SEMBAWANG ROAD KHATIB CAMP SINGAPORE 758532" could never break
+     and the menu grew as wide as it. Worth 330-494px on its own, and nothing
+     to do with the counter that now sits under it.
+
+  2. .nav-item.dropdown could not shrink below its contents, because the
+     min-width: 0 that lets it was written inside a min-width: 1200px block
+     and so never applied on a phone at all.
+
+  3. The menu's min-width of 15rem is 330px at this text size - wider than a
+     320px screen before anything is in it.
+
+  4. Below 360px the name still would not fit beside the portrait and the
+     arrow, so there it steps aside. It is not removed: it stays in the DOM
+     for screen readers, and it is the first line of the menu the chip opens.
+     The gutter stops growing with the text at that size too.
+*/
+.app-navbar .dropdown-header {
+  white-space: normal;
+}
+
+/* Generalises the same pair inside the min-width: 1200px block further up,
+   which left phones unable to shrink the chip */
+.app-navbar .navbar-nav.ms-auto,
+.app-navbar .nav-item.dropdown {
+  min-width: 0;
+}
+
+@media (max-width: 1199.98px) {
+  .app-navbar .dropdown-menu {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 359.98px) {
+  .app-navbar .user-name {
+    display: none;
+  }
+
+  .app-navbar > .container {
+    padding-left: clamp(12px, 3vw, 2.5rem);
+    padding-right: clamp(12px, 3vw, 2.5rem);
+  }
+}
+
+/*
+  The menu the chip opens: parchment, framed like everything else up here.
+  Scoped to .app-navbar so dropdowns elsewhere in the app keep the plain
+  white card set further down this file.
+*/
+.app-navbar .dropdown-menu {
+  --bs-dropdown-bg: #f7edd8;
+  --bs-dropdown-link-hover-bg: #ead7ad;
+  --bs-dropdown-link-color: var(--ks-heading);
+  padding: 0.45rem;
+  border: 0.1875rem solid #c9a05c;
+  border-radius: 0.45rem;
+  box-shadow:
+    0 0 0 0.1875rem #06101a,
+    0.25rem 0.25rem 0 0.1875rem #06101a;
 }
 
 .avatar-circle {
@@ -969,16 +1239,55 @@ form.d-grid {
   white-space: nowrap;
 }
 
+/*
+  The points counter, built the same way as the nav buttons above: coloured
+  border, dark ring outside it, and the same ring again offset down and right
+  for the shadow. Gold is its --nav-accent, so the border, the corner marks
+  and anything else that reads that variable all change from one line.
+
+  It is a plain counter and not a button, so there is no hover or focus state
+  on it - nothing here invites a press that would not do anything.
+*/
 .points-pill {
+  --nav-accent: #f2c14e;
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.4rem 0.95rem;
-  border-radius: 999px;
-  background: var(--ks-amber-bg);
-  color: var(--ks-amber-ink);
+  /* 0.55rem down the sides matches the nav buttons' padding exactly, so the
+     counter and the buttons are the same height and their frames line up */
+  padding: 0.55rem 1rem;
+  color: #fff;
+  background: #10202f;
+  border: 0.1875rem solid var(--nav-accent);
+  border-radius: 0.45rem;
+  box-shadow:
+    0 0 0 0.1875rem #06101a,
+    0.25rem 0.25rem 0 0.1875rem #06101a;
   font-weight: 700;
   white-space: nowrap;
+}
+
+/* The same corner mark the nav buttons carry: one square, one a step down */
+.points-pill::before,
+.points-pill::after {
+  content: '';
+  position: absolute;
+  background: var(--nav-accent);
+}
+
+.points-pill::before {
+  top: 0.22rem;
+  left: 0.22rem;
+  width: 0.3rem;
+  height: 0.3rem;
+}
+
+.points-pill::after {
+  top: 0.58rem;
+  left: 0.58rem;
+  width: 0.18rem;
+  height: 0.18rem;
 }
 
 /*
@@ -993,12 +1302,225 @@ form.d-grid {
   that the pill does not grow.
 */
 .point-coin-img {
-  width: 1.4rem;
-  height: 1.4rem;
+  /*
+    1.6rem, not the 1.4 it was: on the dark fill the coin is the first thing
+    you see, and at the old size it read as a stray dot beside the number.
+
+    1.6 is also the LARGEST it can be before it, rather than the text, decides
+    how tall the counter is - past that the counter grows taller than the nav
+    buttons beside it and the row of frames stops lining up. Measured, not
+    guessed. The size still HAS to be set here; see the warning above.
+  */
+  width: 1.6rem;
+  height: 1.6rem;
   vertical-align: -0.25em;
   margin-right: 0.25rem;
   display: inline-block;
   flex-shrink: 0;
+}
+
+/* 5b. The nav links as pixel-art buttons
+   --------------------------------------------------------------------------
+   Each page carries its own colour, so the row reads as six labelled buttons
+   rather than six words in a line, and the page you are on is the one that is
+   lit up rather than merely a shade lighter.
+
+   HOW THE PIXEL EDGE IS DRAWN
+   There is no image here and no border-image. The chunky frame is three
+   layers on one element:
+
+     border                   the coloured edge
+     box-shadow 1 (spread)    a dark ring just outside that border
+     box-shadow 2 (offset)    the same ring again, moved down and right,
+                              which is the solid shadow underneath
+
+   box-shadow takes no space in the layout, so none of this changes how wide
+   a button is or whether the row still fits.
+
+   The corners are rounded by 0.45rem rather than left square. It is a small
+   enough radius that the chunky frame still reads as one, and the shadow
+   rings follow it on their own, because box-shadow takes the shape of the
+   border box. 0.65rem, which is what the cards and inputs elsewhere use, was
+   tried first and softened it into an ordinary button.
+
+   The two little squares in the top left corner are ::before and ::after.
+   They are decoration, and a pseudo-element is not read out, so they add
+   nothing for a screen reader to wade through.
+*/
+/*
+  The buttons are wider than the plain words they replaced, and at exactly
+  1200px with "Use large text" on the six of them came to 1332px and pushed
+  the whole page sideways.
+
+  Three declarations are needed, not one. flex-wrap lets the list break onto
+  a second line, but on its own it never did: section 5 gives this list
+  flex: none above 1200px, which sizes it to its widest possible row, so
+  there was never any pressure to wrap. flex-shrink and min-width take that
+  back, and only then does the wrap happen. None of this does anything on a
+  screen where the six already fit.
+*/
+.app-navbar .navbar-nav.me-auto {
+  --nav-accent: #3fd9c8;
+  flex-wrap: wrap;
+  flex-shrink: 1;
+  min-width: 0;
+  /*
+    0.9rem, because a gap is not what you see between two of these buttons.
+    Each one draws a dark ring 0.1875rem OUTSIDE its border, and a second
+    copy of that ring 0.25rem further down and right for the shadow. So the
+    frames eat 0.1875 + 0.25 + 0.1875 = 0.625rem of any gap before a single
+    pixel of teal shows through.
+
+    At the 0.6rem this was, that came to 13.75px of frame in a 13.19px gap:
+    every pair overlapped by just over half a pixel. The spacing was even -
+    all of them were -0.56px - but half a pixel lands on a whole screen pixel
+    at some joins and not others, so some looked merged and some did not,
+    which reads as uneven. 0.9rem leaves a clear 6px of teal at every join.
+  */
+  gap: 0.9rem;
+}
+
+/*
+  The six share out whatever room the row has, instead of sitting in a huddle
+  with bare teal to the right of them.
+
+  flex-grow on the LIST first, so the list itself takes the space left over
+  beside the points and the name; then flex-grow on each item, so that space
+  is shared among the buttons. One without the other does nothing: grow the
+  items inside a list that is only as wide as its contents and there is
+  nothing to share out.
+
+  flex-basis stays auto, so a button still starts from the width of its own
+  words and the longer names end up wider - they share the SPARE room, they
+  are not forced to be equal. Only above 1200px: below that the menu is a
+  stack dropped from the toggler, where each button is already full width and
+  growing them would only stretch their heights.
+*/
+@media (min-width: 1200px) {
+  .app-navbar .navbar-nav.me-auto {
+    flex-grow: 1;
+    /*
+      PADDING, not margin. The list grows until it meets the name chip, so
+      without something here the last button sits hard against it - and with
+      the frames each eating 0.625rem, "hard against" means overlapping by
+      13.75px, not merely touching.
+
+      margin-right was the obvious thing and it silently did nothing: this
+      list carries Bootstrap's .me-auto, which is margin-right: auto with an
+      !important on it, and !important beats any selector we can write.
+      Padding is not in that fight, and inside a growing list it has the same
+      effect. 0.9rem to match the gap between the buttons.
+    */
+    padding-right: 0.9rem;
+  }
+
+  .app-navbar .navbar-nav.me-auto .nav-item {
+    flex: 1 1 auto;
+  }
+
+  /* The words sit in the middle of the room the button has been given */
+  .app-navbar .navbar-nav.me-auto .nav-link {
+    text-align: center;
+  }
+}
+
+.app-navbar .navbar-nav.me-auto .nav-link {
+  position: relative;
+  padding: 0.55rem 1.1rem;
+  color: #fff;
+  background: #10202f;
+  border: 0.1875rem solid var(--nav-accent);
+  border-radius: 0.45rem;
+  box-shadow:
+    0 0 0 0.1875rem #06101a,
+    0.25rem 0.25rem 0 0.1875rem #06101a;
+  transition: background-color 0.12s, box-shadow 0.12s;
+}
+
+/* The corner mark: one square, and a smaller one a step down from it */
+.app-navbar .navbar-nav.me-auto .nav-link::before,
+.app-navbar .navbar-nav.me-auto .nav-link::after {
+  content: '';
+  position: absolute;
+  background: var(--nav-accent);
+}
+
+.app-navbar .navbar-nav.me-auto .nav-link::before {
+  top: 0.22rem;
+  left: 0.22rem;
+  width: 0.3rem;
+  height: 0.3rem;
+}
+
+.app-navbar .navbar-nav.me-auto .nav-link::after {
+  top: 0.58rem;
+  left: 0.58rem;
+  width: 0.18rem;
+  height: 0.18rem;
+}
+
+/*
+  Hover and keyboard focus look the same, so reaching a button by tab tells
+  you as much as reaching it with a mouse. The glow is a third shadow laid
+  over the two that were already there; the first two have to be repeated
+  because box-shadow replaces the whole list rather than adding to it.
+*/
+.app-navbar .navbar-nav.me-auto .nav-link:hover,
+.app-navbar .navbar-nav.me-auto .nav-link:focus-visible {
+  background: #17324a;
+  box-shadow:
+    0 0 0 0.1875rem #06101a,
+    0.25rem 0.25rem 0 0.1875rem #06101a,
+    0 0 1.1rem 0.15rem var(--nav-accent);
+}
+
+/*
+  The page you are on. It fills with its own colour and the text goes dark,
+  so it differs from the rest in brightness and not only in hue - someone who
+  does not separate those colours still sees which one is lit. The inset
+  shadow is the highlight along the top edge.
+*/
+.app-navbar .navbar-nav.me-auto .nav-link.active {
+  color: #06101a;
+  background: var(--nav-accent);
+  box-shadow:
+    0 0 0 0.1875rem #06101a,
+    0.25rem 0.25rem 0 0.1875rem #06101a,
+    0 0 1.1rem 0.15rem var(--nav-accent),
+    inset 0 0.22rem 0 rgba(255, 255, 255, 0.7);
+}
+
+/* On the filled button the corner marks have to flip to dark to stay visible */
+.app-navbar .navbar-nav.me-auto .nav-link.active::before,
+.app-navbar .navbar-nav.me-auto .nav-link.active::after {
+  background: #06101a;
+}
+
+/*
+  One colour per page. These are set on the link itself, so they beat the
+  --nav-accent handed down by the list above, and every rule under it that
+  says var(--nav-accent) picks the new one up - border, corner marks, glow
+  and the filled-in current page, from one line each.
+*/
+.nav-pixel-amber { --nav-accent: #f0a93b; }
+.nav-pixel-aqua { --nav-accent: #3fd9c8; }
+.nav-pixel-blue { --nav-accent: #5aa6f8; }
+.nav-pixel-rose { --nav-accent: #f2798f; }
+.nav-pixel-green { --nav-accent: #86d884; }
+.nav-pixel-violet { --nav-accent: #b094f5; }
+
+/*
+  The walking avatar keeps strolling in FRONT of the buttons, as it did when
+  they were plain words.
+
+  It has to be said out loud now. position: relative above puts every button
+  into the painting order that .walker-track was already in, and .container
+  comes after the track in MainLayout, so without this the buttons would be
+  painted over the walker and it would spend its whole walk hidden behind
+  them. A z-index above the track's own 0 puts it back on top.
+*/
+.app-navbar .walker-track {
+  z-index: 2;
 }
 
 .dropdown-menu {
@@ -1054,13 +1576,97 @@ form.d-grid {
   padding: 2.5rem 0 4rem;
 }
 
+/*
+  The page header: a white card with the page's own colour down its left
+  edge, so the top of the page names itself in the same colour as the lit
+  button in the navbar.
+
+  The colour comes from --page-accent, which each view sets with one of the
+  classes below. Teal is the fallback for a page that names none, so nothing
+  breaks if a new page forgets.
+*/
 .page-header {
+  --page-accent: var(--ks-teal);
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem 2rem;
   margin-bottom: 2rem;
+  padding: 1.4rem 1.6rem;
+  background: #fff;
+  border: 0.1875rem solid #06101a;
+  border-left: 0.8rem solid var(--page-accent);
+  border-radius: 0.45rem;
+  box-shadow: 0.25rem 0.25rem 0 0 #06101a;
+}
+
+/* One per page, matching that page's button in the navbar */
+.page-accent-amber { --page-accent: #f0a93b; }   /* My Requests */
+.page-accent-aqua { --page-accent: #3fd9c8; }    /* Help Board */
+.page-accent-blue { --page-accent: #5aa6f8; }    /* My Tasks */
+.page-accent-rose { --page-accent: #f2798f; }    /* Hangouts */
+.page-accent-green { --page-accent: #86d884; }   /* Skill Swaps */
+.page-accent-gold { --page-accent: #f2c14e; }    /* Profile */
+
+/*
+  The one button in the header. Gold on every page rather than the page's own
+  colour: it is the thing to press, and it should look the same wherever you
+  are instead of changing meaning with the room.
+
+  No corner marks on this one - the nav buttons wear them, and on something
+  this size they read as dirt rather than decoration.
+*/
+.page-header .btn {
+  --cta-accent: #f2c14e;
+  color: #fff;
+  font-weight: 700;
+  background: #10202f;
+  border: 0.1875rem solid var(--cta-accent);
+  border-radius: 0.45rem;
+  box-shadow:
+    0 0 0 0.1875rem #06101a,
+    0.25rem 0.25rem 0 0.1875rem #06101a;
+  transition: background-color 0.12s, box-shadow 0.12s;
+}
+
+.page-header .btn:hover,
+.page-header .btn:focus-visible {
+  color: #fff;
+  background: #17324a;
+  box-shadow:
+    0 0 0 0.1875rem #06101a,
+    0.25rem 0.25rem 0 0.1875rem #06101a,
+    0 0 1.1rem 0.15rem var(--cta-accent);
+}
+
+/*
+  On a phone the card's own padding is width the content no longer has. At
+  320px with large text the "Active tasks: 1 / 3" pill was pushed 55px past
+  the screen, because Bootstrap-style pills carry white-space: nowrap and it
+  had nowhere left to go.
+*/
+@media (max-width: 575.98px) {
+  .page-header {
+    padding: 1rem 1.1rem;
+    border-left-width: 0.55rem;
+  }
+
+  .page-header .count-pill {
+    white-space: normal;
+    text-align: center;
+  }
+
+  /*
+    Full width on a phone. At 320px with large text, "Propose a hangout" and
+    "Host a session" came out wider than the card's own content box and their
+    shadows hung 17px and 9px past its edge. Pinning them to the width that
+    IS available cannot overflow, it stops the longer labels wrapping to two
+    lines, and a full-width button is an easier target besides.
+  */
+  .page-header .btn {
+    width: 100%;
+  }
 }
 
 .form-page {

@@ -509,14 +509,13 @@ async function deleteAccount() {
 
                 <div role="group" aria-labelledby="gender-label" class="mb-4">
                   <div id="gender-label" class="form-label">Gender</div>
-                  <div class="row row-cols-2 g-2">
-                    <div v-for="option in GENDERS" :key="option.value" class="col">
-                      <button type="button" class="btn choice-tile w-100"
-                        :class="{ active: form.gender === option.value }"
-                        :aria-pressed="form.gender === option.value"
-                        :data-testid="`gender-${option.value}`"
-                        @click="form.gender = option.value">{{ option.label }}</button>
-                    </div>
+                  <!-- Side by side when both fit, one above the other when not (theme.css) -->
+                  <div class="gender-choices">
+                    <button v-for="option in GENDERS" :key="option.value" type="button" class="btn choice-tile"
+                      :class="{ active: form.gender === option.value }"
+                      :aria-pressed="form.gender === option.value"
+                      :data-testid="`gender-${option.value}`"
+                      @click="form.gender = option.value">{{ option.label }}</button>
                   </div>
                 </div>
 

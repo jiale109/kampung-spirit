@@ -156,7 +156,8 @@ const chosenLabel = computed(() => (props.modelValue ? formatDate(props.modelVal
         <template v-for="cell in week" :key="cell.iso">
           <button v-if="cell.inMonth && !cell.tooEarly && !cell.tooLate" type="button"
             class="btn day-cell"
-            :class="cell.iso === modelValue ? 'btn-primary' : 'btn-outline-secondary'"
+            :class="[cell.iso === modelValue ? 'btn-primary' : 'btn-outline-secondary',
+              { 'is-today': cell.iso === todayISO }]"
             :aria-pressed="cell.iso === modelValue" :aria-label="cell.label"
             :data-testid="`day-${cell.iso}`" @click="emit('update:modelValue', cell.iso)">
             {{ cell.number }}

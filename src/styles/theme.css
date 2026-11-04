@@ -233,6 +233,34 @@ body {
 }
 
 
+/*
+  Male / Female on the profile page. Equal halves when both fit; as soon as
+  one would need more room than half (a narrow phone, large text, or the
+  avatar sitting beside them), they stack, each the full width. The text
+  never wraps or gets cut off.
+*/
+.gender-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.gender-choices .choice-tile {
+  flex: 1 1 0;
+  min-width: max-content;
+  white-space: nowrap;
+}
+
+/* Room for the tick is kept even before one is chosen, so pressing a
+   button does not change its width and make the pair jump */
+.gender-choices .choice-tile:not(.active)::after {
+  content: '\2713';
+  margin-left: auto;
+  font-size: 1.25rem;
+  font-weight: 700;
+  visibility: hidden;
+}
+
 /* 4. Forms
    -------------------------------------------------------------------------- */
 .form-label {
@@ -636,17 +664,37 @@ body {
   border-radius: calc(0.6em / 1.05);
 }
 
+/*
+  Today, in amber so it stands apart from the chosen day (teal). Only while it
+  is not chosen: once picked it is btn-primary, and the teal wins. The "Today"
+  word or dot stays either way, so it is never shown by colour alone.
+  Amber ink on amber is 8.1:1 (7.3:1 on the hover shade).
+*/
+.day-cell.is-today.btn-outline-secondary {
+  --bs-btn-color: var(--ks-amber-ink);
+  --bs-btn-bg: var(--ks-amber-bg);
+  --bs-btn-border-color: var(--ks-amber-ink);
+  --bs-btn-hover-color: var(--ks-amber-ink);
+  --bs-btn-hover-bg: #f9e3a0;
+  --bs-btn-hover-border-color: var(--ks-amber-ink);
+  --bs-btn-active-color: var(--ks-amber-ink);
+  --bs-btn-active-bg: #f9e3a0;
+  --bs-btn-active-border-color: var(--ks-amber-ink);
+  --bs-btn-focus-shadow-rgb: 95, 66, 0;
+  --bs-btn-border-width: 2px;
+}
+
 /* A day outside the two months we accept: holds the space, does nothing */
 .day-blank {
   min-height: calc(3.4em / 1.05);
 }
 
 .day-today {
-  font-size: 0.667em;   /* 0.7rem at the normal size, as before */
+  font-size: 0.58em;   /* about 0.6rem at the normal size */
   font-weight: 600;
   line-height: 1;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0;
 }
 
 /*

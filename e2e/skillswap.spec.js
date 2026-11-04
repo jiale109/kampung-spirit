@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { resetApp, login, uniqueTitle, chooseDay, choosePlace } from './helpers.js'
+import { resetApp, login, uniqueTitle, chooseDay, choosePlace, switchTo } from './helpers.js'
 
 // Each test signs up its own adult and hosts sessions with unique titles, so the
 // tests do not depend on what is already in Supabase.
@@ -46,3 +46,95 @@ for (const category of ['Health & fitness', 'Arts & music', 'Other']) {
     await expect(sessionCard(page, title)).toBeVisible()
   })
 }
+
+// Test that another user can successfully join an existing session
+test('Adult can join an existing SkillSwap session', async ({ page }) => {
+  const title = uniqueTitle('Join test session')
+
+  // Step 1: Log in as host
+  await login(page, 'Adult', 'Mr Goh')
+
+  // Step 2: Host a new session
+  await hostSession(page, {
+    title,
+    category: 'Health & fitness'
+  })
+
+  // Step 3: Switch to another adult account
+  await switchTo(page, 'Adult', 'Ms Lim')
+
+  // Step 4: Navigate to SkillSwap 
+  await page.goto('/app/skill-swaps')
+
+  // Step 5: Find the session created by Mr Goh
+  const card = sessionCard(page, title)
+  await expect(card).toBeVisible()
+
+  // Step 6: Open session details
+  await card.getByRole('button', { name: title }).click()
+
+  // Step 7: Join session
+  await card.getByRole('button', {
+    name: 'Join this session'
+  }).click()
+
+  // Step 8: Verify successful join
+  await expect(
+    page.getByText(`You have a place in “${title}”.`)
+  ).toBeVisible()
+
+  await expect(
+    card.getByText('You are going')
+  ).toBeVisible()
+})
+
+// Test that user can leave a session
+test('Adult can leave an existing SkillSwap session', async ({ page }) => {
+  const title = uniqueTitle('Leave test session')
+
+  // Step 1: Log in as host
+  await login(page, 'Adult', 'Mr Goh')
+
+  // Step 2: Host new session
+  await hostSession(page, {
+    title,
+    category: 'Health & fitness'
+  })
+
+  // Step 3: Switch to another adult account
+  await switchTo(page, 'Adult', 'Ms Lim')
+
+  // Step 4: Go to SkillSwap
+  await page.goto('/app/skill-swaps')
+
+  // Step 5: Find session
+  const card = sessionCard(page, title)
+  await expect(card).toBeVisible()
+
+  // Step 6: Open session details
+  await card.getByRole('button', { name: title }).click()
+
+  // Step 7: Join session first
+  await card.getByRole('button', {
+    name: 'Join this session'
+  }).click()
+
+  // Step 8: Verify succesful join
+  await expect(
+    page.getByText(`You have a place in “${title}”.`)
+  ).toBeVisible()
+
+  // Step 9: Leave session
+  await card.getByRole('button', {
+    name: 'Cancel my place'
+  }).click()
+
+  // Step 10: Verify that attendance was cancelled
+  await expect(
+    page.getByText(`Your place in “${title}” is cancelled.`)
+  ).toBeVisible()
+
+  await expect(
+    card.getByText('You are going')
+  ).not.toBeVisible()
+})

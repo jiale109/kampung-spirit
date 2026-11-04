@@ -40,8 +40,13 @@ const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
-// Sunday first, the way a Singapore wall calendar is laid out
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+// Sunday first, the way a Singapore wall calendar is laid out. The short
+// letter is shown instead on narrow phones (CSS in theme.css picks one).
+const WEEKDAYS = [
+  { long: 'Sun', short: 'S' }, { long: 'Mon', short: 'M' }, { long: 'Tue', short: 'T' },
+  { long: 'Wed', short: 'W' }, { long: 'Thu', short: 'T' }, { long: 'Fri', short: 'F' },
+  { long: 'Sat', short: 'S' },
+]
 
 // '2026-10-25' -> a Date at midnight LOCAL time. Built from the three numbers
 // rather than new Date(string), which reads the string as UTC and can land on
@@ -139,7 +144,9 @@ const chosenLabel = computed(() => (props.modelValue ? formatDate(props.modelVal
     <!-- Day names across the top. Decorative: each button below says its own
          full date to a screen reader, so these are hidden from one. -->
     <div class="day-grid mb-2" aria-hidden="true">
-      <span v-for="name in WEEKDAYS" :key="name" class="day-head">{{ name }}</span>
+      <span v-for="name in WEEKDAYS" :key="name.long" class="day-head">
+        <span class="day-name-long">{{ name.long }}</span><span class="day-name-short">{{ name.short }}</span>
+      </span>
     </div>
 
     <!-- The month itself. A day outside min and max leaves a blank, so there
@@ -149,11 +156,13 @@ const chosenLabel = computed(() => (props.modelValue ? formatDate(props.modelVal
         <template v-for="cell in week" :key="cell.iso">
           <button v-if="cell.inMonth && !cell.tooEarly && !cell.tooLate" type="button"
             class="btn day-cell"
-            :class="cell.iso === modelValue ? 'btn-primary' : 'btn-outline-secondary'"
+            :class="[cell.iso === modelValue ? 'btn-primary' : 'btn-outline-secondary',
+              { 'is-today': cell.iso === todayISO }]"
             :aria-pressed="cell.iso === modelValue" :aria-label="cell.label"
             :data-testid="`day-${cell.iso}`" @click="emit('update:modelValue', cell.iso)">
             {{ cell.number }}
-            <span v-if="cell.iso === todayISO" class="day-today">Today</span>
+            <!-- On narrow phones the word becomes a dot under the number -->
+            <span v-if="cell.iso === todayISO" class="day-today"><span class="day-today-word">Today</span></span>
           </button>
           <span v-else class="day-cell day-blank" aria-hidden="true"></span>
         </template>

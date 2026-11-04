@@ -233,6 +233,34 @@ body {
 }
 
 
+/*
+  Male / Female on the profile page. Equal halves when both fit; as soon as
+  one would need more room than half (a narrow phone, large text, or the
+  avatar sitting beside them), they stack, each the full width. The text
+  never wraps or gets cut off.
+*/
+.gender-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.gender-choices .choice-tile {
+  flex: 1 1 0;
+  min-width: max-content;
+  white-space: nowrap;
+}
+
+/* Room for the tick is kept even before one is chosen, so pressing a
+   button does not change its width and make the pair jump */
+.gender-choices .choice-tile:not(.active)::after {
+  content: '\2713';
+  margin-left: auto;
+  font-size: 1.25rem;
+  font-weight: 700;
+  visibility: hidden;
+}
+
 /* 4. Forms
    -------------------------------------------------------------------------- */
 .form-label {
@@ -559,22 +587,25 @@ body {
 */
 .month-nav {
   --bs-btn-padding-x: 0;
-  width: 3rem;
-  min-width: 3rem;
+  --bs-btn-font-size: 1em;
+  width: max(44px, 3em);
+  min-width: max(44px, 3em);
+  min-height: max(44px, 3em);
   flex-shrink: 0;
 }
 
+/* May wrap between month and year rather than squeeze the arrows */
 .month-label {
   min-width: 0;
   flex: 1 1 auto;
-  font-size: 1.5rem;
+  font-size: 1.5em;
   line-height: 1.2;
 }
 
 /* On the narrowest phones the name matters more than its size */
 @media (max-width: 420px) {
   .month-label {
-    font-size: 1.15rem;
+    font-size: 1.15em;
   }
 }
 
@@ -585,18 +616,34 @@ body {
   the week is laid out with CSS grid here. minmax(0, 1fr) rather than 1fr
   matters: without it a long day name would stop the columns shrinking and the
   calendar would run off the side of a narrow phone.
+
+  The calendar is sized by the screen, not by "Use large text": .day-picker
+  is never bigger than the normal text, and shrinks on narrow phones. All the
+  sizes below are in em so they follow it. Above about 520px wide 1em is the
+  same as 1rem, so nothing changes there.
 */
+.day-picker {
+  font-size: min(1rem, 4.2vw);
+}
+
 .day-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.35rem;
+  gap: 0.35em;
+  /* Lets the "Today" rule below ask how wide the calendar is */
+  container: day-grid / inline-size;
 }
 
 .day-head {
   text-align: center;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.95em;
+  white-space: nowrap;
   color: var(--ks-ink);
+}
+
+.day-name-short {
+  display: none;
 }
 
 /* Big enough to hit with a thumb, and every day the same size */
@@ -605,32 +652,134 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 3.4rem;
-  padding: 0.25rem 0;
-  font-size: 1.05rem;
+  /* Its own font is 1.05em, so these are divided by 1.05 to stay the
+     same size as the old rem values (3.4rem tall, and so on) */
+  gap: calc(0.5em / 1.05);
+  min-width: 0;
+  min-height: calc(3.4em / 1.05);
+  padding: calc(0.25em / 1.05) 0;
+  font-size: 1.05em;
   font-weight: 600;
-  border-radius: 0.6rem;
+  white-space: nowrap;
+  border-radius: calc(0.6em / 1.05);
+}
+
+/*
+  Today, in amber so it stands apart from the chosen day (teal). Only while it
+  is not chosen: once picked it is btn-primary, and the teal wins. The "Today"
+  word or dot stays either way, so it is never shown by colour alone.
+  Amber ink on amber is 8.1:1 (7.3:1 on the hover shade).
+*/
+.day-cell.is-today.btn-outline-secondary {
+  --bs-btn-color: var(--ks-amber-ink);
+  --bs-btn-bg: var(--ks-amber-bg);
+  --bs-btn-border-color: var(--ks-amber-ink);
+  --bs-btn-hover-color: var(--ks-amber-ink);
+  --bs-btn-hover-bg: #f9e3a0;
+  --bs-btn-hover-border-color: var(--ks-amber-ink);
+  --bs-btn-active-color: var(--ks-amber-ink);
+  --bs-btn-active-bg: #f9e3a0;
+  --bs-btn-active-border-color: var(--ks-amber-ink);
+  --bs-btn-focus-shadow-rgb: 95, 66, 0;
+  --bs-btn-border-width: 2px;
 }
 
 /* A day outside the two months we accept: holds the space, does nothing */
 .day-blank {
-  min-height: 3.4rem;
+  min-height: calc(3.4em / 1.05);
 }
 
 .day-today {
-  font-size: 0.7rem;
+  font-size: 0.58em;   /* about 0.6rem at the normal size */
   font-weight: 600;
   line-height: 1;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0;
+}
+
+/*
+  Narrow phones: one-letter day names, and "Today" becomes a dot under the
+  number. The word stays in the page, hidden the way .visually-hidden hides
+  things, so "today" is never shown by colour alone and never overflows.
+*/
+@media (max-width: 420px) {
+  .day-name-long {
+    display: none;
+  }
+
+  .day-name-short {
+    display: inline;
+  }
+
+  .day-cell {
+    gap: calc(0.25em / 1.05);
+  }
+
+  .day-today::after {
+    content: '';
+    display: block;
+    width: 0.4em;
+    height: 0.4em;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .day-today {
+    font-size: 1em;
+  }
+
+  .day-today-word {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+}
+
+/* "TODAY" needs about 2.4em per day box. When the calendar is narrower than
+   that (e.g. large text on a 500-770px screen), use the dot there too. */
+@container day-grid (max-width: 19em) {
+  .day-cell {
+    gap: calc(0.25em / 1.05);
+  }
+
+  .day-today::after {
+    content: '';
+    display: block;
+    width: 0.4em;
+    height: 0.4em;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .day-today {
+    font-size: 1em;
+  }
+
+  .day-today-word {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
 }
 
 /* Matches .form-control.is-invalid, so a missing day looks like any other
    box that still needs filling in */
 .day-picker.is-invalid-box {
   border: 2px solid var(--ks-danger);
-  border-radius: 0.75rem;
-  padding: 1rem;
+  border-radius: 0.75em;
+  padding: 1em;
 }
 
 .invalid-feedback {
@@ -650,6 +799,42 @@ body {
 @media (max-width: 575.98px) {
   .form-actions .btn {
     flex: 1 1 100%;
+  }
+}
+
+/*
+  Forms that lay their rows out with d-grid (RequestForm, the profile edit
+  form, the sign-up form). A grid item will not shrink below its content by
+  default, so one wide child - the category tiles, a long word - pushed the
+  whole column past the card on a phone with large text on. minmax(0, 1fr)
+  lets the column shrink to the card instead.
+*/
+.card-body.d-grid,
+form.d-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* A long word or address breaks onto the next line instead of poking out */
+.card-body {
+  overflow-wrap: anywhere;
+}
+
+/*
+  Phones with "Use large text" on. Every rem is 27px instead of 22px, so the
+  card's padding and the page's side gutter grow with the text and leave the
+  form too little room. Only with large text, so the normal size is unchanged.
+  !important because Bootstrap's p-4 is !important too.
+*/
+@media (max-width: 575.98px) {
+  html.large-text form.card > .card-body.p-4 {
+    padding: 1rem !important;
+  }
+
+  /* Bootstrap's gutter is 0.75rem, which is 20px here; 0.6rem is about the
+     16px it is at the normal size */
+  html.large-text .container.app-container {
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
   }
 }
 

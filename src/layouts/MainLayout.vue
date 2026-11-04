@@ -1,6 +1,11 @@
 <script setup>
-import { computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+// The same Bootstrap file main.js loads, so this is the very Collapse the
+// toggler button uses. (Under Vite the bundle is not put on window.bootstrap,
+// and importing bootstrap/js/dist/collapse would be a second copy that does
+// not know about the toggler's instance.)
+import { Collapse } from 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import { useAuthStore } from '../stores/auth.js'
 import { useHelpRequestStore } from '../stores/helpRequest.js'
 import { usePointsStore } from '../stores/points.js'
@@ -9,6 +14,7 @@ import BrandMark from '../components/BrandMark.vue'
 import TelegramPrompt from '../components/TelegramPrompt.vue'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const store = useHelpRequestStore()
 // The navbar balance comes from the points store, the same one Rewards and Profile use
@@ -49,7 +55,26 @@ onUnmounted(() => applyLargeText(false))
 // Load requests once here so the active-task count is right on every page
 onMounted(store.load)
 
+/*
+  Below xl the links sit in a menu that drops down from the toggler. Choosing
+  a page used to leave it hanging open over the new page, so it is closed on
+  every route change. Watching the route rather than each link covers the nav
+  links, the brand and Profile in one place. Only when it is open (.show):
+  on wide screens the menu is never collapsed, so this does nothing there.
+  Going through Bootstrap keeps the toggler's aria-expanded correct.
+*/
+const navMenu = ref(null)
+
+function closeMenu() {
+  if (navMenu.value?.classList.contains('show')) {
+    Collapse.getOrCreateInstance(navMenu.value, { toggle: false }).hide()
+  }
+}
+
+watch(() => route.fullPath, closeMenu)
+
 async function logout() {
+  closeMenu()
   await auth.logout()
   router.push('/landing')
 }
@@ -78,7 +103,7 @@ async function logout() {
         <span class="navbar-toggler-icon"></span>
       </button>
 
-      <div class="collapse navbar-collapse" id="navbarNav">
+      <div ref="navMenu" class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav me-auto">
           <!-- Ask for help (the old Senior home page) -->
           <li class="nav-item">

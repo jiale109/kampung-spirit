@@ -13,10 +13,9 @@
   components/SkillSwapCard.vue and SkillSwapForm.vue. Completing a session
   pays points in complete_skill_session() in the database.
 
-  STILL LEFT: onCancel uses window.confirm(); a modal like the one in
-  views/senior/SeniorHelpBoardView.vue is easier for seniors to read. The
-  counts in categoryOptions are worked out but not shown. The e2e test only
-  covers hosting, not joining, a full session or cancelling.
+  STILL LEFT: The counts in categoryOptions are worked out but not shown.
+  The e2e test only covers hosting, not joining, a full session or
+  cancelling.
 */
 
 import { ref, computed, onMounted } from 'vue'
@@ -249,8 +248,19 @@ async function onJoin(s) {
 }
 const onLeave = (s) => act(() => store.cancelRsvp(s.id), `Your place in “${s.title}” is cancelled.`)
  
+// Host: cancel a session after "Yes, cancel it" in the modal below, which is
+// easier to read than the browser's own pop-up and says plainly which button
+// keeps it
+const sessionToCancel = ref(null)
+
 function onCancel(s) {
-  if (!window.confirm(`Cancel “${s.title}”? People who joined will lose their place.`)) return
+  notice.value = null
+  sessionToCancel.value = s
+}
+
+function confirmCancel() {
+  const s = sessionToCancel.value
+  sessionToCancel.value = null
   return act(() => store.cancelSession(s.id), `“${s.title}” is cancelled.`)
 }
  
@@ -432,6 +442,11 @@ onMounted(() => {
         @complete="onComplete"
       />
     </div>
+
+    <ConfirmModal v-if="sessionToCancel" title="Cancel this session?"
+      :message="`People who joined “${sessionToCancel.title}” will lose their place and be told it is off. This cannot be undone.`"
+      confirm-label="Yes, cancel it" cancel-label="No, keep it" danger testid="confirm-cancel-session"
+      @confirm="confirmCancel" @cancel="sessionToCancel = null" />
 
     <ConfirmModal v-if="sessionToDelete" title="Delete this session?"
       message="It will be removed for everyone. This cannot be undone."

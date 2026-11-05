@@ -155,12 +155,23 @@ async function leave(hangout) {
   else error.value = result.error
 }
 
-async function cancel(hangout) {
+// Host: cancel a hangout after "Yes, cancel it" in the modal below, which is
+// easier to read than the browser's own pop-up and says plainly which button
+// keeps it
+const hangoutToCancel = ref(null)
+
+function cancel(hangout) {
   message.value = ''
   error.value = ''
-  if (!window.confirm(`Cancel "${hangout.title}"? Everyone going will no longer see it.`)) return
+  hangoutToCancel.value = hangout
+}
+
+async function confirmCancel() {
+  const hangout = hangoutToCancel.value
+  hangoutToCancel.value = null
   const result = await store.cancelHangout(hangout.id)
-  if (!result.ok) error.value = result.error
+  if (result.ok) message.value = `"${hangout.title}" is cancelled.`
+  else error.value = result.error
 }
 
 // Admin: delete a hangout after "Yes, delete". The database refuses this
@@ -297,6 +308,11 @@ async function complete(hangout) {
         Nobody else has proposed a hangout yet.
       </p>
     </template>
+
+    <ConfirmModal v-if="hangoutToCancel" title="Cancel this hangout?"
+      :message="`Everyone going to “${hangoutToCancel.title}” will be told it is off, and it will no longer be shown. This cannot be undone.`"
+      confirm-label="Yes, cancel it" cancel-label="No, keep it" danger testid="confirm-cancel-hangout"
+      @confirm="confirmCancel" @cancel="hangoutToCancel = null" />
 
     <ConfirmModal v-if="hangoutToDelete" title="Delete this hangout?"
       message="It will be removed for everyone. This cannot be undone."

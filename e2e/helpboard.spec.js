@@ -9,6 +9,9 @@ import { formatDate } from '../src/lib/skillSwapFormat.js'
 // Each group signs up one senior and one youth and reuses them (Supabase limits
 // sign-ups). A test that needs a brand-new account uses a name new to its group.
 // Titles include Date.now(), and tidyUp cancels each test's leftover requests.
+// A senior can post only 3 requests a day (MAX_REQUESTS_PER_DAY), and cancelled
+// ones still count, so a group never posts more than 3 with one senior: the extra
+// posts use another senior (e.g. 'Mdm Lee' and 'Mdm Goh' in "Posting a request").
 
 test.beforeEach(async ({ page }) => { await resetApp(page, { keepAccounts: true }) })
 test.afterEach(async ({ browser }) => { await tidyUp(browser) })
@@ -160,7 +163,7 @@ test.describe('Posting a request', () => {
     const title = uniqueTitle('Help me with my nephew')
     const details = page.getByLabel('Details')
 
-    await login(page, 'Senior', 'Mdm Tan')
+    await login(page, 'Senior', 'Mdm Lee')
     await page.goto('/app/requests/create')
     await expect(page.getByTestId('safety-tip')).toContainText('Stay safe: meet in a place you are comfortable with.')
     await fillRequest(page, { title, details: `Please help me send money to my nephew ${Date.now()}` })
@@ -182,7 +185,7 @@ test.describe('Posting a request', () => {
     const title = uniqueTitle('Reset my Singpass')
     const reminder = page.getByTestId('safety-reminder')
 
-    await login(page, 'Senior', 'Mdm Tan')
+    await login(page, 'Senior', 'Mdm Lee')
     await page.goto('/app/requests/create')
     await expect(reminder).toHaveCount(0)
     await fillRequest(page, { title, details: 'Help me reset my Singpass password' })
@@ -196,7 +199,7 @@ test.describe('Posting a request', () => {
   })
 
   test('Asking a helper to come alone is blocked with the safety message', async ({ page }) => {
-    await login(page, 'Senior', 'Mdm Tan')
+    await login(page, 'Senior', 'Mdm Lee')
     await page.goto('/app/requests/create')
     await fillRequest(page, { title: uniqueTitle('Help me move a chair'), details: `Please come alone to help me ${Date.now()}` })
     await page.getByRole('button', { name: 'Post request' }).click()
@@ -211,7 +214,7 @@ test.describe('Posting a request', () => {
     const error = page.getByTestId('description-error')
     const message = 'Please keep contact details out of requests. Talk through the app instead.'
 
-    await login(page, 'Senior', 'Mdm Tan')
+    await login(page, 'Senior', 'Mdm Lee')
     await page.goto('/app/requests/create')
     await fillRequest(page, { title: uniqueTitle('Help me with my phone'), details: 'Please call me at 9123 4567 to arrange' })
     await post.click()
@@ -229,7 +232,7 @@ test.describe('Posting a request', () => {
     const giftCard = uniqueTitle('Help me buy groceries')
     const reminder = page.getByTestId('safety-reminder')
 
-    await login(page, 'Senior', 'Mdm Tan')
+    await login(page, 'Senior', 'Mdm Lee')
     await page.goto('/app/requests/create')
     await fillRequest(page, { title: instagram, details: 'Help me set up Instagram on my phone' })
     await expect(reminder).toHaveCount(0)
@@ -251,7 +254,7 @@ test.describe('Posting a request', () => {
     const title = uniqueTitle('Help me hang a curtain')
     const atHome = page.getByLabel('This help is inside my home')
 
-    await login(page, 'Senior', 'Mdm Tan')
+    await login(page, 'Senior', 'Mdm Goh')
     await page.goto('/app/requests/create')
     await fillRequest(page, { title })
     await expect(atHome).not.toBeChecked()
@@ -276,7 +279,7 @@ test.describe('Posting a request', () => {
   test('An "Other" request shows a hint, and its physical box stays ticked', async ({ page }) => {
     const other = uniqueTitle('Move my flower pots')
 
-    await login(page, 'Senior', 'Mdm Tan')
+    await login(page, 'Senior', 'Mdm Goh')
     await page.goto('/app/requests/create')
     await page.getByRole('button', { name: /Other/ }).click()
     await expect(page.getByText("Say clearly what you need in the title, for example 'Change a light bulb'.")).toBeVisible()
@@ -337,7 +340,7 @@ test.describe('Youth Help Board', () => {
     const later = `Read my letter ${stamp}`      // in 5 days; Easy, 15 min = 5 points
     const sortBy = page.getByLabel('Sort by')
 
-    await login(page, 'Senior', 'Mr Lim')
+    await login(page, 'Senior', 'Mr Ong')
     await postRequest(page, { title: soon, neededAt: futureTime(2), difficulty: 'Hard', duration: '90 min' })
     await postRequest(page, { title: later, neededAt: futureTime(5), difficulty: 'Easy', duration: '15 min' })
     await switchTo(page, 'Youth', 'Wei Jie')
@@ -366,7 +369,7 @@ test.describe('Youth Help Board', () => {
     const fresh = uniqueTitle('Help me wrap a present')
 
     // Medium, 45 min = 30 points. The senior's own cards stay simple.
-    await login(page, 'Senior', 'Mr Lim')
+    await login(page, 'Senior', 'Mr Koh')
     await postRequest(page, { title: old, difficulty: 'Medium', duration: '45 min' })
     await postRequest(page, { title: fresh })
     await expect(card(page, old).getByTestId('card-stats')).toHaveCount(0)
@@ -441,7 +444,7 @@ test.describe('Accepting', () => {
     const titles = [uniqueTitle('Help with phone'), uniqueTitle('Help with laptop'), uniqueTitle('Help with tablet')]
     const activeCount = page.getByTestId('active-count')
 
-    await login(page, 'Senior', 'Mdm Fatimah')
+    await login(page, 'Senior', 'Mdm Rani')
     for (const title of titles) await postRequest(page, { title })
     await switchTo(page, 'Youth', 'Daniel')   // new, so no tasks yet
 
@@ -465,14 +468,14 @@ test.describe('Accepting', () => {
   test('If the request was cancelled meanwhile, accepting shows why and the card goes away', async ({ page, browser }) => {
     const title = uniqueTitle('Help me with my phone bill')
 
-    await login(page, 'Senior', 'Mdm Fatimah')
+    await login(page, 'Senior', 'Mdm Siew')
     await postRequest(page, { title })
     await switchTo(page, 'Youth', 'Aisha')
     await expect(card(page, title)).toBeVisible()
 
     // Meanwhile, in another browser, the senior cancels it
     const seniorPage = await (await browser.newContext()).newPage()
-    await login(seniorPage, 'Senior', 'Mdm Fatimah')
+    await login(seniorPage, 'Senior', 'Mdm Siew')
     await card(seniorPage, title).getByTestId('cancel').click()
     await seniorPage.getByTestId('confirm-cancel').click()
     await expect(card(seniorPage, title).locator('.status-pill')).toHaveText('Cancelled')
@@ -569,13 +572,102 @@ test.describe('My Tasks', () => {
     const title = uniqueTitle('Help me read my bill')
     const inPast = page.getByTestId('past-requests').locator('.request-card', { hasText: title })
 
-    await postAndAccept(page, { senior: 'Uncle Raj', youth: 'Siti', request: { title } })
+    await postAndAccept(page, { senior: 'Auntie Mei', youth: 'Siti', request: { title } })
     await markTaskDone(page, title)
-    await switchTo(page, 'Senior', 'Uncle Raj')
+    await switchTo(page, 'Senior', 'Auntie Mei')
     await confirmTaskDone(page, title)
     await expect(inPast).toContainText('Done')
     await openCard(page, title)
     await expect(inPast.getByTestId('delete')).toHaveCount(0)
+  })
+})
+
+
+test.describe('Daily limit', () => {
+  test.beforeAll(forgetAccounts)
+
+  const LIMIT_NOTE = 'You have posted 3 requests today. You can ask for more help tomorrow.'
+
+  // A new senior posts 3 requests. Ends on My Requests.
+  async function postThree(page, senior) {
+    const titles = [uniqueTitle('Help me with my radio'), uniqueTitle('Help me with my fan'), uniqueTitle('Help me with my lamp')]
+    await login(page, 'Senior', senior)
+    for (const title of titles) await postRequest(page, { title })
+    return titles
+  }
+
+  test('Posting 3 requests updates the count, and the note replaces "+ Ask for Help"', async ({ page }) => {
+    const count = page.getByTestId('daily-count')
+    const askForHelp = page.getByRole('link', { name: '+ Ask for Help' })
+
+    await login(page, 'Senior', 'Mdm Ng')
+    await expect(page.getByText('You have not asked for help yet')).toBeVisible()
+    await expect(count).toHaveCount(0)
+
+    await postRequest(page, { title: uniqueTitle('Help me with my radio') })
+    await expect(count).toHaveText('You can post 3 requests a day. You have posted 1 today.')
+    await postRequest(page, { title: uniqueTitle('Help me with my fan') })
+    await expect(count).toHaveText('You can post 3 requests a day. You have posted 2 today.')
+    await expect(askForHelp).toBeVisible()
+
+    await postRequest(page, { title: uniqueTitle('Help me with my lamp') })
+    await expect(count).toHaveText('You can post 3 requests a day. You have posted 3 today.')
+    await expect(page.getByTestId('daily-limit-note')).toHaveText(LIMIT_NOTE)
+    await expect(askForHelp).toHaveCount(0)
+  })
+
+  test('At the limit the create page shows the note instead of the form, even if reached in another tab', async ({ page, browser }) => {
+    const post = page.getByRole('button', { name: 'Post request' })
+
+    await login(page, 'Senior', 'Mdm Chua')
+    await postRequest(page, { title: uniqueTitle('Help me with my radio') })
+    await postRequest(page, { title: uniqueTitle('Help me with my fan') })
+
+    // The form is open with 2 posted, then the 3rd is posted in another tab
+    await page.goto('/app/requests/create')
+    await fillRequest(page, { title: uniqueTitle('Help me with my kettle') })
+    const otherTab = await (await browser.newContext()).newPage()
+    await mockOneMap(otherTab)
+    await login(otherTab, 'Senior', 'Mdm Chua')
+    await postRequest(otherTab, { title: uniqueTitle('Help me with my lamp') })
+    await otherTab.context().close()
+
+    // The database refuses the 4th, and the page says so
+    await post.click()
+    await expect(page.getByTestId('create-error')).toHaveText('You can post up to 3 help requests a day. Please try again tomorrow.')
+    await expect(post).toHaveCount(0)
+    await expect(page).toHaveURL(/\/app\/requests\/create$/)
+
+    // Opening the create page again: the note and a way back, no form
+    await page.goto('/app/requests/create')
+    await expect(page.getByTestId('daily-limit-note')).toHaveText(LIMIT_NOTE)
+    await expect(post).toHaveCount(0)
+    await page.getByRole('link', { name: 'Back to my requests' }).click()
+    await expect(page).toHaveURL(/\/app\/requests$/)
+  })
+
+  test('Cancelling one of the 3 does not bring "+ Ask for Help" back', async ({ page }) => {
+    const [first] = await postThree(page, 'Mr Teo')
+
+    await (await openCard(page, first)).getByTestId('cancel').click()
+    await page.getByTestId('confirm-cancel').click()
+    await expect(card(page, first).locator('.status-pill')).toHaveText('Cancelled')
+    await expect(page.getByTestId('daily-count')).toContainText('You have posted 3 today.')
+    await expect(page.getByTestId('daily-limit-note')).toBeVisible()
+    await expect(page.getByRole('link', { name: '+ Ask for Help' })).toHaveCount(0)
+  })
+
+  test('Editing a request still works at the limit', async ({ page }) => {
+    const [first] = await postThree(page, 'Mr Wong')
+    const newTitle = uniqueTitle('Help me with my old radio')
+
+    await (await openCard(page, first)).getByRole('link', { name: 'Edit' }).click()
+    await page.getByLabel('Short title').fill(newTitle)
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await expect(page).toHaveURL(/\/app\/requests$/)
+    rememberRequest(newTitle)
+    await expect(card(page, newTitle)).toBeVisible()
+    await expect(page.getByTestId('daily-limit-note')).toBeVisible()
   })
 })
 

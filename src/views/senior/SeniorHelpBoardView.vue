@@ -1,7 +1,9 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useAuthStore } from '../../stores/auth.js'
-import { useHelpRequestStore, isPastTime, formatNeededAt } from '../../stores/helpRequest.js'
+import {
+  useHelpRequestStore, isPastTime, formatNeededAt, MAX_REQUESTS_PER_DAY, DAILY_LIMIT_NOTE,
+} from '../../stores/helpRequest.js'
 import EmptyState from '../../components/EmptyState.vue'
 import RequestCard from '../../components/RequestCard.vue'
 import ConfirmModal from '../../components/ConfirmModal.vue'
@@ -99,8 +101,14 @@ onMounted(store.load)
       <div>
         <h1 class="page-title">Hello, {{ auth.user.name }}</h1>
         <p class="page-subtitle">Your help requests</p>
+        <p v-if="store.postedTodayCount > 0" class="daily-count" data-testid="daily-count">
+          You can post {{ MAX_REQUESTS_PER_DAY }} requests a day. You have posted {{ store.postedTodayCount }} today.
+        </p>
       </div>
-      <router-link v-if="store.myRequests.length > 0" to="/app/requests/create" class="btn btn-primary btn-lg">+ Ask for Help</router-link>
+      <template v-if="store.myRequests.length > 0">
+        <p v-if="store.dailyLimitReached" class="limit-note" data-testid="daily-limit-note">{{ DAILY_LIMIT_NOTE }}</p>
+        <router-link v-else to="/app/requests/create" class="btn btn-primary btn-lg">+ Ask for Help</router-link>
+      </template>
     </div>
 
     <div v-if="message" ref="successAlert" class="alert alert-success closable-alert" role="status" tabindex="-1"
@@ -118,7 +126,8 @@ onMounted(store.load)
     </div>
 
     <EmptyState v-else-if="store.myRequests.length === 0" message="You have not asked for help yet. It is okay to ask!">
-      <router-link to="/app/requests/create" class="btn btn-primary btn-lg mt-4">+ Ask for Help</router-link>
+      <p v-if="store.dailyLimitReached" class="limit-note mt-4" data-testid="daily-limit-note">{{ DAILY_LIMIT_NOTE }}</p>
+      <router-link v-else to="/app/requests/create" class="btn btn-primary btn-lg mt-4">+ Ask for Help</router-link>
     </EmptyState>
 
     <template v-else>
@@ -197,6 +206,19 @@ onMounted(store.load)
   flex-shrink: 0;
   min-width: 3rem;
   min-height: 3rem;
+}
+
+/* Calm, plain information: no warning colour, it is not a mistake */
+.daily-count {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  color: var(--ks-muted);
+}
+
+.limit-note {
+  max-width: 24rem;
+  margin: 0;
+  font-weight: 600;
 }
 
 .load-error {

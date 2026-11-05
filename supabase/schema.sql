@@ -616,38 +616,6 @@ create table public.hangouts (
   created_at timestamptz not null default now()
 );
 
--- Require at least 24 hours' notice when creating or rescheduling hangouts.
-CREATE OR REPLACE FUNCTION public.hangouts_check_advance_notice()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = ''
-AS $$
-DECLARE
-  hangout_starts_at timestamptz;
-BEGIN
-  hangout_starts_at :=
-    public.skill_session_start(NEW.hangout_date, NEW.hangout_time);
-
-  IF hangout_starts_at < NOW() THEN
-    RAISE EXCEPTION
-      'That day and time have already passed.';
-  END IF;
-
-  IF hangout_starts_at < NOW() + INTERVAL '24 hours' THEN
-    RAISE EXCEPTION
-      'Hangouts must be scheduled at least 24 hours in advance.';
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER hangouts_check_advance_notice
-BEFORE INSERT OR UPDATE OF hangout_date, hangout_time
-ON public.hangouts
-FOR EACH ROW
-EXECUTE FUNCTION public.hangouts_check_advance_notice();
-
 create index on public.hangouts (status);
 create index on public.hangouts (host_id);
 create index on public.hangouts (hotspot_id);
@@ -849,9 +817,9 @@ insert into public.hangouts (host_id, title, description, hotspot_id, hangout_da
 select p.id, v.title, v.description, v.hotspot_id, current_date + v.days, v.at, v.duration
 from (select id from public.profiles order by created_at limit 1) p,
 (values
-  ('Morning walk at the park', 'A gentle walk and a chat. We stop whenever anyone needs a rest.', 'eunos-park', 1, time '07:30', 60),
-  ('Kopi and newspapers', 'Read the papers together over kopi. Come and go as you like.', 'eunos-crescent-market', 2, time '09:00', 60),
-  ('Herb garden morning', 'Watering and weeding together. Gloves provided.', 'eunos-community-garden', 3, time '08:00', 90)
+  ('Morning walk at the park', 'A gentle walk and a chat. We stop whenever anyone needs a rest.', 'eunos-park', 2, time '07:30', 60),
+  ('Kopi and newspapers', 'Read the papers together over kopi. Come and go as you like.', 'eunos-crescent-market', 3, time '09:00', 60),
+  ('Herb garden morning', 'Watering and weeding together. Gloves provided.', 'eunos-community-garden', 4, time '08:00', 90)
 ) as v(title, description, hotspot_id, days, at, duration);
 
 
@@ -2109,3 +2077,44 @@ create trigger help_requests_notice_times
 update public.help_requests
 set marked_done_at = now()
 where status = 'pending_confirmation' and marked_done_at is null;
+
+
+-- ============================================================================
+-- 22. Hangouts: at least 24 hours' notice                    Owner: Kelsey Wong
+-- ============================================================================
+-- Here at the end, not in section 7, because it uses skill_session_start()
+-- from section 8.1, and the sample hangouts in section 7 would fire it before
+-- that exists (the same reason as section 9). The skill swap half of this
+-- rule is in skill_sessions_check(), section 8. For an existing project:
+-- supabase/migrations/20261107130000_advance_notice.sql.
+
+-- A trigger of its own beside hangouts_check (section 9), which keeps its
+-- past-time and guardian checks unchanged.
+create or replace function public.hangouts_check_advance_notice()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  hangout_starts_at timestamptz;
+begin
+  hangout_starts_at := public.skill_session_start(new.hangout_date, new.hangout_time);
+
+  if hangout_starts_at < now() then
+    raise exception 'That day and time have already passed.';
+  end if;
+
+  if hangout_starts_at < now() + interval '24 hours' then
+    raise exception 'Hangouts must be scheduled at least 24 hours in advance.';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.hangouts_check_advance_notice() from public, anon, authenticated;
+
+drop trigger if exists hangouts_check_advance_notice on public.hangouts;
+create trigger hangouts_check_advance_notice
+  before insert or update of hangout_date, hangout_time on public.hangouts
+  for each row execute function public.hangouts_check_advance_notice();

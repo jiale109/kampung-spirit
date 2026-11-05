@@ -98,7 +98,7 @@ const requestsBySenior = {
 // src/lib/hotspots.js.
 const hangoutsByHost = {
   'demo.tan@example.com': [
-    { title: 'Morning walk at the park', description: 'A gentle walk and a chat. We stop whenever anyone needs a rest.', ...placeAt('eunos-park'), hangout_date: dateFromToday(1), hangout_time: '08:30', duration: 60 },
+    { title: 'Morning walk at the park', description: 'A gentle walk and a chat. We stop whenever anyone needs a rest.', ...placeAt('eunos-park'), hangout_date: dateFromToday(2), hangout_time: '08:30', duration: 60 },
   ],
   'demo.fatimah@example.com': [
     { title: 'Herb garden morning', description: 'Watering and weeding together. Gloves provided.', ...placeAt('eunos-community-garden'), hangout_date: dateFromToday(3), hangout_time: '09:00', duration: 90 },

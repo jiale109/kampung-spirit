@@ -304,7 +304,7 @@ as $$
   ]
 $$;
 
--- Contact details are not allowed in requests (people talk through the app).
+-- Contact details are not allowed in requests, because everyone can see them.
 -- Must match CONTACT_PHRASES in src/lib/contentRules.js.
 create function public.contact_phrases()
 returns text[]
@@ -341,7 +341,7 @@ begin
   if t ~ '(^|[^0-9])(\+65 ?)?[689][0-9]{3}[ -]?[0-9]{4}([^0-9]|$)'
      or t ~ '[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+'
      or exists (select 1 from unnest(public.contact_phrases()) p where t ~ ('\m' || p || '\M')) then
-    raise exception 'Please keep contact details out of requests. Talk through the app instead.';
+    raise exception 'Please keep contact details out of requests. Everyone on the Help Board can see them.';
   end if;
   return new;
 end;
@@ -616,38 +616,6 @@ create table public.hangouts (
   created_at timestamptz not null default now()
 );
 
--- Require at least 24 hours' notice when creating or rescheduling hangouts.
-CREATE OR REPLACE FUNCTION public.hangouts_check_advance_notice()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = ''
-AS $$
-DECLARE
-  hangout_starts_at timestamptz;
-BEGIN
-  hangout_starts_at :=
-    public.skill_session_start(NEW.hangout_date, NEW.hangout_time);
-
-  IF hangout_starts_at < NOW() THEN
-    RAISE EXCEPTION
-      'That day and time have already passed.';
-  END IF;
-
-  IF hangout_starts_at < NOW() + INTERVAL '24 hours' THEN
-    RAISE EXCEPTION
-      'Hangouts must be scheduled at least 24 hours in advance.';
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER hangouts_check_advance_notice
-BEFORE INSERT OR UPDATE OF hangout_date, hangout_time
-ON public.hangouts
-FOR EACH ROW
-EXECUTE FUNCTION public.hangouts_check_advance_notice();
-
 create index on public.hangouts (status);
 create index on public.hangouts (host_id);
 create index on public.hangouts (hotspot_id);
@@ -849,9 +817,9 @@ insert into public.hangouts (host_id, title, description, hotspot_id, hangout_da
 select p.id, v.title, v.description, v.hotspot_id, current_date + v.days, v.at, v.duration
 from (select id from public.profiles order by created_at limit 1) p,
 (values
-  ('Morning walk at the park', 'A gentle walk and a chat. We stop whenever anyone needs a rest.', 'eunos-park', 1, time '07:30', 60),
-  ('Kopi and newspapers', 'Read the papers together over kopi. Come and go as you like.', 'eunos-crescent-market', 2, time '09:00', 60),
-  ('Herb garden morning', 'Watering and weeding together. Gloves provided.', 'eunos-community-garden', 3, time '08:00', 90)
+  ('Morning walk at the park', 'A gentle walk and a chat. We stop whenever anyone needs a rest.', 'eunos-park', 2, time '07:30', 60),
+  ('Kopi and newspapers', 'Read the papers together over kopi. Come and go as you like.', 'eunos-crescent-market', 3, time '09:00', 60),
+  ('Herb garden morning', 'Watering and weeding together. Gloves provided.', 'eunos-community-garden', 4, time '08:00', 90)
 ) as v(title, description, hotspot_id, days, at, duration);
 
 
@@ -959,6 +927,9 @@ create table public.skill_session_attendees (
   session_id uuid not null references public.skill_sessions(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
   joined_at timestamptz not null default now(),
+  -- Set by complete_skill_session(): true if the host ticked them as there,
+  -- false if not. null until the session is completed.
+  attended boolean,
   primary key (session_id, user_id)
 );
  
@@ -1121,8 +1092,10 @@ begin
 end;
 $$;
  
--- The host says it happened: the host and everyone with a place earn points
-create function public.complete_skill_session(swap_id uuid)
+-- The host says it happened and ticks who came (attended_ids, on
+-- /app/skill-swaps/:id/attendance): the host and the people who came earn
+-- points. People with a place who did not come get attended = false and no points.
+create function public.complete_skill_session(swap_id uuid, attended_ids uuid[])
 returns void
 language plpgsql
 security definer
@@ -1148,6 +1121,25 @@ begin
     raise exception 'Nobody joined this session, so there are no points to give.';
   end if;
 
+  if attended_ids is null or cardinality(attended_ids) = 0 then
+    raise exception 'Please tick at least one person who came.';
+  end if;
+
+  -- Everyone ticked must have had a place (a null in the list fails this too)
+  if exists (
+    select 1 from unnest(attended_ids) as ticked(user_id)
+    where not exists (
+      select 1 from public.skill_session_attendees a
+      where a.session_id = s.id and a.user_id = ticked.user_id
+    )
+  ) then
+    raise exception 'Some of the people you ticked did not sign up for this session. Please reload the page and try again.';
+  end if;
+
+  update public.skill_session_attendees a
+  set attended = (a.user_id = any(attended_ids))
+  where a.session_id = s.id;
+
   update public.skill_sessions set status = 'completed' where id = s.id;
 
   pts := public.skill_swap_points(s.duration);
@@ -1158,22 +1150,22 @@ begin
   insert into public.points_ledger (user_id, amount, reason)
   select a.user_id, pts, 'Joined skill swap: ' || s.title
   from public.skill_session_attendees a
-  where a.session_id = s.id;
+  where a.session_id = s.id and a.attended;
 end;
 $$;
- 
+
 revoke execute on function
   public.join_skill_session(uuid),
   public.leave_skill_session(uuid),
   public.cancel_skill_session(uuid),
-  public.complete_skill_session(uuid)
+  public.complete_skill_session(uuid, uuid[])
 from public, anon;
- 
+
 grant execute on function
   public.join_skill_session(uuid),
   public.leave_skill_session(uuid),
   public.cancel_skill_session(uuid),
-  public.complete_skill_session(uuid)
+  public.complete_skill_session(uuid, uuid[])
 to authenticated;
  
 grant execute on function public.skill_swap_points(int) to authenticated;
@@ -2042,3 +2034,111 @@ drop trigger if exists help_requests_daily_limit on public.help_requests;
 create trigger help_requests_daily_limit
   before insert on public.help_requests
   for each row execute function public.help_requests_daily_limit();
+
+
+-- ============================================================================
+-- 21. Help requests: Telegram reminders, "nobody could help in time", and
+--     "please confirm"
+-- ============================================================================
+-- The hourly send-reminders function (supabase/functions/send-reminders)
+-- reads these columns to send each message once:
+--   reminder_sent_at        about a day before an accepted request, to the
+--                           helper and the person who asked
+--   expired_notice_sent_at  the time passed while nobody had accepted it, to
+--                           the person who asked
+--   confirm_nudge_sent_at   the helper said it was done a day ago and it is
+--                           still not confirmed, to the person who asked
+-- and marked_done_at is when the helper pressed "done", so it knows when a
+-- day has gone by.
+--
+-- None of these can be written from the browser: help_requests only grants
+-- update on the request's own details (schema.sql section 4).
+
+alter table public.help_requests add column if not exists reminder_sent_at timestamptz;
+alter table public.help_requests add column if not exists expired_notice_sent_at timestamptz;
+alter table public.help_requests add column if not exists confirm_nudge_sent_at timestamptz;
+alter table public.help_requests add column if not exists marked_done_at timestamptz;
+
+-- Keeps those columns right as a request changes, without touching the
+-- functions that change it (accept_help_request and the others): a trigger
+-- on the row, like the rules in sections 18 to 20.
+create or replace function public.help_requests_notice_times()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  -- Moved to a new time: everyone should hear about the new one
+  if new.needed_at is distinct from old.needed_at then
+    new.reminder_sent_at := null;
+    new.expired_notice_sent_at := null;
+  end if;
+
+  -- A different helper (someone withdrew and another accepted): remind them too
+  if new.helper_id is distinct from old.helper_id then
+    new.reminder_sent_at := null;
+  end if;
+
+  -- The helper pressed "done": start the one-day wait before "please confirm"
+  if new.status = 'pending_confirmation' and old.status is distinct from 'pending_confirmation' then
+    new.marked_done_at := now();
+    new.confirm_nudge_sent_at := null;
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.help_requests_notice_times() from public, anon, authenticated;
+
+drop trigger if exists help_requests_notice_times on public.help_requests;
+create trigger help_requests_notice_times
+  before update of needed_at, helper_id, status on public.help_requests
+  for each row execute function public.help_requests_notice_times();
+
+-- Requests already waiting for a confirmation start their day now, so they
+-- get one nudge tomorrow instead of never
+update public.help_requests
+set marked_done_at = now()
+where status = 'pending_confirmation' and marked_done_at is null;
+
+
+-- ============================================================================
+-- 22. Hangouts: at least 24 hours' notice                    Owner: Kelsey Wong
+-- ============================================================================
+-- Here at the end, not in section 7, because it uses skill_session_start()
+-- from section 8.1, and the sample hangouts in section 7 would fire it before
+-- that exists (the same reason as section 9). The skill swap half of this
+-- rule is in skill_sessions_check(), section 8. For an existing project:
+-- supabase/migrations/20261107130000_advance_notice.sql.
+
+-- A trigger of its own beside hangouts_check (section 9), which keeps its
+-- past-time and guardian checks unchanged.
+create or replace function public.hangouts_check_advance_notice()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  hangout_starts_at timestamptz;
+begin
+  hangout_starts_at := public.skill_session_start(new.hangout_date, new.hangout_time);
+
+  if hangout_starts_at < now() then
+    raise exception 'That day and time have already passed.';
+  end if;
+
+  if hangout_starts_at < now() + interval '24 hours' then
+    raise exception 'Hangouts must be scheduled at least 24 hours in advance.';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.hangouts_check_advance_notice() from public, anon, authenticated;
+
+drop trigger if exists hangouts_check_advance_notice on public.hangouts;
+create trigger hangouts_check_advance_notice
+  before insert or update of hangout_date, hangout_time on public.hangouts
+  for each row execute function public.hangouts_check_advance_notice();

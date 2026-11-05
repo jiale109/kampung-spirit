@@ -52,7 +52,7 @@ const safety = [
   },
   {
     title: 'No sharing phone numbers',
-    text: 'Requests cannot include contact details. You talk through the app.',
+    text: 'Requests cannot include phone numbers or other contact details, so yours is never shown on the Help Board.',
   },
   {
     title: 'A heads-up for heavy tasks',

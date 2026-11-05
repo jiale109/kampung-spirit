@@ -17,6 +17,7 @@ import { useAuthStore } from '../stores/auth.js'
 import AuthShell from '../components/AuthShell.vue'
 import PasswordInput from '../components/PasswordInput.vue'
 import HotspotMap from '../components/HotspotMap.vue'
+import { findAddressAt } from '../lib/onemap.js'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -53,11 +54,28 @@ const errors = ref({})
   OneMap's list of Singapore addresses instead, and the map shows the pin so
   the person can check it is really their block before carrying on.
 
-  The map here is NOT pickable, unlike the one on the hangout form. Tapping a
-  spot gives coordinates with no name, which is fine for "meet me by the big
-  tree" but not for a home address.
+  Tapping the map works too, but not the way it does on the hangout form,
+  where a tapped spot is just coordinates the host names. Here the tap is
+  looked up (findAddressAt in lib/onemap.js) and becomes OneMap's address for
+  the block there, the same as if it had been searched for.
 */
 const chosenAddress = ref(null)
+const addressMap = ref(null)
+const lookingUpAddress = ref(false)
+
+async function onMapTapped({ lat, lng }) {
+  errors.value.block = ''
+  lookingUpAddress.value = true
+  const result = await findAddressAt(lat, lng)
+  lookingUpAddress.value = false
+  if (!result.ok) {
+    errors.value.block = result.error
+    return
+  }
+  // Move the pin from where the finger landed onto the block itself
+  addressMap.value?.showPlace(result.place)
+  onAddressFound(result.place)
+}
 
 function onAddressFound(place) {
   chosenAddress.value = place
@@ -227,7 +245,8 @@ async function submit() {
         <div class="form-label">Block and street</div>
         <p class="page-subtitle mb-2">
           Neighbours come to this address to help you, so please pick it from the list
-          rather than typing it. Search for your block number and street, like &ldquo;Blk 123&rdquo; and the street name.
+          rather than typing it. Search for your block number and street, like &ldquo;Blk 123&rdquo; and the street name,
+          or tap your block on the map.
         </p>
 
         <!-- Shown once a real address has been chosen -->
@@ -238,9 +257,10 @@ async function submit() {
             data-testid="change-address" @click="changeAddress">Change</button>
         </div>
 
-        <!-- No "pickable": a home address must be a real one from OneMap,
-             not a spot tapped on the map with a name typed beside it -->
-        <HotspotMap label="Find your block" @select="onAddressFound" />
+        <!-- A tap is looked up and becomes a real OneMap address (onMapTapped) -->
+        <HotspotMap ref="addressMap" label="Find your block" pickable
+          @select="onAddressFound" @pick="onMapTapped" />
+        <p v-if="lookingUpAddress" class="page-subtitle mt-2 mb-0" role="status">Finding the address there…</p>
 
         <div v-if="errors.block" class="invalid-feedback d-block" role="alert"
           data-testid="block-error">{{ errors.block }}</div>

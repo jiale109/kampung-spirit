@@ -7,7 +7,7 @@ the only place that talks to Telegram, because the bot token must stay secret.
 |---|---|---|
 | `telegram-webhook` | Telegram, when someone messages the bot | `/start <code>` links an account, `/stop` unlinks, `/help` explains |
 | `notify` | Database Webhooks (7 of them, below) | Sends a message when a request is accepted, withdrawn, done, confirmed or cancelled; when someone joins your skill swap or hangout; when one you joined is cancelled |
-| `send-reminders` | A Supabase Cron job, every hour | One reminder about a day before each skill swap and hangout, to everyone going |
+| `send-reminders` | A Supabase Cron job, every hour | One reminder about a day before each skill swap, hangout and accepted help request; "nobody could help in time" when an open request's time passes; "please confirm" a day after a helper says a request is done |
 | `telegram-account` | The Profile page (axios) | `POST` sends a test message, `DELETE` disconnects |
 | `_shared/telegram.js` | The four above | Sending messages, looking up names, date formatting |
 
@@ -15,6 +15,8 @@ The database part (tables `telegram_links` and `telegram_link_codes`, the
 function `create_telegram_link_code()`, and `reminder_sent_at` columns) is
 section 14 of `supabase/schema.sql`, or
 `supabase/migrations/20261026120000_telegram.sql` for an existing project.
+The help request reminders also need section 21
+(`supabase/migrations/20261107120000_help_request_reminders.sql`).
 
 ## Setup (once per Supabase project)
 

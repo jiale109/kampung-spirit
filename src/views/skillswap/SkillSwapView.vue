@@ -10,16 +10,16 @@
 
   Uses: stores/skillSwap.js (rules repeated from supabase/schema.sql section
   8), lib/skillSwapFormat.js (formatting, CATEGORIES, option lists),
-  components/SkillSwapCard.vue and SkillSwapForm.vue. Completing a session
-  pays points in complete_skill_session() in the database.
+  components/SkillSwapCard.vue and SkillSwapForm.vue. The host's "Mark as
+  completed" opens SkillSwapAttendanceView.vue, where they tick who came;
+  complete_skill_session() in the database then pays only those people.
 
-  STILL LEFT: onCancel uses window.confirm(); a modal like the one in
-  views/senior/SeniorHelpBoardView.vue is easier for seniors to read. The
-  counts in categoryOptions are worked out but not shown. The e2e test only
-  covers hosting, not joining, a full session or cancelling.
+  STILL LEFT: The counts in categoryOptions are worked out but not shown.
+  The e2e test only covers hosting, not joining, a full session or
+  cancelling.
 */
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import EmptyState from '../../components/EmptyState.vue'
 import SkillSwapCard from '../../components/SkillSwapCard.vue'
@@ -65,6 +65,7 @@ const pickedPoint = ref(null)
 // it is built and none has to be added afterwards
 const mapReady = ref(false)
 const notice = ref(null) // { kind: 'ok' | 'error', text }
+const noticeAlert = ref(null)
 
 //to allow user to filter all events, going, hosting 
 const tabs = [
@@ -249,8 +250,19 @@ async function onJoin(s) {
 }
 const onLeave = (s) => act(() => store.cancelRsvp(s.id), `Your place in “${s.title}” is cancelled.`)
  
+// Host: cancel a session after "Yes, cancel it" in the modal below, which is
+// easier to read than the browser's own pop-up and says plainly which button
+// keeps it
+const sessionToCancel = ref(null)
+
 function onCancel(s) {
-  if (!window.confirm(`Cancel “${s.title}”? People who joined will lose their place.`)) return
+  notice.value = null
+  sessionToCancel.value = s
+}
+
+function confirmCancel() {
+  const s = sessionToCancel.value
+  sessionToCancel.value = null
   return act(() => store.cancelSession(s.id), `“${s.title}” is cancelled.`)
 }
  
@@ -269,21 +281,23 @@ function confirmDelete() {
   return act(() => store.adminDelete(s.id), `“${s.title}” has been deleted.`)
 }
 
-async function onComplete(s) {
-  if (busy.value) return
-  busy.value = true
-  const result = await store.completeSession(s.id)
-  report(
-    result,
-    `“${s.title}” is marked as completed. Everyone who took part earns ${result.points} points.`,
-  )
-  busy.value = false
-}
  
 onMounted(() => {
   // Arriving from the host form after sharing a session.
   if (route.query.created) {
     notice.value = { kind: 'ok', text: 'Your session is shared. Neighbours can now join it.' }
+  }
+  // Arriving from the attendance page after the host confirmed who came
+  const came = Number(route.query.completed)
+  const each = Number(route.query.points)
+  if (Number.isInteger(came) && came > 0 && Number.isInteger(each)) {
+    notice.value = {
+      kind: 'ok',
+      text: came === 1
+        ? `Done! 1 person earned ${each} points.`
+        : `Done! ${came} people earned ${each} points each.`,
+    }
+    nextTick(() => noticeAlert.value?.focus())
   }
   store.load().then(() => {
     mapReady.value = true
@@ -301,7 +315,7 @@ onMounted(() => {
       <RouterLink v-if="!auth.isAdmin" :to="createPath" class="btn btn-primary btn-lg">Host a session</RouterLink>
     </div>
     <p v-if="!auth.isAdmin" class="points-note mt-4">
-      Hosting or joining a session earns you points once the host marks it as completed.
+      Hosting a session, or going to one, earns you points once the host confirms who came.
     </p>
 
     <!--all | hosting | going-->
@@ -404,6 +418,9 @@ onMounted(() => {
  
     <div
       v-if="notice"
+      ref="noticeAlert"
+      tabindex="-1"
+      data-testid="swap-notice"
       class="alert"
       :class="notice.kind === 'ok' ? 'alert-success' : 'alert-danger'"
       :role="notice.kind === 'error' ? 'alert' : 'status'"
@@ -429,9 +446,13 @@ onMounted(() => {
         @join="onJoin"
         @leave="onLeave"
         @cancel="onCancel"
-        @complete="onComplete"
       />
     </div>
+
+    <ConfirmModal v-if="sessionToCancel" title="Cancel this session?"
+      :message="`People who joined “${sessionToCancel.title}” will lose their place and be told it is off. This cannot be undone.`"
+      confirm-label="Yes, cancel it" cancel-label="No, keep it" danger testid="confirm-cancel-session"
+      @confirm="confirmCancel" @cancel="sessionToCancel = null" />
 
     <ConfirmModal v-if="sessionToDelete" title="Delete this session?"
       message="It will be removed for everyone. This cannot be undone."
@@ -441,3 +462,9 @@ onMounted(() => {
 
 </template>
 
+<style scoped>
+.alert[tabindex='-1']:focus {
+  outline: 3px solid var(--ks-teal-dark);
+  outline-offset: 3px;
+}
+</style>

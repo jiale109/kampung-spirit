@@ -35,7 +35,7 @@ const props = defineProps({
   // One line of help between the search box and the map. Left out, nothing
   // is shown, so a page that explains itself above the card says it once.
   hint: { type: String, default: '' },
-  // true on the propose form: tapping the map drops the pin there
+  // true where tapping the map should drop the pin there (and emit 'pick')
   pickable: { type: Boolean, default: false },
 })
 
@@ -44,9 +44,9 @@ const props = defineProps({
   select: a place chosen from the OneMap search, with a name.
   pick:   a spot tapped on the map. There is no name for it, because reading
           a name back from coordinates needs OneMap's reverse geocode, which
-          needs a token, and tokens last about 3 days. The form asks the host
-          to name the spot instead, which also reads better than OneMap's own
-          names for some buildings.
+          needs a token, and tokens last about 3 days. The hangout and request
+          forms ask for a name instead; the home address forms look the block
+          up with findAddressAt() in lib/onemap.js.
 */
 const emit = defineEmits(['select', 'pick', 'marker'])
 
@@ -129,13 +129,25 @@ function dropPin(lat, lng, label) {
   searchMarker.bindPopup(`<strong>${label}</strong>`).openPopup()
 }
 
-// A place picked from the OneMap search: move there and mark it
-function goTo(place) {
+// Move there and mark it, without telling the page
+function showPlace(place) {
   if (!map) return
   dropPin(place.lat, place.lng, place.name)
   map.setView([place.lat, place.lng], 17)
+}
+
+// A place picked from the OneMap search: move there and mark it
+function goTo(place) {
+  showPlace(place)
   emit('select', place)
 }
+
+/*
+  For a page that works out the place itself after a tap (the home address
+  on sign-up and Edit profile, see findAddressAt in lib/onemap.js): it moves
+  the pin from the tapped spot onto the block that was found.
+*/
+defineExpose({ showPlace })
 </script>
 
 <template>

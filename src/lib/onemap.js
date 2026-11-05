@@ -15,6 +15,7 @@
   Docs: https://www.onemap.gov.sg/apidocs
 */
 import axios from 'axios'
+import { distanceKm } from './nearby.js'
 
 const BASE = 'https://www.onemap.gov.sg'
 const token = import.meta.env.VITE_ONEMAP_TOKEN
@@ -151,4 +152,62 @@ export async function searchAddress(searchVal) {
     console.error('OneMap search failed:', e.message)
     return []
   }
+}
+
+/*
+  THE HOME ADDRESS AT A SPOT TAPPED ON THE MAP
+  (sign-up and Edit profile, where a home address has to be a real one)
+
+  OneMap can turn coordinates back into an address (reverse geocode), but
+  only with a token, and tokens last about 3 days. So it takes two steps:
+
+    1. OpenStreetMap's Nominatim, which needs no key, says which block and
+       street the spot is on: "4A", "Eunos Crescent".
+    2. That goes through searchAddress() above, so the address that is saved
+       is OneMap's own, exactly as if the person had searched for it.
+
+  Step 2 matters: OpenStreetMap's postcodes are not always right (it has
+  401004 for Blk 4A Eunos Crescent; OneMap has 402004). Only a OneMap result
+  within MAX_DISTANCE_KM of the tap is accepted, so a block of the same
+  number on another street of the same name cannot slip in.
+
+  Nominatim allows about one request a second and asks apps to say who they
+  are; the browser sends the page address as the Referer, which is enough
+  for a tap now and then. Docs: https://nominatim.org/release-docs/latest/api/Reverse/
+
+  Returns { ok: true, place } (the same shape as a search result) or
+  { ok: false, error: 'Plain message' }. Never throws.
+*/
+const NOMINATIM = 'https://nominatim.openstreetmap.org/reverse'
+const MAX_DISTANCE_KM = 0.15
+
+export async function findAddressAt(lat, lng) {
+  const notFound = {
+    ok: false,
+    error: 'We could not find a block where you tapped. Please tap right on your block, or search for it above.',
+  }
+
+  let address
+  try {
+    const response = await axios.get(NOMINATIM, {
+      params: { format: 'jsonv2', lat, lon: lng, zoom: 18, addressdetails: 1, 'accept-language': 'en' },
+      timeout: 10000,
+    })
+    address = response.data?.address
+  } catch (e) {
+    console.error('Address lookup failed:', e.message)
+    return { ok: false, error: 'We could not look up that spot just now. Please search for your block above instead.' }
+  }
+
+  const block = address?.house_number
+  const street = address?.road
+  if (!block || !street) return notFound
+
+  const results = await searchAddress(`${block} ${street}`)
+  const nearest = results
+    .map((place) => ({ place, km: distanceKm(lat, lng, place.lat, place.lng) }))
+    .filter((r) => r.km <= MAX_DISTANCE_KM)
+    .sort((a, b) => a.km - b.km)[0]
+
+  return nearest ? { ok: true, place: nearest.place } : notFound
 }

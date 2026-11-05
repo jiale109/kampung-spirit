@@ -144,6 +144,11 @@ const UI = {
 
   // Opening and closing the card
   'Show details': { 'zh-CN': '查看详情', ms: 'Lihat butiran', ta: 'விவரங்களைக் காட்டு' },
+  'Click to keep open': {
+    'zh-CN': '点击保持展开',
+    ms: 'Klik untuk kekal terbuka',
+    ta: 'திறந்தே வைக்க கிளிக் செய்க',
+  },
   'Hide details': { 'zh-CN': '收起详情', ms: 'Sembunyikan butiran', ta: 'விவரங்களை மறை' },
 
   'Waiting for a helper for {n} days': {

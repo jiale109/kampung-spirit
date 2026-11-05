@@ -13,15 +13,20 @@
 */
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
+/*
+  focus is how far down each photo the faces are (0% top, 100% bottom). The
+  band is cropped to fit the screen, and this keeps the faces in the part
+  that shows. Adding a photo? Open it, look where the faces sit, set focus.
+*/
 const photos = [
-  '/images/landing/photo-1.webp',
-  '/images/landing/photo-2.webp',
-  '/images/landing/photo-3.webp',
-  '/images/landing/photo-4.webp',
-  '/images/landing/photo-5.webp',
-  '/images/landing/photo-6.webp',
-  '/images/landing/photo-7.webp',
-  '/images/landing/photo-8.webp',
+  { src: '/images/landing/photo-1.webp', focus: '25%' },
+  { src: '/images/landing/photo-2.webp', focus: '30%' },
+  { src: '/images/landing/photo-3.webp', focus: '40%' }, // close-up selfie, nearly square
+  { src: '/images/landing/photo-4.webp', focus: '15%' },
+  { src: '/images/landing/photo-5.webp', focus: '30%' },
+  { src: '/images/landing/photo-6.webp', focus: '30%' }, // nearly square
+  { src: '/images/landing/photo-7.webp', focus: '20%' },
+  { src: '/images/landing/photo-8.webp', focus: '35%' },
 ]
 const CHANGE_EVERY_MS = 5000
 
@@ -79,13 +84,15 @@ onUnmounted(() => {
     <div class="hero-photos" aria-hidden="true">
       <!-- Fade (less motion): photos stacked, the current one fully visible -->
       <template v-if="reduceMotion">
-        <img v-for="(src, i) in slides" :key="src" :src="src" alt="" class="hero-photo hero-photo--fade"
+        <img v-for="(photo, i) in slides" :key="photo.src" :src="photo.src" alt="" class="hero-photo hero-photo--fade"
+          :style="{ objectPosition: `center ${photo.focus}` }"
           :class="{ 'is-current': i === index }" />
       </template>
 
       <!-- Slide -->
       <div v-else class="hero-track" :style="trackStyle" @transitionend.self="onSlideEnd">
-        <img v-for="(src, i) in slides" :key="i" :src="src" alt="" class="hero-photo" />
+        <img v-for="(photo, i) in slides" :key="i" :src="photo.src" alt="" class="hero-photo"
+          :style="{ objectPosition: `center ${photo.focus}` }" />
       </div>
 
       <!-- Darkens the bottom so the white words stay easy to read -->
@@ -103,16 +110,33 @@ onUnmounted(() => {
   isolation: isolate;
 }
 
-/* Tall enough to feel like a break in the page, never taller than the screen */
+/*
+  The same shape as the photos (most are about 16:9), so little is cropped
+  and nobody's head is cut off: 56.25vw is 9/16 of the screen width. Never
+  taller than most of the screen, and on phones never so short that the
+  words over the photo have no room.
+*/
 .photo-band {
   justify-content: flex-end;
-  height: clamp(22rem, 70vh, 40rem);
+  height: clamp(16rem, 56.25vw, 85vh);
   /* The photos run edge to edge, but the words line up with the page column */
   padding-inline: max(var(--landing-gutter), calc((100% - var(--landing-width)) / 2));
 }
 
 .photo-band-caption {
   max-width: 22ch;
+}
+
+/* Phones: smaller, so the line takes less of the photo and covers fewer faces */
+@media (max-width: 575.98px) {
+  .photo-band-caption {
+    font-size: 1.3rem;
+  }
+
+  /* A little taller than the photos' shape, so the faces sit above the words */
+  .photo-band {
+    height: 22rem;
+  }
 }
 
 .hero-photos {

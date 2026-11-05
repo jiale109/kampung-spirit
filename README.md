@@ -50,7 +50,7 @@ All demo accounts use the password **`kampung-demo-123`**.
 
 ### Admin account
 
-An admin can see every help request, hangout and skill swap session, and delete any of them. An admin does not take part: they cannot post, accept, host or join anything.
+An admin sees the help requests, hangouts and skill swap sessions that residents can still see (plus requests that are accepted or awaiting confirmation), and can delete any of them. Finished, cancelled and past items are not shown. An admin does not take part: they cannot post, accept, host or join anything.
 
 - **Log in:** type **`admin`** in the email box and the password **`admin123!`**. (The full email is `admin@example.com`.)
 - **Created by** `pnpm seed:demo`, like the other demo accounts.

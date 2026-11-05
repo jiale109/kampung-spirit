@@ -255,7 +255,7 @@ async function complete(hangout) {
 
     <!-- Yours first, then everyone else's. A heading only appears when that
          half has something in it, so nobody is shown an empty box. -->
-    <!-- Admin: every open hangout in one list, ended ones too, each with Delete -->
+    <!-- Admin: every open hangout that has not ended, in one list, each with Delete -->
     <section v-else-if="auth.isAdmin" data-testid="admin-hangouts">
       <h2 class="page-title fs-4 mb-3">
         All hangouts

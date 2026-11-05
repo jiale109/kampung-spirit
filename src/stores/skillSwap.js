@@ -72,8 +72,8 @@ export const useSkillSwapStore = defineStore('skillSwap', () => {
   const hasStarted = (item) => sessionStart(item.date, item.time) <= now.value
   const hasEnded = (item) => sessionEnd(item.date, item.time, item.duration) <= now.value
   // Ended items stay for their host only, until they mark them done or cancel.
-  // An admin sees them all, so they can tidy up ones nobody closed.
-  const stillShown = (item) => !hasEnded(item) || isHost(item) || auth.isAdmin
+  // An admin sees the same as everyone else: nothing that has already ended.
+  const stillShown = (item) => !hasEnded(item) || isHost(item)
  
   const needSignIn = () => ({ ok: false, error: 'Please sign in first.' })
   const notFound = () => ({ ok: false, error: 'We could not find that session.' })

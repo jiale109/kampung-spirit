@@ -2506,7 +2506,7 @@ form.d-grid {
 .btn-primary:not(.day-cell),
 .btn-outline-primary:not(.day-cell),
 .btn-outline-secondary:not(.day-cell):not(.month-nav),
-.btn-outline-danger
+.btn-outline-danger,
 .btn-danger {
   --cta-accent: #f2c14e;
   font-weight: 700;
@@ -2573,7 +2573,7 @@ form.d-grid {
     0 0 1.1rem 0.15rem var(--danger-accent);
 }
 
-.btn-outline-danger:hover,
+
 .btn-outline-danger:focus-visible {
   color: #fff;
   background: var(--ks-danger);

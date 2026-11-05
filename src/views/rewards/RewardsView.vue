@@ -430,7 +430,7 @@ async function markUsed(id) {
 }
 
 .challenge-progress {
-  height: 20px;
+  height: 30px;
   background: rgba(255, 255, 255, 0.25);
   border: 0.125rem solid #06101a;
   border-radius: 0.35rem;

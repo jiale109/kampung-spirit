@@ -15,13 +15,25 @@ import { adminClient, sendMessage } from '../_shared/telegram.js'
 
 const WEBHOOK_SECRET = Deno.env.get('TELEGRAM_WEBHOOK_SECRET')
 
+// Keep in step with what supabase/functions/notify and send-reminders send
 const HELP_TEXT = [
   'I send short messages from Kampung Spirit:',
-  '• when a neighbour agrees to help with your request',
-  '• when your helper says the task is done',
+  '',
+  'Your help requests',
+  '• when a neighbour agrees to help, or can no longer help',
+  '• a reminder the day before',
+  '• when your helper says it is done, and a nudge if you have not confirmed',
+  '• if nobody could help in time',
+  '',
+  'Tasks you are helping with',
+  '• a reminder the day before',
+  '• if the request is cancelled',
   '• when you earn points',
-  '• when someone joins your skill swap or hangout',
-  '• a reminder the day before a skill swap or hangout you joined',
+  '',
+  'Skill swaps and hangouts',
+  '• when someone joins or leaves one you host',
+  '• if one you joined is cancelled',
+  '• a reminder the day before',
   '',
   'To connect, open Kampung Spirit, go to Profile and press "Get updates on Telegram".',
   'Send /stop to turn messages off.',

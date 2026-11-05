@@ -1,6 +1,7 @@
 // send-reminders: run every hour by a Supabase Cron job. Sends, once each:
 //   - a reminder about a day before each skill swap and hangout, to everyone
-//     going (host included)
+//     going (host included). For an OUTDOOR hangout it adds the weather
+//     forecast for that place and time (data.gov.sg, see forecastFor below)
 //   - a reminder about a day before each accepted help request, to the helper
 //     and the person who asked
 //   - "nobody could help in time" when an open request's time passes, to the
@@ -25,6 +26,90 @@ const DAY_MS = 24 * 60 * 60 * 1000
 // Only requests whose time passed in the last week get "nobody could help",
 // so the first run does not message people about months-old requests
 const EXPIRED_LOOK_BACK_MS = 7 * DAY_MS
+
+/*
+  WEATHER FOR AN OUTDOOR HANGOUT, about a day ahead
+  The app's rain warning (src/lib/weather.js) uses the 2-hour forecast, which
+  is far too short for a reminder sent the day before. data.gov.sg also has:
+    - the 24-hour forecast: the weather for each region (north, south, east,
+      west, central) in 6-hour periods
+    - the 4-day outlook: one forecast per day for the whole of Singapore
+  The 24-hour one is used when it reaches the hangout's start, the 4-day one
+  when the hangout is just beyond it. No key is needed. If either cannot be
+  read, the reminder simply goes without a weather line.
+*/
+const FORECAST_24H = 'https://api-open.data.gov.sg/v2/real-time/api/twenty-four-hr-forecast'
+const FORECAST_4DAY = 'https://api-open.data.gov.sg/v2/real-time/api/four-day-outlook'
+
+// A rough middle point for each region, so a hangout goes to the nearest one
+const REGIONS = {
+  central: [1.3521, 103.8198],
+  east: [1.35, 103.94],
+  north: [1.418, 103.82],
+  south: [1.28, 103.83],
+  west: [1.35, 103.7],
+}
+
+const isWet = (text) => /shower|rain|thunder/i.test(text)
+
+async function readJson(url) {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return await res.json()
+  } catch (e) {
+    console.error('Could not read the weather forecast', url, e.message)
+    return null
+  }
+}
+
+function nearestRegion(lat, lng) {
+  let best = 'central'
+  let bestDistance = Infinity
+  for (const [name, [rLat, rLng]] of Object.entries(REGIONS)) {
+    const d = (lat - rLat) ** 2 + (lng - rLng) ** 2
+    if (d < bestDistance) {
+      bestDistance = d
+      best = name
+    }
+  }
+  return best
+}
+
+// Both forecasts are read at most once per run, and only if an outdoor hangout needs one
+let forecasts = null
+async function loadForecasts() {
+  if (!forecasts) {
+    const [day, outlook] = await Promise.all([readJson(FORECAST_24H), readJson(FORECAST_4DAY)])
+    forecasts = { day: day?.data?.records?.[0], outlook: outlook?.data?.records?.[0] }
+  }
+  return forecasts
+}
+
+// The weather line for an outdoor hangout starting at `start`, or '' if there is none
+async function forecastFor(start, lat, lng) {
+  const { day, outlook } = await loadForecasts()
+
+  const period = day?.periods?.find((p) => new Date(p.timePeriod.start) <= start && start < new Date(p.timePeriod.end))
+  if (period) {
+    const region = nearestRegion(Number(lat), Number(lng))
+    const text = period.regions?.[region]?.text
+    if (text) {
+      return `Weather: ${text.toLowerCase()} expected in the ${region} around then.`
+        + (isWet(text) ? ' Bring an umbrella, and check the app in case the host changes plans.' : '')
+    }
+  }
+
+  // Just beyond the 24-hour forecast: the day's outlook for the whole island
+  const sgDay = new Date(start.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const forDay = outlook?.forecasts?.find((f) => String(f.timestamp).slice(0, 10) === sgDay)
+  const summary = forDay?.forecast?.summary || forDay?.forecast?.text
+  if (summary) {
+    return `Weather that day: ${summary.toLowerCase()}.`
+      + (isWet(summary) ? ' Bring an umbrella, and check the app in case the host changes plans.' : '')
+  }
+  return ''
+}
 
 // A help request's needed_at as "Saturday 1 November, 3:00 pm" (Singapore time)
 function formatNeededAt(iso) {
@@ -71,7 +156,7 @@ Deno.serve(async (req) => {
   // ---- Hangouts ----
   const { data: hangouts, error: hangoutsError } = await db
     .from('hangouts')
-    .select('id, title, place_name, hangout_date, hangout_time')
+    .select('id, title, place_name, hangout_date, hangout_time, outdoor, latitude, longitude')
     .eq('status', 'open')
     .is('reminder_sent_at', null)
     .gte('hangout_date', fromDate)
@@ -81,8 +166,13 @@ Deno.serve(async (req) => {
   for (const h of (hangouts ?? []).filter((h) => startsSoon(h.hangout_date, h.hangout_time))) {
     // The host is in hangout_attendees too, so one list covers everyone going
     const { data: people } = await db.from('hangout_attendees').select('user_id').eq('hangout_id', h.id)
+    const weather = h.outdoor
+      ? await forecastFor(singaporeMoment(h.hangout_date, h.hangout_time), h.latitude, h.longitude)
+      : ''
     sent += await notifyUsers(db, (people ?? []).map((p) => p.user_id),
-      `Reminder: the hangout "${h.title}" is on ${formatWhen(h.hangout_date, h.hangout_time)} at ${h.place_name}.\n\n${openApp('/app/hangouts')}`)
+      `Reminder: the hangout "${h.title}" is on ${formatWhen(h.hangout_date, h.hangout_time)} at ${h.place_name}.`
+      + (weather ? `\n\n${weather}` : '')
+      + `\n\n${openApp('/app/hangouts')}`)
     await db.from('hangouts').update({ reminder_sent_at: now.toISOString() }).eq('id', h.id)
   }
 

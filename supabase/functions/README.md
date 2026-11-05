@@ -7,7 +7,7 @@ the only place that talks to Telegram, because the bot token must stay secret.
 |---|---|---|
 | `telegram-webhook` | Telegram, when someone messages the bot | `/start <code>` links an account, `/stop` unlinks, `/help` explains |
 | `notify` | Database Webhooks (7 of them, below) | Sends a message when a request is accepted, withdrawn, done, confirmed or cancelled; when someone joins your skill swap or hangout; when one you joined is cancelled |
-| `send-reminders` | A Supabase Cron job, every hour | One reminder about a day before each skill swap, hangout and accepted help request; "nobody could help in time" when an open request's time passes; "please confirm" a day after a helper says a request is done |
+| `send-reminders` | A Supabase Cron job, every hour | One reminder about a day before each skill swap, hangout and accepted help request (outdoor hangouts include the data.gov.sg weather forecast); "nobody could help in time" when an open request's time passes; "please confirm" a day after a helper says a request is done |
 | `telegram-account` | The Profile page (axios) | `POST` sends a test message, `DELETE` disconnects |
 | `_shared/telegram.js` | The four above | Sending messages, looking up names, date formatting |
 

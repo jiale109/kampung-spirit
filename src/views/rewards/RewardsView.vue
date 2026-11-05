@@ -358,12 +358,12 @@ async function markUsed(id) {
               <strong>Terms:</strong> {{ activeModalVoucher.terms }}
             </small>
           </div>
-          <div class="modal-footer border-0 pt-0 d-flex flex-column-reverse flex-sm-row justify-content-sm-end gap-2">
-            <button type="button" class="btn btn-outline-secondary w-100 w-sm-auto px-4"
+          <div class="modal-footer border-0 pt-0 d-flex flex-column flex-sm-row justify-content-sm-end gap-2">
+            <button type="button" class="btn btn-outline-secondary modal-action px-4"
               @click="activeModalVoucher = null">
               Close
             </button>
-            <button type="button" class="btn btn-primary px-4 w-100 w-sm-auto"
+            <button type="button" class="btn btn-primary px-4 modal-action"
               :disabled="pointsStore.myPoints < activeModalVoucher.cost" @click="promptRedeem(activeModalVoucher)">
               {{
                 pointsStore.myPoints >= activeModalVoucher.cost
@@ -394,12 +394,12 @@ async function markUsed(id) {
             </p>
             <p class="text-muted small mb-0">Points cannot be refunded once redeemed.</p>
           </div>
-          <div class="modal-footer d-flex flex-column-reverse flex-sm-row gap-2">
-            <button type="button" class="btn btn-outline-secondary w-100 w-sm-auto px-3"
+          <div class="modal-footer d-flex flex-column flex-sm-row gap-2">
+            <button type="button" class="btn btn-outline-secondary modal-action px-3"
               @click="voucherToConfirm = null">
               Keep my points
             </button>
-            <button type="button" class="btn btn-primary w-100 w-sm-auto px-4" data-testid="confirm-redeem"
+            <button type="button" class="btn btn-primary modal-action px-4" data-testid="confirm-redeem"
               :disabled="redeeming" @click="confirmRedeem">
               {{ redeeming ? 'Redeeming...' : 'Yes, redeem' }}
             </button>
@@ -413,6 +413,33 @@ async function markUsed(id) {
 </template>
 
 <style scoped>
+/*
+  The voucher pop-up buttons: full width and stacked on a phone (bigger to
+  press), side by side from 576px up. The order is the same at every size:
+  top to bottom on a phone is left to right on a bigger screen.
+
+  From 576px they share the row equally (flex: 1), so they never spill out
+  of the pop-up, even with large text: a long label wraps inside its own
+  button instead. Bootstrap has no "w-sm-auto" class (its w-* utilities do
+  not change at breakpoints), which is why this lives here.
+*/
+.modal-action {
+  width: 100%;
+}
+
+@media (min-width: 576px) {
+  .modal-action {
+    flex: 1 1 0;
+    width: auto;
+  }
+
+  /* Both the same height when one label wraps to two lines (the words stay
+     in the middle: .btn centres its contents, theme.css section 3) */
+  .modal-footer:has(.modal-action) {
+    align-items: stretch;
+  }
+}
+
 .community-challenge-card {
   background: #0b6e6e;
 }

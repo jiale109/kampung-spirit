@@ -314,7 +314,7 @@ onMounted(() => {
       </div>
       <RouterLink v-if="!auth.isAdmin" :to="createPath" class="btn btn-primary btn-lg">Host a session</RouterLink>
     </div>
-    <p v-if="!auth.isAdmin" class="points-note mt-4">
+    <p v-if="!auth.isAdmin" class="points-note mt-4 mb-4">
       Hosting a session, or going to one, earns you points once the host confirms who came.
     </p>
 

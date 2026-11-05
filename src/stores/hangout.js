@@ -163,9 +163,18 @@ export const useHangoutStore = defineStore('hangout', () => {
       return { ok: false, error: 'That place is not in Singapore. Please choose somewhere closer to home.' }
     }
     if (!HANGOUT_DURATIONS.includes(duration)) return { ok: false, error: 'Please choose how long it will last.' }
-    if (!data.date || !data.time) return { ok: false, error: 'Please choose a day and a time.' }
-    if (sessionStart(data.date, data.time) < new Date()) {
-      return { ok: false, error: 'That day and time have already passed.' }
+    if (!data.date || !data.time) {
+      return { ok: false, error: 'Please choose a day and a time.' }
+    }
+
+    const startTime = sessionStart(data.date, data.time)
+    const MIN_NOTICE_MS = 24 * 60 * 60 * 1000
+
+    if (startTime.getTime() - Date.now() < MIN_NOTICE_MS) {
+      return {
+        ok: false,
+        error: 'Hangouts must be scheduled at least 24 hours in advance.',
+      }
     }
 
     // host_id is filled in by the database (default auth.uid()), and the

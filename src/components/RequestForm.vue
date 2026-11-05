@@ -54,14 +54,29 @@ function makeTitle(category, details) {
 const nextToday = TIME_OPTIONS.find((t) => sessionStart(FIRST_DAY, t.value) > new Date())
 const firstFree = nextToday ? { date: FIRST_DAY, time: nextToday.value } : { date: dateFromToday(1), time: '09:00' }
 
+/*
+  Rescheduling a request whose day has gone: the old day can no longer be
+  picked, so the day starts empty and the person must choose a new one (the
+  "Please choose the day" check below). The old time is kept if it is one in
+  the list, otherwise the first free time.
+*/
+const savedDate = props.request ? toISO(new Date(props.request.neededAt)) : ''
+const savedTime = props.request ? toTime(props.request.neededAt) : ''
+const dayHasPassed = props.request && savedDate < FIRST_DAY
+const startTime = !props.request
+  ? firstFree.time
+  : !dayHasPassed || TIME_OPTIONS.some((t) => t.value === savedTime)
+    ? savedTime
+    : firstFree.time
+
 const form = ref({
   title: props.request?.title ?? '',
   description: props.request?.description ?? '',
   category: props.request?.category ?? '',
   difficulty: props.request?.difficulty ?? 'Easy',
   duration: props.request?.duration ?? 30,
-  date: props.request ? toISO(new Date(props.request.neededAt)) : firstFree.date,
-  time: props.request ? toTime(props.request.neededAt) : firstFree.time,
+  date: !props.request ? firstFree.date : dayHasPassed ? '' : savedDate,
+  time: startTime,
   location: props.request?.location ?? '',
   // The pin for the place, chosen on the map the same way as components/HangoutForm.vue.
   // Older requests have none, so they start empty and the form asks for one.

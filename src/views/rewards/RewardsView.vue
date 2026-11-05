@@ -133,15 +133,15 @@ async function markUsed(id) {
 <template>
   <div class="rewards-page pb-5">
     <!-- Header with User Balance -->
-    <div class="page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div class="page-header page-accent-violet d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
       <div>
         <h1 class="page-title">Rewards</h1>
         <p class="page-subtitle text-muted">Redeem your kampung points at popular local merchants.</p>
       </div>
       <div>
-        <span class="count-pill is-full" data-testid="rewards-balance">
-           <img src="/images/coin.svg" class="point-coin-img" alt="" />
-           <strong>{{ pointsStore.myPoints }} pts</strong>
+        <span class="points-pill" data-testid="rewards-balance">
+          <img src="/images/coin.svg" class="point-coin-img" alt="" />
+          {{ pointsStore.myPoints }} pts
         </span>
       </div>
     </div>
@@ -158,51 +158,44 @@ async function markUsed(id) {
 
 
     <!--community challenge-->
-    <div class="card border-0 rounded-4 mb-4 text-white overflow-hidden community-challenge-card">
+    <div class="card mb-4 text-white overflow-hidden community-challenge-card">
       <div class="card-body p-4 position-relative">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
           <div>
-            <span class="badge bg-warning text-dark px-3 py-1 rounded-pill  fw-bold mb-1">
-               Monthly Community Challenge
+            <span class="challenge-badge mb-2">
+              Monthly Community Challenge
             </span>
             <h2 class="h5 fw-bold mb-0 text-white">Kampung Spirit Goal</h2>
           </div>
           <!-- Numbers as text -->
           <div class="text-end">
             <span class="fs-5 fw-bold font-monospace">
-              {{ pointsStore.communityPointsThisMonth.toLocaleString() }} of {{ pointsStore.COMMUNITY_TARGET.toLocaleString() }}
+              {{ pointsStore.communityPointsThisMonth.toLocaleString() }} of {{
+                pointsStore.COMMUNITY_TARGET.toLocaleString() }}
             </span>
             <small class="d-block text-white-50">points earned this month</small>
           </div>
         </div>
-
         <!--Progress Bar -->
-        <div
-          class="progress my-3 bg-white bg-opacity-25 rounded-pill"
-          style="height: 18px;"
-          role="progressbar"
-          :aria-valuenow="pointsStore.communityPointsThisMonth"
-          aria-valuemin="0"
+        <div class="progress my-3 challenge-progress" role="progressbar"
+          :aria-valuenow="pointsStore.communityPointsThisMonth" aria-valuemin="0"
           :aria-valuemax="pointsStore.COMMUNITY_TARGET"
-          :aria-label="`Community progress: ${pointsStore.communityProgress}%`"
-        >
-          <div
-            class="progress-bar progress-bar-striped progress-bar-animated bg-warning text-dark fw-bold rounded-pill"
-            :style="{ width: pointsStore.communityProgress + '%' }"
-          >
+          :aria-label="`Community progress: ${pointsStore.communityProgress}%`">
+          <div class="progress-bar progress-bar-striped progress-bar-animated"
+            :style="{ width: pointsStore.communityProgress + '%' }">
             <span v-if="pointsStore.communityProgress >= 15" class="small">
               {{ pointsStore.communityProgress }}%
             </span>
           </div>
         </div>
-
         <!-- Target status & Bonus description -->
         <div class="d-flex flex-wrap justify-content-between align-items-center small text-white-50 gap-2">
           <span>
             {{
               pointsStore.isCommunityTargetReached
                 ? 'Target reached! All contributors received a +50 pts bonus.'
-                : `${(pointsStore.COMMUNITY_TARGET - pointsStore.communityPointsThisMonth).toLocaleString()} more points to unlock a 50 pts bonus for all contributors!`
+                : `${(pointsStore.COMMUNITY_TARGET - pointsStore.communityPointsThisMonth).toLocaleString()} more points to
+            unlock a 50 pts bonus for all contributors!`
             }}
           </span>
           <span class="text-white fw-semibold">{{ pointsStore.communityProgress }}% achieved</span>
@@ -210,26 +203,24 @@ async function markUsed(id) {
       </div>
     </div>
     <!-- Tab Toggle: Browse vs My Wallet -->
-    <div class="btn-group w-100 mb-4" role="group" aria-label="Rewards view">
-      <button
-        type="button"
-        class="btn btn-lg"
-        :class="activeTab === 'shop' ? 'btn-primary' : 'btn-outline-primary'"
-        @click="activeTab = 'shop'"
-      >
-         Browse Vouchers
-      </button>
-      <button
-        type="button"
-        class="btn btn-lg d-flex align-items-center justify-content-center gap-2"
-        :class="activeTab === 'wallet' ? 'btn-primary' : 'btn-outline-primary'"
-        @click="activeTab = 'wallet'"
-      >
-         My Wallet
-        <span v-if="walletStore.unusedCount > 0" class="badge bg-warning text-dark rounded-pill">
-          {{ walletStore.unusedCount }}
-        </span>
-      </button>
+    <div class="row g-2 g-sm-3 mb-4" role="group" aria-label="Rewards view">
+      <div class="col-6">
+        <button type="button"
+          class="btn w-100 py-2 py-sm-3 px-2 d-flex align-items-center justify-content-center text-center"
+          :class="activeTab === 'shop' ? 'btn-primary' : 'btn-outline-primary'" @click="activeTab = 'shop'">
+          Browse Vouchers
+        </button>
+      </div>
+      <div class="col-6">
+        <button type="button"
+          class="btn w-100 py-2 py-sm-3 px-2 d-flex align-items-center justify-content-center gap-1 gap-sm-2 text-center"
+          :class="activeTab === 'wallet' ? 'btn-primary' : 'btn-outline-primary'" @click="activeTab = 'wallet'">
+          <span>My Wallet</span>
+          <span v-if="walletStore.unusedCount > 0" class="badge bg-warning text-dark rounded-1">
+            {{ walletStore.unusedCount }}
+          </span>
+        </button>
+      </div>
     </div>
 
     <!-- Browse Voucher Tab -->
@@ -237,15 +228,9 @@ async function markUsed(id) {
 
       <!-- Category Filters -->
       <div class="d-flex gap-2 overflow-auto pb-2 mb-4" role="tablist">
-        <button
-          v-for="t in voucherTypes"
-          :key="t.name"
-          type="button"
-          class="btn rounded-pill px-3 text-nowrap d-inline-flex align-items-center gap-2"
-          :class="selectedType === t.name ? 'btn-primary active text-white' : 'btn-outline-secondary bg-white'"
-          @click="selectedType = t.name"
-        >
-          <span>{{ t.name }}</span>
+        <button v-for="t in voucherTypes" :key="t.name" type="button" class="category-chip text-nowrap"
+          :class="{ active: selectedType === t.name }" @click="selectedType = t.name">
+          {{ t.name }}
         </button>
       </div>
 
@@ -262,11 +247,8 @@ async function markUsed(id) {
 
       <div v-else class="row row-cols-1 row-cols-md-2 g-4">
         <div v-for="voucher in filteredVouchers" :key="voucher.id" class="col">
-          <VoucherCard
-            :voucher="voucher"
-            :can-afford="pointsStore.myPoints >= voucher.cost"
-            @select="activeModalVoucher = $event"
-          />
+          <VoucherCard :voucher="voucher" :can-afford="pointsStore.myPoints >= voucher.cost"
+            @select="activeModalVoucher = $event" />
         </div>
       </div>
     </div>
@@ -279,10 +261,8 @@ async function markUsed(id) {
       </div>
 
       <!-- Empty State -->
-      <EmptyState
-        v-if="walletStore.myWallet.length === 0"
-        message="Your wallet is empty. Earn points from tasks and redeem vouchers from the shop!"
-      >
+      <EmptyState v-if="walletStore.myWallet.length === 0"
+        message="Your wallet is empty. Earn points from tasks and redeem vouchers from the shop!">
         <button class="btn btn-primary btn-lg mt-3" @click="activeTab = 'shop'">
           Browse Vouchers
         </button>
@@ -291,25 +271,22 @@ async function markUsed(id) {
       <!-- Wallet List -->
       <div v-else class="row row-cols-1 row-cols-md-2 g-4">
         <div v-for="item in walletStore.myWallet" :key="item.id" class="col">
-          <div class="card h-100 shadow-sm border rounded-4" :class="{ 'opacity-75 bg-light': item.used }">
-            <div class="card-body p-4 d-flex flex-column justify-content-between">
+          <div class="card h-100" :class="{ 'opacity-75 bg-light': item.used }">
+            <div class="card-body p-3 p-sm-4 d-flex flex-column justify-content-between">
               <div>
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                  <div>
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                  <div class="wallet-title-wrap flex-grow-1">
                     <h5 class="fw-bold mb-0 text-dark">{{ item.voucher.merchant || 'Merchant' }}</h5>
                     <p class="text-muted small mb-0">{{ item.voucher.title }}</p>
                   </div>
-                  <span
-                    v-if="!item.used"
-                    class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1"
-                  >
-                     Ready to use
+                  <span v-if="!item.used"
+                    class="badge bg-success-subtle text-success border border-success-subtle px-2 px-sm-3 py-1 text-nowrap">
+                    Ready to use
                   </span>
-                  <span v-else class="badge bg-secondary-subtle text-secondary border rounded-pill px-3 py-1">
+                  <span v-else class="badge bg-secondary-subtle text-secondary border px-2 px-sm-3 py-1 text-nowrap">
                     Used
                   </span>
                 </div>
-
                 <!-- Big Voucher Code -->
                 <div class="p-3 my-3 bg-white border border-2 border-dashed rounded-3 text-center">
                   <div class="text-muted small mb-1">VOUCHER CODE</div>
@@ -332,12 +309,8 @@ async function markUsed(id) {
                 <span v-if="item.used" class="text-muted small">
                   Used on {{ formatDate(item.usedAt) }}
                 </span>
-                <button
-                  v-else
-                  type="button"
-                  class="btn btn-outline-secondary btn-sm rounded-pill ms-auto"
-                  @click="markUsed(item.id)"
-                >
+                <button v-else type="button" class="btn btn-outline-secondary btn-sm ms-auto"
+                  @click="markUsed(item.id)">
                   Mark as used
                 </button>
               </div>
@@ -348,37 +321,24 @@ async function markUsed(id) {
     </div>
 
     <!-- Voucher Details Modal -->
-    <div
-      v-if="activeModalVoucher"
-      class="modal show d-block"
-      role="dialog"
-      aria-modal="true"
-      @click.self="activeModalVoucher = null"
-    >
+    <div v-if="activeModalVoucher" class="modal show d-block" role="dialog" aria-modal="true"
+      @click.self="activeModalVoucher = null">
       <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-content">
           <div class="modal-header border-0 pb-0">
             <h2 class="modal-title h5 fw-bold">{{ activeModalVoucher.merchant }}</h2>
             <button type="button" class="btn-close" aria-label="Close" @click="activeModalVoucher = null"></button>
           </div>
           <div class="modal-body">
             <div class="mb-3 text-center p-3 rounded-3" :style="{ backgroundColor: activeModalVoucher.bg }">
-              <img
-                :src="activeModalVoucher.logo"
-                :alt="activeModalVoucher.merchant"
-                style="height: 80px; object-fit: contain;"
-                @error="$event.target.style.display = 'none'"
-              />
+              <img :src="activeModalVoucher.logo" :alt="activeModalVoucher.merchant"
+                style="height: 80px; object-fit: contain;" @error="$event.target.style.display = 'none'" />
             </div>
             <h3 class="h5 fw-bold mb-1">{{ activeModalVoucher.title }}</h3>
             <!-- Google Maps Link for Nearby Outlets -->
             <div class="mb-3">
-              <a
-                :href="getGoogleMapsUrl(activeModalVoucher)"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="btn btn-sm btn-outline-primary rounded-pill d-inline-flex align-items-center gap-1 text-decoration-none px-3 py-1"
-              >
+              <a :href="getGoogleMapsUrl(activeModalVoucher)" target="_blank" rel="noopener noreferrer"
+                class="btn btn-sm btn-outline-primary w-100 d-flex align-items-center justify-content-center text-wrap gap-1 text-decoration-none py-2 px-3">
                 <span>Find {{ activeModalVoucher.merchant }} near me</span>
                 <span class="small" aria-hidden="true">↗</span>
               </a>
@@ -386,7 +346,8 @@ async function markUsed(id) {
 
             <p class="mb-3">{{ activeModalVoucher.description }}</p>
 
-            <div class="alert alert-light border d-flex justify-content-between align-items-center mb-3">
+            <div
+              class="alert alert-light border d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
               <span><strong>Cost:</strong> {{ activeModalVoucher.cost }} pts</span>
               <span class="text-muted small">
                 Your balance: <strong>{{ pointsStore.myPoints }} pts</strong>
@@ -397,20 +358,13 @@ async function markUsed(id) {
               <strong>Terms:</strong> {{ activeModalVoucher.terms }}
             </small>
           </div>
-          <div class="modal-footer border-0 pt-0">
-            <button
-              type="button"
-              class="btn btn-outline-secondary rounded-pill px-4"
-              @click="activeModalVoucher = null"
-            >
+          <div class="modal-footer border-0 pt-0 d-flex flex-column-reverse flex-sm-row gap-2">
+            <button type="button" class="btn btn-outline-secondary w-100 w-sm-auto px-4"
+              @click="activeModalVoucher = null">
               Close
             </button>
-            <button
-              type="button"
-              class="btn btn-primary rounded-pill px-4"
-              :disabled="pointsStore.myPoints < activeModalVoucher.cost"
-              @click="promptRedeem(activeModalVoucher)"
-            >
+            <button type="button" class="btn btn-primary px-4"
+              :disabled="pointsStore.myPoints < activeModalVoucher.cost" @click="promptRedeem(activeModalVoucher)">
               {{
                 pointsStore.myPoints >= activeModalVoucher.cost
                   ? `Redeem for ${activeModalVoucher.cost} pts`
@@ -423,48 +377,30 @@ async function markUsed(id) {
     </div>
 
     <!-- Confirm Redemption Modal (Copied from SeniorHelpBoardView pattern) -->
-    <div
-      v-if="voucherToConfirm"
-      class="modal show d-block"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-redeem-title"
-      @click.self="voucherToConfirm = null"
-    >
+    <div v-if="voucherToConfirm" class="modal show d-block" role="dialog" aria-modal="true"
+      aria-labelledby="confirm-redeem-title" @click.self="voucherToConfirm = null">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
           <div class="modal-header">
             <h2 id="confirm-redeem-title" class="modal-title h5 fw-bold">Confirm Redemption?</h2>
-            <button
-              type="button"
-              class="btn-close"
-              aria-label="Close"
-              @click="voucherToConfirm = null"
-            ></button>
+            <button type="button" class="btn-close" aria-label="Close" @click="voucherToConfirm = null"></button>
           </div>
           <div class="modal-body fs-6">
             <p>
-              Spend <strong> <img src="/images/coin.svg" class="point-coin-img" alt="" /> {{ voucherToConfirm.cost }} points</strong> to redeem
+              Spend <strong> <img src="/images/coin.svg" class="point-coin-img" alt="" /> {{ voucherToConfirm.cost }}
+                points</strong> to redeem
               <strong>{{ voucherToConfirm.title }}</strong> from
               <strong>{{ voucherToConfirm.merchant }}</strong>?
             </p>
             <p class="text-muted small mb-0">Points cannot be refunded once redeemed.</p>
           </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-outline-secondary rounded-pill px-3"
-              @click="voucherToConfirm = null"
-            >
+          <div class="modal-footer d-flex flex-column-reverse flex-sm-row gap-2">
+            <button type="button" class="btn btn-outline-secondary w-100 w-sm-auto px-3"
+              @click="voucherToConfirm = null">
               Keep my points
             </button>
-            <button
-              type="button"
-              class="btn btn-primary rounded-pill px-4"
-              data-testid="confirm-redeem"
-              :disabled="redeeming"
-              @click="confirmRedeem"
-            >
+            <button type="button" class="btn btn-primary w-100 w-sm-auto px-4" data-testid="confirm-redeem"
+              :disabled="redeeming" @click="confirmRedeem">
               {{ redeeming ? 'Redeeming...' : 'Yes, redeem' }}
             </button>
           </div>
@@ -476,8 +412,64 @@ async function markUsed(id) {
   </div>
 </template>
 
-<style>
+<style scoped>
 .community-challenge-card {
-  background:  #0b6e6e ;
+  background: #0b6e6e;
+}
+
+.challenge-badge {
+  display: inline-block;
+  background: #f2c14e;
+  color: #06101a;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.65rem;
+  border: 0.125rem solid #06101a;
+  border-radius: 0.35rem;
+  box-shadow: 0.125rem 0.125rem 0 0 #06101a;
+}
+
+.challenge-progress {
+  height: 20px;
+  background: rgba(255, 255, 255, 0.25);
+  border: 0.125rem solid #06101a;
+  border-radius: 0.35rem;
+  overflow: hidden;
+}
+
+.challenge-progress .progress-bar {
+  background-color: #f2c14e;
+  color: #06101a;
+  font-weight: 700;
+}
+
+.category-chip {
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 0.35rem 0.9rem;
+  border-radius: 0.35rem;
+  border: 0.125rem solid #06101a;
+  background: #fff;
+  color: #06101a;
+  box-shadow: 0.125rem 0.125rem 0 0 #06101a;
+  cursor: pointer;
+  transition: background-color 0.1s ease, transform 0.1s ease;
+}
+
+.category-chip:hover {
+  background: var(--ks-teal-tint, #e8f5f4);
+}
+
+.category-chip.active {
+  background: #10202f;
+  color: #fff;
+  border-color: #06101a;
+  box-shadow: 0.125rem 0.125rem 0 0 #06101a;
+}
+
+.wallet-title-wrap {
+  min-width: 130px;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 </style>

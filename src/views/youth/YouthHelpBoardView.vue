@@ -215,7 +215,7 @@ async function doAccept(request, physicalOk) {
         <h1 class="page-title">Help your neighbours</h1>
         <p class="page-subtitle">Pick a request you can help with.</p>
       </div>
-      <span v-if="!auth.isAdmin" class="count-pill" :class="{ 'is-full': store.atLimit }" data-testid="active-count">
+      <span v-if="!auth.isAdmin" class="points-pill" :class="{ 'is-full': store.atLimit }" data-testid="active-count">
         Active tasks: {{ store.activeCount }} / {{ MAX_ACTIVE_TASKS }}
       </span>
     </div>
@@ -394,5 +394,8 @@ async function doAccept(request, physicalOk) {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem 1rem;
+}
+.points-pill.is-full {
+  --nav-accent: #f2798f; 
 }
 </style>

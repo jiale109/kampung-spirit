@@ -1617,6 +1617,7 @@ form.d-grid {
 .page-accent-blue { --page-accent: #5aa6f8; }    /* My Tasks */
 .page-accent-rose { --page-accent: #f2798f; }    /* Hangouts */
 .page-accent-green { --page-accent: #86d884; }   /* Skill Swaps */
+.page-accent-violet { --page-accent: #b094f5; }  /* Rewards */
 .page-accent-gold { --page-accent: #f2c14e; }    /* Profile */
 
 /*
@@ -2465,7 +2466,8 @@ form.d-grid {
 .btn-primary:not(.day-cell),
 .btn-outline-primary:not(.day-cell),
 .btn-outline-secondary:not(.day-cell):not(.month-nav),
-.btn-outline-danger {
+.btn-outline-danger
+.btn-danger {
   --cta-accent: #f2c14e;
   font-weight: 700;
   border-radius: 0.45rem;
@@ -2515,6 +2517,21 @@ form.d-grid {
   background: #fff;
   border: 0.1875rem solid #06101a;
 }
+.btn-danger {
+  --danger-accent: #f2798f;
+  color: #fff;
+  background: var(--ks-danger, #a82635);
+  border: 0.1875rem solid var(--danger-accent);
+}
+.btn-danger:hover,
+.btn-danger:focus-visible {
+  color: #fff;
+  background: #8f202b;
+  box-shadow:
+    0 0 0 0.1875rem #06101a,
+    0.25rem 0.25rem 0 0.1875rem #06101a,
+    0 0 1.1rem 0.15rem var(--danger-accent);
+}
 
 .btn-outline-danger:hover,
 .btn-outline-danger:focus-visible {
@@ -2532,7 +2549,8 @@ form.d-grid {
 .btn-primary:not(.day-cell):disabled,
 .btn-outline-primary:not(.day-cell):disabled,
 .btn-outline-secondary:not(.day-cell):not(.month-nav):disabled,
-.btn-outline-danger:disabled {
+.btn-outline-danger:disabled,
+.btn-danger:disabled {
   opacity: 1;
   color: #e4e9ee;
   background: #525d68;

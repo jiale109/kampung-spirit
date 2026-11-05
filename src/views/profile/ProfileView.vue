@@ -527,7 +527,7 @@ async function deleteAccount() {
         -->
         <div role="group" aria-labelledby="avatar-label">
           <div id="avatar-label" class="form-label">Your avatar</div>
-          <p class="page-subtitle mb-3">Choose how you would like to look to your neighbours.</p>
+          <p class="page-subtitle mb-3">Choose how you look on your profile and in the bar at the top of the app.</p>
 
           <div class="card avatar-picker">
             <div class="card-body p-4 d-flex flex-column flex-sm-row align-items-center gap-4">

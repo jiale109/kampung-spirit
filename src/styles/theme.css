@@ -1235,13 +1235,19 @@ form.d-grid {
   min-width: 0;
 }
 
-/* At xl the tabs always take a row of their own, below the brand and the
-   name chip, even on screens wide enough to fit them all on one line. The
-   gap above them keeps the chip's shadow from sitting on the tabs. */
+/* The tabs sit below the brand and the name chip: always at xl, and in the
+   menu the button opens on smaller screens. The gap above them keeps the
+   chip's shadow from sitting on the first tab. While the menu is closed it
+   is display: none, so the gap takes no room. */
+.app-navbar .navbar-collapse {
+  margin-top: 1rem;
+}
+
+/* At xl the tabs always take a row of their own, even on screens wide
+   enough to fit them all on one line */
 @media (min-width: 1200px) {
   .app-navbar .navbar-collapse {
     flex-basis: 100%;
-    margin-top: 1rem;
   }
 }
 

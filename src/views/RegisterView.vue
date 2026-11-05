@@ -14,7 +14,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
-import LandingHero from '../components/LandingHero.vue'
+import AuthShell from '../components/AuthShell.vue'
 import PasswordInput from '../components/PasswordInput.vue'
 import HotspotMap from '../components/HotspotMap.vue'
 
@@ -173,162 +173,151 @@ async function submit() {
 </script>
 
 <template>
-  <div class="container-fluid p-0">
-    <div class="row g-0 landing-row">
+  <AuthShell>
+    <h1 class="page-title">Create an account</h1>
+    <p class="page-subtitle mb-4">Ask for help, help others, or both.</p>
 
-      <!-- Tagline over photos that change by themselves -->
-      <LandingHero />
+    <div v-if="formError" class="alert alert-danger" role="alert">{{ formError }}</div>
 
-      <!-- Sign up -->
-      <div class="col-lg-6 landing-panel">
-        <div class="login-box">
-          <h2 class="page-title">Create an account</h2>
-          <p class="page-subtitle mb-4">Ask for help, help others, or both.</p>
-
-          <div v-if="formError" class="alert alert-danger" role="alert">{{ formError }}</div>
-
-          <form class="d-grid gap-4" novalidate @submit.prevent="submit">
-            <div>
-              <label for="name" class="form-label">Your name</label>
-              <input id="name" v-model="form.name" type="text" class="form-control" autocomplete="name"
-                :class="{ 'is-invalid': errors.name }" maxlength="60" />
-              <div class="invalid-feedback">{{ errors.name }}</div>
-            </div>
-
-            <div>
-              <label for="email" class="form-label">Email</label>
-              <input id="email" v-model="form.email" type="email" class="form-control" autocomplete="email"
-                :class="{ 'is-invalid': errors.email }" />
-              <div class="invalid-feedback">{{ errors.email }}</div>
-            </div>
-
-            <div>
-              <label for="password" class="form-label">Password</label>
-              <PasswordInput id="password" v-model="form.password" autocomplete="new-password"
-                aria-describedby="password-rules" :invalid="!!errors.password" />
-              <div v-if="errors.password" class="invalid-feedback d-block">{{ errors.password }}</div>
-
-              <!-- Ticked off as they type. The words say done / not yet, not only the colour. -->
-              <p class="form-text mb-1 mt-2">Your password needs:</p>
-              <ul id="password-rules" class="password-rules" data-testid="password-rules">
-                <li v-for="c in passwordChecks" :key="c.key" :class="{ 'is-met': c.met }">
-                  <span class="rule-mark" aria-hidden="true">{{ c.met ? '✓' : '○' }}</span>
-                  {{ c.text }}
-                  <span class="visually-hidden">{{ c.met ? '(done)' : '(not yet)' }}</span>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <label for="password-again" class="form-label">Type your password again</label>
-              <PasswordInput id="password-again" v-model="form.passwordAgain" autocomplete="new-password"
-                aria-describedby="password-match" :invalid="!!errors.passwordAgain" />
-              <div v-if="errors.passwordAgain" class="invalid-feedback d-block">{{ errors.passwordAgain }}</div>
-              <p v-else-if="showMatch" id="password-match" class="form-text password-match"
-                :class="{ 'is-met': passwordsMatch }" aria-live="polite">
-                <span aria-hidden="true">{{ passwordsMatch ? '✓' : '○' }}</span>
-                {{ passwordsMatch ? 'The passwords match.' : 'The passwords do not match yet.' }}
-              </p>
-            </div>
-
-            <div>
-              <div class="form-label">Block and street</div>
-              <p class="page-subtitle mb-2">
-                Neighbours come to this address to help you, so please pick it from the list
-                rather than typing it. Searching &ldquo;Blk 412 Eunos Cres&rdquo; works.
-              </p>
-
-              <!-- Shown once a real address has been chosen -->
-              <div v-if="chosenAddress" class="chosen-address d-flex flex-wrap align-items-center
-                justify-content-between gap-3 mb-3" data-testid="chosen-address">
-                <span><strong>{{ form.block }}</strong></span>
-                <button type="button" class="btn btn-outline-secondary flex-shrink-0"
-                  data-testid="change-address" @click="changeAddress">Change</button>
-              </div>
-
-              <!-- No "pickable": a home address must be a real one from OneMap,
-                   not a spot tapped on the map with a name typed beside it -->
-              <HotspotMap label="Find your block" @select="onAddressFound" />
-
-              <div v-if="errors.block" class="invalid-feedback d-block" role="alert"
-                data-testid="block-error">{{ errors.block }}</div>
-            </div>
-
-            <!-- Separate boxes instead of a date picker, which many seniors find hard to use -->
-            <fieldset>
-              <legend class="form-label">Date of birth</legend>
-              <div class="row g-2">
-                <div class="col-12 col-sm-4">
-                  <label for="birth-day" class="visually-hidden">Day</label>
-                  <select id="birth-day" v-model="form.day" class="form-select" :class="{ 'is-invalid': errors.birthDate }">
-                    <option value="" disabled>Day</option>
-                    <option v-for="d in days" :key="d" :value="String(d)">{{ d }}</option>
-                  </select>
-                </div>
-                <div class="col-12 col-sm-8">
-                  <label for="birth-month" class="visually-hidden">Month</label>
-                  <select id="birth-month" v-model="form.month" class="form-select" :class="{ 'is-invalid': errors.birthDate }">
-                    <option value="" disabled>Month</option>
-                    <option v-for="(m, i) in months" :key="m" :value="String(i + 1)">{{ m }}</option>
-                  </select>
-                </div>
-                <div class="col-12">
-                  <label for="birth-year" class="visually-hidden">Year</label>
-                  <input id="birth-year" v-model="form.year" type="text" inputmode="numeric" maxlength="4"
-                    class="form-control" placeholder="Year, e.g. 1955" :class="{ 'is-invalid': errors.birthDate }" />
-                </div>
-              </div>
-              <div v-if="errors.birthDate" class="invalid-feedback d-block" role="alert">{{ errors.birthDate }}</div>
-              <div class="form-text">Only you can see your date of birth. Others see your age group.</div>
-            </fieldset>
-
-            <!-- Only for ages 12-17 -->
-            <fieldset v-if="isMinor" class="guardian-box" data-testid="guardian-section">
-              <legend class="form-label">Parent or guardian</legend>
-              <p class="mb-3">You are under {{ ADULT_AGE }}, so a parent or guardian must agree before you can help others.
-                We will check with them before you accept your first task.</p>
-
-              <div class="d-grid gap-3">
-                <div>
-                  <label for="guardian-name" class="form-label">Parent or guardian's name</label>
-                  <input id="guardian-name" v-model="form.guardianName" type="text" class="form-control"
-                    :class="{ 'is-invalid': errors.guardianName }" maxlength="60" />
-                  <div class="invalid-feedback">{{ errors.guardianName }}</div>
-                </div>
-                <div>
-                  <label for="guardian-email" class="form-label">Parent or guardian's email</label>
-                  <input id="guardian-email" v-model="form.guardianEmail" type="email" class="form-control"
-                    :class="{ 'is-invalid': errors.guardianEmail }" />
-                  <div class="invalid-feedback">{{ errors.guardianEmail }}</div>
-                </div>
-                <div class="form-check">
-                  <input id="guardian-consent" v-model="form.guardianConsent" type="checkbox" class="form-check-input"
-                    :class="{ 'is-invalid': errors.guardianConsent }" />
-                  <label for="guardian-consent" class="form-check-label">
-                    My parent or guardian has read about Kampung Spirit and agrees that I can join and help neighbours.
-                  </label>
-                  <div class="invalid-feedback">{{ errors.guardianConsent }}</div>
-                </div>
-              </div>
-            </fieldset>
-
-            <div class="form-check form-switch">
-              <input id="large-text" v-model="form.largeText" type="checkbox" role="switch" class="form-check-input" />
-              <label for="large-text" class="form-check-label">Use large text</label>
-              <div class="form-text">You can change this later in your profile.</div>
-            </div>
-
-            <button type="submit" class="btn btn-primary btn-lg w-100" :disabled="busy">
-              {{ busy ? 'Creating your account…' : 'Create account' }}
-            </button>
-          </form>
-
-          <p class="mt-4 mb-0">Already have an account? <router-link to="/landing">Log in</router-link></p>
-        </div>
+    <form class="d-grid gap-4" novalidate @submit.prevent="submit">
+      <div>
+        <label for="name" class="form-label">Your name</label>
+        <input id="name" v-model="form.name" type="text" class="form-control" autocomplete="name"
+          :class="{ 'is-invalid': errors.name }" maxlength="60" />
+        <div class="invalid-feedback">{{ errors.name }}</div>
       </div>
 
-    </div>
-  </div>
+      <div>
+        <label for="email" class="form-label">Email</label>
+        <input id="email" v-model="form.email" type="email" class="form-control" autocomplete="email"
+          :class="{ 'is-invalid': errors.email }" />
+        <div class="invalid-feedback">{{ errors.email }}</div>
+      </div>
+
+      <div>
+        <label for="password" class="form-label">Password</label>
+        <PasswordInput id="password" v-model="form.password" autocomplete="new-password"
+          aria-describedby="password-rules" :invalid="!!errors.password" />
+        <div v-if="errors.password" class="invalid-feedback d-block">{{ errors.password }}</div>
+
+        <!-- Ticked off as they type. The words say done / not yet, not only the colour. -->
+        <p class="form-text mb-1 mt-2">Your password needs:</p>
+        <ul id="password-rules" class="password-rules" data-testid="password-rules">
+          <li v-for="c in passwordChecks" :key="c.key" :class="{ 'is-met': c.met }">
+            <span class="rule-mark" aria-hidden="true">{{ c.met ? '✓' : '○' }}</span>
+            {{ c.text }}
+            <span class="visually-hidden">{{ c.met ? '(done)' : '(not yet)' }}</span>
+          </li>
+        </ul>
+      </div>
+
+      <div>
+        <label for="password-again" class="form-label">Type your password again</label>
+        <PasswordInput id="password-again" v-model="form.passwordAgain" autocomplete="new-password"
+          aria-describedby="password-match" :invalid="!!errors.passwordAgain" />
+        <div v-if="errors.passwordAgain" class="invalid-feedback d-block">{{ errors.passwordAgain }}</div>
+        <p v-else-if="showMatch" id="password-match" class="form-text password-match"
+          :class="{ 'is-met': passwordsMatch }" aria-live="polite">
+          <span aria-hidden="true">{{ passwordsMatch ? '✓' : '○' }}</span>
+          {{ passwordsMatch ? 'The passwords match.' : 'The passwords do not match yet.' }}
+        </p>
+      </div>
+
+      <div>
+        <div class="form-label">Block and street</div>
+        <p class="page-subtitle mb-2">
+          Neighbours come to this address to help you, so please pick it from the list
+          rather than typing it. Search for your block number and street, like &ldquo;Blk 123&rdquo; and the street name.
+        </p>
+
+        <!-- Shown once a real address has been chosen -->
+        <div v-if="chosenAddress" class="chosen-address d-flex flex-wrap align-items-center
+          justify-content-between gap-3 mb-3" data-testid="chosen-address">
+          <span><strong>{{ form.block }}</strong></span>
+          <button type="button" class="btn btn-outline-secondary flex-shrink-0"
+            data-testid="change-address" @click="changeAddress">Change</button>
+        </div>
+
+        <!-- No "pickable": a home address must be a real one from OneMap,
+             not a spot tapped on the map with a name typed beside it -->
+        <HotspotMap label="Find your block" @select="onAddressFound" />
+
+        <div v-if="errors.block" class="invalid-feedback d-block" role="alert"
+          data-testid="block-error">{{ errors.block }}</div>
+      </div>
+
+      <!-- Separate boxes instead of a date picker, which many seniors find hard to use -->
+      <fieldset>
+        <legend class="form-label">Date of birth</legend>
+        <div class="row g-2">
+          <div class="col-12 col-sm-4">
+            <label for="birth-day" class="visually-hidden">Day</label>
+            <select id="birth-day" v-model="form.day" class="form-select" :class="{ 'is-invalid': errors.birthDate }">
+              <option value="" disabled>Day</option>
+              <option v-for="d in days" :key="d" :value="String(d)">{{ d }}</option>
+            </select>
+          </div>
+          <div class="col-12 col-sm-8">
+            <label for="birth-month" class="visually-hidden">Month</label>
+            <select id="birth-month" v-model="form.month" class="form-select" :class="{ 'is-invalid': errors.birthDate }">
+              <option value="" disabled>Month</option>
+              <option v-for="(m, i) in months" :key="m" :value="String(i + 1)">{{ m }}</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label for="birth-year" class="visually-hidden">Year</label>
+            <input id="birth-year" v-model="form.year" type="text" inputmode="numeric" maxlength="4"
+              class="form-control" placeholder="Year, e.g. 1955" :class="{ 'is-invalid': errors.birthDate }" />
+          </div>
+        </div>
+        <div v-if="errors.birthDate" class="invalid-feedback d-block" role="alert">{{ errors.birthDate }}</div>
+        <div class="form-text">Only you can see your date of birth. Others see your age group.</div>
+      </fieldset>
+
+      <!-- Only for ages 12-17 -->
+      <fieldset v-if="isMinor" class="guardian-box" data-testid="guardian-section">
+        <legend class="form-label">Parent or guardian</legend>
+        <p class="mb-3">You are under {{ ADULT_AGE }}, so a parent or guardian must agree before you can help others.
+          We will check with them before you accept your first task.</p>
+
+        <div class="d-grid gap-3">
+          <div>
+            <label for="guardian-name" class="form-label">Parent or guardian's name</label>
+            <input id="guardian-name" v-model="form.guardianName" type="text" class="form-control"
+              :class="{ 'is-invalid': errors.guardianName }" maxlength="60" />
+            <div class="invalid-feedback">{{ errors.guardianName }}</div>
+          </div>
+          <div>
+            <label for="guardian-email" class="form-label">Parent or guardian's email</label>
+            <input id="guardian-email" v-model="form.guardianEmail" type="email" class="form-control"
+              :class="{ 'is-invalid': errors.guardianEmail }" />
+            <div class="invalid-feedback">{{ errors.guardianEmail }}</div>
+          </div>
+          <div class="form-check">
+            <input id="guardian-consent" v-model="form.guardianConsent" type="checkbox" class="form-check-input"
+              :class="{ 'is-invalid': errors.guardianConsent }" />
+            <label for="guardian-consent" class="form-check-label">
+              My parent or guardian has read about Kampung Spirit and agrees that I can join and help neighbours.
+            </label>
+            <div class="invalid-feedback">{{ errors.guardianConsent }}</div>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="form-check form-switch">
+        <input id="large-text" v-model="form.largeText" type="checkbox" role="switch" class="form-check-input" />
+        <label for="large-text" class="form-check-label">Use large text</label>
+        <div class="form-text">You can change this later in your profile.</div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg w-100" :disabled="busy">
+        {{ busy ? 'Creating your account…' : 'Create account' }}
+      </button>
+    </form>
+
+    <p class="mt-4 mb-0">Already have an account? <router-link to="/login">Log in</router-link></p>
+    <p class="mt-3 mb-0"><router-link to="/landing">← Back to the home page</router-link></p>
+  </AuthShell>
 </template>
 
 <style scoped>

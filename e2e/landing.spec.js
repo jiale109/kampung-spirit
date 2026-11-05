@@ -5,11 +5,17 @@ test.beforeEach(async ({ page }) => {
   await resetApp(page)
 })
 
-test('The root path opens the login page', async ({ page }) => {
+test('The root path opens the home page, which leads to log in and sign up', async ({ page }) => {
   await page.goto('/')
   await expect(page).toHaveURL(/\/landing$/)
+  await page.getByTestId('topbar-login').click()
+  await expect(page).toHaveURL(/\/login$/)
   await expect(page.getByLabel('Email')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible()
+
+  await page.goto('/landing')
+  await page.getByTestId('topbar-signup').click()
+  await expect(page).toHaveURL(/\/register$/)
 })
 
 test('Signing up logs you in, and you can log out and back in', async ({ page }) => {
@@ -30,15 +36,15 @@ test('Seniors start on the senior pages, everyone else on the youth pages', asyn
 
 test('Logged-out visitors are sent to the login page', async ({ page }) => {
   await page.goto('/app/requests')
-  await expect(page).toHaveURL(/\/landing$/)
+  await expect(page).toHaveURL(/\/login$/)
   await page.goto('/app/tasks')
-  await expect(page).toHaveURL(/\/landing$/)
+  await expect(page).toHaveURL(/\/login$/)
 })
 
 test('A wrong password shows a plain message', async ({ page }) => {
   await loginWith(page, uniqueEmail(), 'not-the-password')
   await expect(page.getByRole('alert')).toHaveText('That email or password is not right.')
-  await expect(page).toHaveURL(/\/landing$/)
+  await expect(page).toHaveURL(/\/login$/)
 })
 
 test('The sign-up form explains what is missing', async ({ page }) => {

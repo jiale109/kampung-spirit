@@ -1,76 +1,53 @@
 <script setup>
 /*
-  Landing page and login                                 Owner: Reuben Tham
-  Log in with email and password (Supabase Auth, see stores/auth.js).
-  New people go to the sign-up page (views/RegisterView.vue).
-  The route guard in router/index.js sends logged-out people here.
+  Home page for people who are not logged in                Owner: Reuben Tham
+  A bar along the top that stays put while scrolling (Log in and Sign up),
+  a short intro with a pixel-art scene, then components/LandingStory.vue,
+  which explains the app (the photo carousel is in there too). Logging in
+  is its own page (views/LoginView.vue, /login) and so is signing up
+  (views/RegisterView.vue, /register).
 */
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth.js'
-import LandingHero from '../components/LandingHero.vue'
+import LandingStory from '../components/LandingStory.vue'
+import BrandMark from '../components/BrandMark.vue'
 
-const router = useRouter()
-const auth = useAuthStore()
-
-const form = ref({ email: '', password: '' })
-const error = ref('')
-const busy = ref(false)
-
-async function submit() {
-  error.value = ''
-  if (!form.value.email.trim() || !form.value.password) {
-    error.value = 'Please enter your email and password.'
-    return
-  }
-
-  busy.value = true
-  const result = await auth.login({ email: form.value.email.trim(), password: form.value.password })
-  busy.value = false
-
-  if (result.ok) router.push(auth.homePath)
-  else error.value = result.error
+// Glides down, unless the device asks for less movement
+function showHowItWorks() {
+  const lessMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  document.getElementById('how-it-works').scrollIntoView({ behavior: lessMotion ? 'auto' : 'smooth' })
 }
 </script>
 
 <template>
-  <div class="container-fluid p-0">
-    <div class="row g-0 landing-row">
-
-      <!-- Tagline over photos that change by themselves -->
-      <LandingHero />
-
-      <!-- Log in -->
-      <div class="col-lg-6 landing-panel">
-        <div class="login-box">
-          <h2 class="page-title">Welcome</h2>
-          <p class="page-subtitle mb-4">Log in to ask for help or to help a neighbour.</p>
-
-          <div v-if="error" class="alert alert-danger" role="alert">{{ error }}</div>
-
-          <form class="d-grid gap-4" novalidate @submit.prevent="submit">
-            <div>
-              <label for="email" class="form-label">Email</label>
-              <!-- type="text" so the admin can type just "admin" (stores/auth.js);
-                   inputmode still brings up the email keyboard on phones -->
-              <input id="email" v-model="form.email" type="text" inputmode="email" class="form-control"
-                autocomplete="username" aria-describedby="email-hint" />
-              <div id="email-hint" class="form-text">Your email address</div>
-            </div>
-            <div>
-              <label for="password" class="form-label">Password</label>
-              <input id="password" v-model="form.password" type="password" class="form-control"
-                autocomplete="current-password" />
-            </div>
-            <button type="submit" class="btn btn-primary btn-lg w-100" :disabled="busy">
-              {{ busy ? 'Logging in…' : 'Log in' }}
-            </button>
-          </form>
-
-          <p class="mt-4 mb-0">New here? <router-link to="/register">Create an account</router-link></p>
-        </div>
+  <div>
+    <header class="landing-topbar">
+      <!-- Lined up with the page content below, while the white bar runs edge to edge -->
+      <div class="topbar-inner">
+        <router-link to="/landing" class="topbar-brand">
+          <BrandMark :size="64" />
+          <span class="topbar-brand-name">Kampung Spirit</span>
+        </router-link>
+        <nav class="topbar-actions" aria-label="Your account">
+          <router-link to="/login" class="btn btn-lg btn-outline-primary" data-testid="topbar-login">Log in</router-link>
+          <router-link to="/register" class="btn btn-lg btn-primary" data-testid="topbar-signup">Sign up</router-link>
+        </nav>
       </div>
+    </header>
 
-    </div>
+    <!-- No buttons here: Log in and Sign up are always in the bar above -->
+    <section class="landing-intro" aria-labelledby="intro-title">
+      <div class="landing-intro-words">
+        <h1 id="intro-title" class="landing-intro-title">Neighbours helping neighbours, one small favour at a time.</h1>
+        <p class="landing-intro-text">
+          Ask for a hand, lend one, and get to know the people in your block. Made for HDB estates all over Singapore.
+        </p>
+        <button type="button" class="btn btn-link see-how p-0" data-testid="see-how" @click="showHowItWorks">
+          See how Kampung Spirit works <span aria-hidden="true">↓</span>
+        </button>
+      </div>
+      <!-- Decorative: the heading beside it says what the app is -->
+      <img src="/images/landing/feature-hero.svg" alt="" class="landing-intro-picture" width="576" height="288" />
+    </section>
+
+    <LandingStory />
   </div>
 </template>

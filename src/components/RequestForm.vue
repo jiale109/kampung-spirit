@@ -191,7 +191,7 @@ async function submit() {
 
   const [blocked] = safetyCheck.value.blocked
   if (blocked) errors.value.safety = `For everyone's safety, requests cannot include "${blocked}". Please change it and try again.`
-  else if (safetyCheck.value.contact.length) errors.value.safety = 'Please keep contact details out of requests. Talk through the app instead.'
+  else if (safetyCheck.value.contact.length) errors.value.safety = 'Please keep contact details out of requests. Everyone on the Help Board can see them.'
 
   if (Object.keys(errors.value).length > 0) {
     await nextTick()

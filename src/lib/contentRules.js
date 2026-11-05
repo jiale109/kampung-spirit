@@ -48,7 +48,7 @@ export const BLOCKED_PHRASES = [
   'cheebye',
 ]
 
-// Contact details: requests are public, so people talk through the app instead
+// Contact details: requests are public, so they are kept out of them
 export const CONTACT_PHRASES = ['whatsapp me', 'telegram me', 'add me on', 'dm me']
 
 // Same patterns as help_requests_check_text() in schema.sql.

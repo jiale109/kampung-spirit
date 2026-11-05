@@ -212,7 +212,7 @@ test.describe('Posting a request', () => {
   test('A phone number or "whatsapp me" is blocked with the contact details message', async ({ page }) => {
     const post = page.getByRole('button', { name: 'Post request' })
     const error = page.getByTestId('description-error')
-    const message = 'Please keep contact details out of requests. Talk through the app instead.'
+    const message = 'Please keep contact details out of requests. Everyone on the Help Board can see them.'
 
     await login(page, 'Senior', 'Mdm Lee')
     await page.goto('/app/requests/create')

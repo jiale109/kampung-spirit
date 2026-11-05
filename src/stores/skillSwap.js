@@ -8,7 +8,7 @@ import {
 } from '../lib/skillSwapFormat.js'
 import { supabase } from '../lib/supabase.js'
 
-const COLUMNS = `id, title, description, category, venue, latitude, longitude, session_date, session_time, duration, capacity, status, host_id, created_at, host:profiles!host_id(name), attendees:skill_session_attendees(user_id)`
+const COLUMNS = `id, title, description, category, venue, latitude, longitude, session_date, session_time, duration, capacity, status, host_id, created_at, host:profiles!host_id(name), attendees:skill_session_attendees(user_id, attended, user:profiles!user_id(name))`
 
 function fromRow(r) {
   return {
@@ -28,6 +28,13 @@ function fromRow(r) {
     hostId: r.host_id,
     hostName: r.host?.name ?? '',
     attendeeIds: (r.attendees ?? []).map((a) => a.user_id),
+    // The same people with their names, for the host's attendance page.
+    // attended is null until the host completes the session.
+    attendees: (r.attendees ?? []).map((a) => ({
+      id: a.user_id,
+      name: a.user?.name ?? '',
+      attended: a.attended ?? null,
+    })),
     createdAt: new Date(r.created_at).getTime(),
   }
 }
@@ -194,24 +201,31 @@ export const useSkillSwapStore = defineStore('skillSwap', () => {
     return run(supabase.rpc('cancel_skill_session', { swap_id: id }))
   }
  
-  // for display msg
-  async function completeSession(id) {
+  // The host ticks who came on the attendance page; only they (and the host)
+  // earn points. Returns { ok, points, count } so the page can say how many.
+  async function completeSession(id, attendedIds = []) {
     if (!me.value) return needSignIn()
     const s = find(id)
     if (!s) return notFound()
     if (!isHost(s)) return { ok: false, error: 'Only the host can complete this session.' }
+    if (s.status !== 'open') return { ok: false, error: 'This session is no longer open.' }
     if (sessionStart(s.date, s.time) > new Date()) {
       return { ok: false, error: 'You can mark a session as completed once it has started.' }
     }
-    // Other refusals (e.g. nobody joined) come back from the database as plain sentences
+    const ids = [...new Set(attendedIds)]
+    if (ids.length === 0) return { ok: false, error: 'Please tick at least one person who came.' }
+    if (ids.some((uid) => !s.attendeeIds.includes(uid))) {
+      return { ok: false, error: 'Some of the people you ticked did not sign up for this session. Please reload the page and try again.' }
+    }
+    // Other refusals come back from the database as plain sentences
     const points = pointsForSkillSwap(s.duration)
-    const result = await run(supabase.rpc('complete_skill_session', { swap_id: id }))
+    const result = await run(supabase.rpc('complete_skill_session', { swap_id: id, attended_ids: ids }))
     if (!result.ok) return result
     // complete_skill_session() adds points_ledger rows, so refresh the balance in the navbar
     await usePointsStore().load()
-    return { ok: true, points }
+    return { ok: true, points, count: ids.length }
   }
- 
+
   // Admin only: delete any session (schema.sql section 18). The database
   // refuses this for everyone else. Reloads either way, so the list is current.
   async function adminDelete(id) {
@@ -233,6 +247,7 @@ export const useSkillSwapStore = defineStore('skillSwap', () => {
     isAttending,
     hasStarted,
     hasEnded,
+    find,
     createSession,
     rsvp,
     cancelRsvp,

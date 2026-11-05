@@ -28,8 +28,9 @@ async function hostSession(page, { title, category }) {
   await choosePlace(page, 'Eunos CC')
   await page.getByTestId('swap-venue').fill('Eunos CC, Level 2')
 
-  // Tomorrow, so the time can never have passed already
-  await chooseDay(page, 1)
+  // The day after tomorrow: sessions need 24 hours' notice, and tomorrow at the
+  // form's default 3:00 PM is less than that once it is past 3 PM today
+  await chooseDay(page, 2)
   await page.getByRole('button', { name: 'Share my session' }).click()
   await expect(page).toHaveURL(/\/app\/skill-swaps(\?|$)/)
 }

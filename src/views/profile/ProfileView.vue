@@ -22,6 +22,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth.js'
 import { usePointsStore } from '../../stores/points.js'
 import HotspotMap from '../../components/HotspotMap.vue'
+import { findAddressAt } from '../../lib/onemap.js'
 import TelegramConnect from '../../components/TelegramConnect.vue'
 import ConfirmModal from '../../components/ConfirmModal.vue'
 import {
@@ -98,13 +99,18 @@ const saveError = ref('')
   address would otherwise be locked out of their own profile until they
   re-picked it.
 
-  changingAddress is true only while the map is open. Saving is refused then,
-  because a half-finished change is not an address.
+  changingAddress is true while the map is open. The map stays open after an
+  address is picked, so the pin can be seen on the new block (and another
+  tried); newAddressChosen says one has been. Saving is refused only while
+  the map is open with nothing picked yet, because a half-finished change is
+  not an address.
 */
 const changingAddress = ref(false)
+const newAddressChosen = ref(false)
 
 function startChangingAddress() {
   changingAddress.value = true
+  newAddressChosen.value = false
   errors.value.block = ''
 }
 
@@ -112,12 +118,33 @@ function onAddressFound(place) {
   // The full address is the unambiguous one, and 100 characters is what the
   // help board's location column takes when block is copied into it
   form.value.block = String(place.address || place.name).slice(0, 100)
-  changingAddress.value = false
+  newAddressChosen.value = true
   errors.value.block = ''
+}
+
+// The map, so a tapped spot's pin can be moved onto the block that was found
+const addressMap = ref(null)
+
+// Tapping a block on the map: looked up and turned into OneMap's address for
+// it, the same as searching (findAddressAt in lib/onemap.js)
+const lookingUpAddress = ref(false)
+
+async function onMapTapped({ lat, lng }) {
+  errors.value.block = ''
+  lookingUpAddress.value = true
+  const result = await findAddressAt(lat, lng)
+  lookingUpAddress.value = false
+  if (!result.ok) {
+    errors.value.block = result.error
+    return
+  }
+  addressMap.value?.showPlace(result.place)
+  onAddressFound(result.place)
 }
 
 function keepOldAddress() {
   changingAddress.value = false
+  newAddressChosen.value = false
   form.value.block = auth.user.block
   errors.value.block = ''
 }
@@ -242,6 +269,7 @@ function startEditing() {
     interestOptions.includes(name),
   )
   changingAddress.value = false
+  newAddressChosen.value = false
   newInterest.value = ''
   interestError.value = ''
   errors.value = {}
@@ -257,6 +285,7 @@ function stopEditing() {
   interestError.value = ''
   newInterest.value = ''
   changingAddress.value = false
+  newAddressChosen.value = false
 }
 
 function isChosen(name) {
@@ -278,7 +307,7 @@ async function save() {
   if (form.value.name.trim().length < 2) {
     errors.value.name = 'Please write your name.'
   }
-  if (changingAddress.value) {
+  if (changingAddress.value && !newAddressChosen.value) {
     errors.value.block =
       'Please press your block in the list, or press "Keep my old address".'
   } else if (form.value.block.trim().length < 3) {
@@ -470,13 +499,20 @@ async function deleteAccount() {
               data-testid="change-address" @click="startChangingAddress">Change</button>
           </div>
 
-          <!-- Only while changing it. Not pickable: a home address comes from
-               OneMap, not from a spot tapped on the map. -->
+          <!-- Only while changing it. A tap is looked up and becomes a real
+               OneMap address (onMapTapped), the same as a search. The map
+               stays open after a pick, with the pin on the new block. -->
           <template v-else>
+            <div v-if="newAddressChosen" class="chosen-address mb-3" data-testid="current-address">
+              New address: <strong>{{ form.block }}</strong>
+            </div>
             <p class="page-subtitle mb-2">
-              Search for your block and press it in the list. Neighbours come here to help you.
+              Search for your block and press it in the list, or tap your block on the map.
+              Neighbours come here to help you.
             </p>
-            <HotspotMap label="Find your block" @select="onAddressFound" />
+            <HotspotMap ref="addressMap" label="Find your block" pickable
+              @select="onAddressFound" @pick="onMapTapped" />
+            <p v-if="lookingUpAddress" class="page-subtitle mt-2 mb-0" role="status">Finding the address there…</p>
             <button type="button" class="btn btn-outline-secondary mt-3"
               data-testid="keep-address" @click="keepOldAddress">Keep my old address</button>
           </template>

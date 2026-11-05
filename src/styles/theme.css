@@ -1907,7 +1907,9 @@ form.d-grid {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
+  /* 1rem: 0.625rem of any gap is swallowed by the frames these buttons now
+     draw outside their borders, and 0.75rem left under 3px of daylight */
+  gap: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--ks-line);
 }
@@ -2086,4 +2088,104 @@ form.d-grid {
   .landing-row {
     min-height: 100vh;
   }
+}
+
+/* ==========================================================================
+   13. Buttons, everywhere
+   ==========================================================================
+   One frame for every button in the app: the coloured edge, a dark ring just
+   outside it, and the same ring again offset down and right for the shadow -
+   the navbar, the page headers and the form rows already wear it, and these
+   rules bring the rest along.
+
+   Gold means "this does the thing", white means "this backs out or filters".
+   The page's own colour stays reserved for WHERE YOU ARE: the lit nav button
+   and the stripe down the page header. A button never borrows it, or the two
+   meanings blur.
+
+   WHAT IS DELIBERATELY LEFT ALONE
+   .day-cell and .month-nav. DayPicker builds its calendar out of .btn-primary
+   and .btn-outline-secondary - 42 of them in a fixed grid - so without these
+   exclusions every date in the month would grow a gold plaque and a 4px
+   shadow, and the grid would come apart. .choice-tile is safe without being
+   named: the interest and category tiles are .btn, but never .btn-primary.
+   ========================================================================== */
+.btn-primary:not(.day-cell),
+.btn-outline-primary:not(.day-cell),
+.btn-outline-secondary:not(.day-cell):not(.month-nav),
+.btn-outline-danger {
+  --cta-accent: #f2c14e;
+  font-weight: 700;
+  border-radius: 0.45rem;
+  box-shadow:
+    0 0 0 0.1875rem #06101a,
+    0.25rem 0.25rem 0 0.1875rem #06101a;
+  transition: background-color 0.12s, box-shadow 0.12s;
+}
+
+/* The one that does the thing */
+.btn-primary:not(.day-cell) {
+  color: #fff;
+  background: #10202f;
+  border: 0.1875rem solid var(--cta-accent);
+}
+
+.btn-primary:not(.day-cell):hover,
+.btn-primary:not(.day-cell):focus-visible {
+  color: #fff;
+  background: #17324a;
+  box-shadow:
+    0 0 0 0.1875rem #06101a,
+    0.25rem 0.25rem 0 0.1875rem #06101a,
+    0 0 1.1rem 0.15rem var(--cta-accent);
+}
+
+/* Backing out, filtering, clearing: the same frame, plain white */
+.btn-outline-primary:not(.day-cell),
+.btn-outline-secondary:not(.day-cell):not(.month-nav) {
+  color: var(--ks-ink);
+  background: #fff;
+  border: 0.1875rem solid #06101a;
+}
+
+.btn-outline-primary:not(.day-cell):hover,
+.btn-outline-primary:not(.day-cell):focus-visible,
+.btn-outline-secondary:not(.day-cell):not(.month-nav):hover,
+.btn-outline-secondary:not(.day-cell):not(.month-nav):focus-visible {
+  color: var(--ks-ink);
+  background: var(--ks-teal-tint);
+}
+
+/* Cancelling a hangout, withdrawing from a task: white like the others, but
+   it keeps its red lettering, because the warning is in the word */
+.btn-outline-danger {
+  color: var(--ks-danger);
+  background: #fff;
+  border: 0.1875rem solid #06101a;
+}
+
+.btn-outline-danger:hover,
+.btn-outline-danger:focus-visible {
+  color: #fff;
+  background: var(--ks-danger);
+}
+
+/*
+  Greyed out while something is in flight. Several of these buttons disable
+  themselves mid-action ("Saving...", mark-done, accept at the task limit),
+  and without this the rules above would paint them in full gold - a button
+  that looks pressable while refusing presses, which invites a second press
+  and a second request.
+*/
+.btn-primary:not(.day-cell):disabled,
+.btn-outline-primary:not(.day-cell):disabled,
+.btn-outline-secondary:not(.day-cell):not(.month-nav):disabled,
+.btn-outline-danger:disabled {
+  opacity: 1;
+  color: #e4e9ee;
+  background: #525d68;
+  border-color: #8a949e;
+  box-shadow:
+    0 0 0 0.1875rem #06101a,
+    0.25rem 0.25rem 0 0.1875rem #06101a;
 }

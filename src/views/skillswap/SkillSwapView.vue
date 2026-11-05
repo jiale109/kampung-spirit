@@ -286,7 +286,7 @@ onMounted(() => {
     </p>
 
     <!--all | hosting | going-->
-    <div class="d-flex flex-wrap gap-2 mb-4" role="group" aria-label="Show sessions">
+    <div class="d-flex flex-wrap gap-3 mb-4" role="group" aria-label="Show sessions">
       <button
         v-for="t in tabs"
         :key="t.key"
@@ -376,7 +376,7 @@ onMounted(() => {
       </div>
     </div>
  
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
       <span class="count-pill" role="status" data-testid="session-count">{{ countText }}</span>
       <button v-if="activeFilterCount" type="button" class="btn btn-outline-secondary" @click="clearFilters">
         Clear filters ({{ activeFilterCount }})

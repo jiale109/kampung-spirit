@@ -225,7 +225,6 @@ async function doAccept(request, physicalOk) {
         :class="{ 'is-full': store.atLimit }" data-testid="active-count"
         :aria-label="`Active tasks: ${store.activeCount} of ${MAX_ACTIVE_TASKS}. Open My Tasks`">
         Active tasks: {{ store.activeCount }} / {{ MAX_ACTIVE_TASKS }}
-        <span aria-hidden="true">›</span>
       </router-link>
     </div>
 

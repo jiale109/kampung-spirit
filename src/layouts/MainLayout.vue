@@ -83,7 +83,6 @@ function closeMenu() {
 watch(() => route.fullPath, closeMenu)
 
 async function logout() {
-  closeMenu()
   await auth.logout()
   router.push('/landing')
 }
@@ -107,10 +106,52 @@ async function logout() {
       <!-- add better icon beside kampung spirit ? -->
       <router-link class="navbar-brand" :to="auth.homePath"><BrandMark />Kampung Spirit</router-link>
 
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-        aria-controls="navbarNav" aria-expanded="false" aria-label="Open menu">
-        <span class="navbar-toggler-icon"></span>
-      </button>
+      <!-- The name chip and the menu button, kept together so they never land
+           on different rows. Outside the collapse, so the chip stays at the
+           top right, on the brand's row, at every width (ms-auto). The tabs
+           go on their own row below (theme.css). The button is hidden at xl. -->
+      <div class="navbar-account d-flex align-items-center ms-auto">
+        <!-- The name chip. The points counter lives inside the menu it opens.
+             Its menu always floats (theme.css, .account-nav). -->
+        <ul class="navbar-nav account-nav ms-auto align-items-lg-center gap-2 gap-lg-3">
+          <li class="nav-item dropdown">
+            <a class="nav-link user-toggle dropdown-toggle d-flex align-items-center gap-2" href="#" role="button"
+              data-bs-toggle="dropdown" aria-expanded="false" :aria-label="`Account menu for ${auth.user.name}`">
+              <!-- Their own avatar, or the first letter of their name until they build one -->
+              <span class="avatar-frame" aria-hidden="true">
+                <img v-if="avatarPicture" :src="avatarPicture" class="avatar-portrait" alt="" />
+                <span v-else class="avatar-initial">{{ avatarInitial }}</span>
+              </span>
+              <!-- Phones below 576px show only the avatar, so the top row fits -->
+              <span class="user-name d-none d-sm-inline" data-testid="username">{{ auth.user.name }}</span>
+              <span v-if="auth.isAdmin" class="badge admin-badge" data-testid="admin-badge">Admin</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li>
+                <div class="dropdown-header">
+                  <div class="fw-bold">{{ auth.user.name }}</div>
+                  <div class="menu-meta">{{ auth.user.block }}</div>
+                  <span v-if="!auth.isAdmin" class="points-pill" data-testid="points"><img src="/images/coin.svg"
+                    class="point-coin-img" alt="" />{{ points.myPoints }} pts</span>
+                </div>
+              </li>
+              <li><hr class="dropdown-divider" /></li>
+              <!-- An admin has no profile page (router/index.js, notForAdmin) -->
+              <li v-if="!auth.isAdmin">
+                <router-link class="dropdown-item" to="/app/profile">Profile</router-link>
+              </li>
+              <li>
+                <button class="dropdown-item text-danger" @click="logout">Log out</button>
+              </li>
+            </ul>
+          </li>
+        </ul>
+
+        <button class="navbar-toggler ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+          aria-controls="navbarNav" aria-expanded="false" aria-label="Open menu">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      </div>
 
       <div ref="navMenu" class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav me-auto">
@@ -136,39 +177,6 @@ async function logout() {
           </li>
         </ul>
 
-        <!-- The name chip. The points counter lives inside the menu it opens. -->
-        <ul class="navbar-nav ms-auto align-items-lg-center gap-2 gap-lg-3">
-          <li class="nav-item dropdown">
-            <a class="nav-link user-toggle dropdown-toggle d-flex align-items-center gap-2" href="#" role="button"
-              data-bs-toggle="dropdown" aria-expanded="false">
-              <!-- Their own avatar, or the first letter of their name until they build one -->
-              <span class="avatar-frame" aria-hidden="true">
-                <img v-if="avatarPicture" :src="avatarPicture" class="avatar-portrait" alt="" />
-                <span v-else class="avatar-initial">{{ avatarInitial }}</span>
-              </span>
-              <span class="user-name" data-testid="username">{{ auth.user.name }}</span>
-              <span v-if="auth.isAdmin" class="badge admin-badge" data-testid="admin-badge">Admin</span>
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li>
-                <div class="dropdown-header">
-                  <div class="fw-bold">{{ auth.user.name }}</div>
-                  <div class="menu-meta">{{ auth.user.block }}</div>
-                  <span v-if="!auth.isAdmin" class="points-pill" data-testid="points"><img src="/images/coin.svg"
-                    class="point-coin-img" alt="" />{{ points.myPoints }} pts</span>
-                </div>
-              </li>
-              <li><hr class="dropdown-divider" /></li>
-              <!-- An admin has no profile page (router/index.js, notForAdmin) -->
-              <li v-if="!auth.isAdmin">
-                <router-link class="dropdown-item" to="/app/profile">Profile</router-link>
-              </li>
-              <li>
-                <button class="dropdown-item text-danger" @click="logout">Log out</button>
-              </li>
-            </ul>
-          </li>
-        </ul>
       </div>
     </div>
   </nav>

@@ -616,6 +616,38 @@ create table public.hangouts (
   created_at timestamptz not null default now()
 );
 
+-- Require at least 24 hours' notice when creating or rescheduling hangouts.
+CREATE OR REPLACE FUNCTION public.hangouts_check_advance_notice()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  hangout_starts_at timestamptz;
+BEGIN
+  hangout_starts_at :=
+    public.skill_session_start(NEW.hangout_date, NEW.hangout_time);
+
+  IF hangout_starts_at < NOW() THEN
+    RAISE EXCEPTION
+      'That day and time have already passed.';
+  END IF;
+
+  IF hangout_starts_at < NOW() + INTERVAL '24 hours' THEN
+    RAISE EXCEPTION
+      'Hangouts must be scheduled at least 24 hours in advance.';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER hangouts_check_advance_notice
+BEFORE INSERT OR UPDATE OF hangout_date, hangout_time
+ON public.hangouts
+FOR EACH ROW
+EXECUTE FUNCTION public.hangouts_check_advance_notice();
+
 create index on public.hangouts (status);
 create index on public.hangouts (host_id);
 create index on public.hangouts (hotspot_id);
@@ -933,24 +965,35 @@ create table public.skill_session_attendees (
 create index on public.skill_session_attendees (user_id);
  
 -- Checks a new session before it is saved
-create function public.skill_sessions_check()
-returns trigger
-language plpgsql
-set search_path = ''
-as $$
-begin
-  if public.skill_session_start(new.session_date, new.session_time) < now() then
-    raise exception 'That day and time have already passed.';
-  end if;
- 
-  if public.is_unverified_minor(new.host_id) then
-    raise exception 'Your parent or guardian needs to confirm your account before you can host.';
-  end if;
- 
-  return new;
-end;
-$$;
- 
+CREATE OR REPLACE FUNCTION public.skill_sessions_check()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  session_starts_at timestamptz;
+BEGIN
+  session_starts_at :=
+    public.skill_session_start(NEW.session_date, NEW.session_time);
+
+  IF session_starts_at < NOW() THEN
+    RAISE EXCEPTION
+      'That day and time have already passed.';
+  END IF;
+
+  IF session_starts_at < NOW() + INTERVAL '24 hours' THEN
+    RAISE EXCEPTION
+      'SkillSwap sessions must be scheduled at least 24 hours in advance.';
+  END IF;
+
+  IF public.is_unverified_minor(NEW.host_id) THEN
+    RAISE EXCEPTION
+      'Your parent or guardian needs to confirm your account before you can host.';
+  END IF;
+
+  RETURN NEW;
+END;
+$$; 
 revoke execute on function public.skill_sessions_check() from public, anon, authenticated;
  
 create trigger skill_sessions_check

@@ -107,12 +107,21 @@ function submit() {
   }
   // A calendar box can be left empty or typed into by hand, so the day is
   // checked here as well as in stores/hangout.js and the database.
+  const MIN_NOTICE_MS = 24 * 60 * 60 * 1000
+
   if (!form.value.date) {
     errors.value.date = 'Please choose a day.'
   } else if (form.value.date > LAST_DAY) {
     errors.value.date = 'Please choose a day within the next two months.'
-  } else if (sessionStart(form.value.date, form.value.time) < new Date()) {
-    errors.value.date = 'That day and time have already passed.'
+  } else {
+    const startTime = sessionStart(form.value.date, form.value.time)
+    const hoursUntilHangout = startTime.getTime() - Date.now()
+
+    if (hoursUntilHangout < 0) {
+      errors.value.date = 'That day and time have already passed.'
+    } else if (hoursUntilHangout < MIN_NOTICE_MS) {
+      errors.value.date = 'Please schedule your hangout at least 24 hours in advance.'
+    }
   }
 
   // Stop here if anything is wrong

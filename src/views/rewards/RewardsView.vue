@@ -323,7 +323,7 @@ async function markUsed(id) {
     <!-- Voucher Details Modal -->
     <div v-if="activeModalVoucher" class="modal show d-block" role="dialog" aria-modal="true"
       @click.self="activeModalVoucher = null">
-      <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
           <div class="modal-header border-0 pb-0">
             <h2 class="modal-title h5 fw-bold">{{ activeModalVoucher.merchant }}</h2>
@@ -336,7 +336,7 @@ async function markUsed(id) {
             </div>
             <h3 class="h5 fw-bold mb-1">{{ activeModalVoucher.title }}</h3>
             <!-- Google Maps Link for Nearby Outlets -->
-            <div class="mb-3">
+            <div v-if="activeModalVoucher.merchant !== 'Grab' && activeModalVoucher.merchant !== 'Gojek'" class="mb-3">
               <a :href="getGoogleMapsUrl(activeModalVoucher)" target="_blank" rel="noopener noreferrer"
                 class="btn btn-sm btn-outline-primary w-100 d-flex align-items-center justify-content-center text-wrap gap-1 text-decoration-none py-2 px-3">
                 <span>Find {{ activeModalVoucher.merchant }} near me</span>
@@ -358,12 +358,12 @@ async function markUsed(id) {
               <strong>Terms:</strong> {{ activeModalVoucher.terms }}
             </small>
           </div>
-          <div class="modal-footer border-0 pt-0 d-flex flex-column-reverse flex-sm-row gap-2">
+          <div class="modal-footer border-0 pt-0 d-flex flex-column-reverse flex-sm-row justify-content-sm-end gap-2">
             <button type="button" class="btn btn-outline-secondary w-100 w-sm-auto px-4"
               @click="activeModalVoucher = null">
               Close
             </button>
-            <button type="button" class="btn btn-primary px-4"
+            <button type="button" class="btn btn-primary px-4 w-100 w-sm-auto"
               :disabled="pointsStore.myPoints < activeModalVoucher.cost" @click="promptRedeem(activeModalVoucher)">
               {{
                 pointsStore.myPoints >= activeModalVoucher.cost

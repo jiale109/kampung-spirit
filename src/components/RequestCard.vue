@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
+import TranslateText from './TranslateText.vue'
 import CategoryBadge from './CategoryBadge.vue'
 import StatusBadge from './StatusBadge.vue'
 import RequestMapModal from './RequestMapModal.vue'
@@ -109,6 +110,9 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
       <div class="request-details">
         <div class="request-details-inner">
           <p class="request-desc">{{ request.description }}</p>
+
+          <!-- Under the words, never instead of them -->
+          <TranslateText :text="request.description" />
 
           <div class="request-place">
             <span>Meeting place: <strong>{{ request.location }}</strong></span>

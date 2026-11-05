@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
+import TranslateText from './TranslateText.vue'
 import { useSkillSwapStore } from '../stores/skillSwap.js'
 import {
   formatDate,
@@ -101,6 +102,9 @@ const detailsId = computed(() => `swap-details-${props.session.id}`)
       <div :id="detailsId" class="request-details">
         <div class="request-details-inner">
           <p class="request-desc">{{ session.description }}</p>
+
+          <!-- Under the words, never instead of them -->
+          <TranslateText :text="session.description" />
  
           <dl class="request-facts">
             <div>

@@ -9,6 +9,7 @@
 */
 import { ref, computed } from 'vue'
 import { useHangoutStore } from '../stores/hangout.js'
+import TranslateText from './TranslateText.vue'
 import { formatDate, formatTime, formatDuration } from '../lib/skillSwapFormat.js'
 
 const props = defineProps({
@@ -86,6 +87,9 @@ const detailsId = computed(() => `hangout-details-${props.hangout.id}`)
       <div :id="detailsId" class="request-details">
         <div class="request-details-inner">
           <p class="request-desc">{{ hangout.description }}</p>
+
+          <!-- Under the words, never instead of them -->
+          <TranslateText :text="hangout.description" />
 
           <!-- Rain warning for outdoor places only. The page passes it in. -->
           <p v-if="hangout.weatherWarning" class="points-note" data-testid="weather-warning">

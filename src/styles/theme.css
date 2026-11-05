@@ -1826,9 +1826,19 @@ form.d-grid {
   gap: 1rem;
   min-height: 0;
   overflow: hidden;
-  /* room so focus rings are not cut off by overflow: hidden */
-  padding: 0.25rem;
-  margin: -0.25rem;
+  /*
+    Room so what sits inside is not cut off by the overflow: hidden above.
+    The padding and the negative margin are equal and opposite, so this costs
+    no space - it only widens what the card is willing to paint.
+
+    0.5rem, not the 0.25rem it was: that was enough for a focus ring, but the
+    buttons and selects in here now draw a frame 0.4375rem outside their own
+    box, and the right edge of it was being sliced off - by 4.1px on a 320px
+    phone and 5.1px with large text. Measured on the language select and on
+    the Translate button.
+  */
+  padding: 0.5rem;
+  margin: -0.5rem;
 }
 
 .request-desc {
@@ -2593,4 +2603,74 @@ form.d-grid {
 /* Today keeps its amber ring - see the note at the top of this section */
 .day-cell.is-today.btn-outline-secondary {
   border-color: var(--ks-amber-ink);
+}
+
+/* ==========================================================================
+   15. "Read this in another language"
+   ==========================================================================
+   components/TranslateText.vue, under the description on a card. Quiet on
+   purpose: it is an offer, not an action, so it must not pull the eye away
+   from the button that actually joins the hangout.
+   ========================================================================== */
+.translate-block {
+  /*
+    No top margin. This is a flex child of .request-details-inner, which
+    already puts 1rem between its children - a margin here is added to that,
+    not instead of it, and the gap under the description came out at 44px
+    (54px with large text) instead of 22px.
+  */
+  margin: 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--ks-line);
+}
+
+.translate-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-weight: 600;
+  color: var(--ks-muted);
+}
+
+.translate-row {
+  display: flex;
+  flex-wrap: wrap;
+  /* 1rem, like everywhere else these framed controls sit side by side:
+     0.625rem of any gap is eaten by the frame before anything shows */
+  gap: 1rem;
+  align-items: center;
+}
+
+/*
+  Wide enough for the longest language name, and allowed to shrink on a
+  narrow phone rather than pushing the button off the card.
+*/
+.translate-select {
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 20rem;
+}
+
+/*
+  The translation itself. Teal tint rather than white, so it reads as an
+  addition to the card rather than more of what the neighbour wrote.
+*/
+.translate-result {
+  margin: 0.9rem 0 0;
+  padding: 0.85rem 1rem;
+  background: var(--ks-teal-tint);
+  border: 0.1875rem solid #06101a;
+  border-radius: 0.45rem;
+  /* A translated line can be one long word in some scripts */
+  overflow-wrap: anywhere;
+}
+
+.translate-problem {
+  margin: 0.9rem 0 0;
+  color: var(--ks-danger);
+}
+
+.translate-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  color: var(--ks-muted);
 }

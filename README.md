@@ -105,7 +105,7 @@ src/
     rewards/                 Vouchers, wallet and the community challenge           /app/rewards
     profile/                 Your details, interests and "Use large text"           /app/profile
   components/
-    RequestCard.vue          A request: simple card, details on hover or tap
+    RequestCard.vue          A request: simple card, details on hover, click keeps open
     RequestForm.vue          Create/edit form with validation (including when help is needed)
     HangoutCard.vue  HangoutForm.vue  HotspotMap.vue (+ locationSearch.vue)
     SkillSwapCard.vue  SkillSwapForm.vue  VoucherCard.vue
@@ -142,7 +142,7 @@ Pages in the navbar (the same for everyone, since anyone can ask for help and an
 The users are seniors, so the design is deliberately calm and large.
 
 - **Text size:** **22px for everyone**, and **27px when "Use large text" is on** (chosen at sign up or on the Profile page). The larger size is the `html.large-text` rule in `styles/theme.css`, applied by `MainLayout.vue` and `lib/profile.js`. Everything is sized in `rem` so text, buttons and spacing grow together. Always use `rem`.
-- **Simple by default:** request cards show only the category, status and title. The details and buttons open on mouse hover, or on tap, or with Enter on the keyboard (`components/RequestCard.vue`). Reuse this idea for other lists.
+- **Simple by default:** request cards show only the category, status and title. The details and buttons open on mouse hover, and a click (or a tap, or Enter on the keyboard) keeps them open until clicked again (`components/RequestCard.vue`). Reuse this idea for other lists.
 - **Big targets:** buttons and inputs are at least 48px tall, with one main action per screen.
 - **Status in words:** colour is only a hint. States are always written ("Open", "Awaiting confirmation").
 - **Colours and fonts** are variables at the top of `styles/theme.css`. Change `--ks-teal` to re-colour the whole app.

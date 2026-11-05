@@ -28,8 +28,45 @@ const props = defineProps({
 
 const categoryIcon = computed(() => categories.find((c) => c.name === props.request.category)?.icon)
 
+// ---- open and close the details (same idea as HangoutCard.vue) ----
+// Hover opens it for mouse users. A click, tap or Enter pins it open until
+// pressed again, so touch and keyboard users can open it too. Only a real
+// mouse counts as hovering, so a tap on a phone never opens it by hover.
 const pinned = ref(false)
-const expanded = computed(() => props.open || pinned.value)
+const hovering = ref(false)
+const expanded = computed(() => props.open || pinned.value || hovering.value)
+
+function onEnter(e) {
+  if (e.pointerType === 'mouse') hovering.value = true
+}
+function onLeave(e) {
+  if (e.pointerType === 'mouse') hovering.value = false
+}
+// Unpinning also clears hovering, so "Hide details" closes the card even
+// while the mouse is still over it
+function toggle() {
+  if (pinned.value) {
+    pinned.value = false
+    hovering.value = false
+  } else {
+    pinned.value = true
+  }
+}
+
+const hint = computed(() => {
+  // Translated here rather than in the template: the arrow is part of the
+  // wording, and t() falls through to English, so the English stays exactly
+  // as it was written
+  if (pinned.value) return t('Hide details') + ' ▴'
+  if (hovering.value) return t('Click to keep open') + ' ▾'
+  return t('Show details') + ' ▾'
+})
+
+// Pin first, so the map popup does not close the card when the mouse moves onto it
+function openMap() {
+  pinned.value = true
+  showMap.value = true
+}
 
 // The map is only drawn when someone presses "View map", never when the list loads
 const showMap = ref(false)
@@ -94,7 +131,8 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
 
 <template>
   <article class="card request-card"
-    :class="[categoryClass(request.category), { 'is-expanded': expanded, 'is-compact': compact }]">
+    :class="[categoryClass(request.category), { 'is-expanded': expanded, 'is-compact': compact }]"
+    @pointerenter="onEnter" @pointerleave="onLeave">
       
     <div class="card-body p-3 p-md-4">
       <div class="d-flex flex-column flex-md-row justify-content-between align-items-center align-items-md-center gap-3">
@@ -118,7 +156,7 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
           <div class="d-flex flex-column gap-1 text-start">
             <h2 class="request-title">
               <button type="button" class="request-toggle" :aria-expanded="expanded"
-                @click="pinned = !pinned">{{ title }}</button>
+                @click="toggle">{{ title }}</button>
             </h2>
 
             <p v-if="compact" class="request-stats" data-testid="card-stats">
@@ -136,11 +174,14 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
               {{ t('Waiting for a helper for {n} days', { n: waitingDays }) }}
             </p>
 
+
             <div v-if="$slots.notice" class="request-notice">
               <slot name="notice" />
             </div>
 
-            <span v-if="!open" class="request-hint">{{ expanded ? t('Hide details') + ' ▴' : t('Show details') + ' ▾' }}</span>
+            <!-- Does the same as the title button. Hidden from screen readers:
+                 the title button and its aria-expanded already say it -->
+            <span v-if="!open" class="request-hint" aria-hidden="true" @click="toggle">{{ hint }}</span>
           </div>
         </div>
 
@@ -172,7 +213,8 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
 
           <div class="request-place">
             <span>{{ t('Meeting place:') }} <strong>{{ request.location }}</strong></span>
-            <button type="button" class="btn btn-outline-primary" data-testid="view-map" @click="showMap = true">{{ t('View map') }}</button>
+            <button type="button" class="btn btn-outline-primary" data-testid="view-map"
+              @click="openMap">{{ t('View map') }}</button>
           </div>
           <!-- showRequester is false on the requester's own board, so it is their home -->
           <p v-if="request.atHome" class="mb-0" data-testid="at-home">

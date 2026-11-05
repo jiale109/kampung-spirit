@@ -18,14 +18,17 @@
 */
 import { ref, computed, onMounted } from 'vue'
 import { useHangoutStore } from '../../stores/hangout.js'
+import { useAuthStore } from '../../stores/auth.js'
 import { loadForecast, weatherWarning } from '../../lib/weather.js'
 import { sessionStart } from '../../lib/skillSwapFormat.js'
 import EmptyState from '../../components/EmptyState.vue'
 import HangoutCard from '../../components/HangoutCard.vue'
 import HotspotMap from '../../components/HotspotMap.vue'
+import ConfirmModal from '../../components/ConfirmModal.vue'
 import { useTelegramPrompt } from '../../composables/useTelegramPrompt.js'
 
 const store = useHangoutStore()
+const auth = useAuthStore()
 const { askToLinkTelegram } = useTelegramPrompt()
 
 /*
@@ -160,6 +163,24 @@ async function cancel(hangout) {
   if (!result.ok) error.value = result.error
 }
 
+// Admin: delete a hangout after "Yes, delete". The database refuses this
+// for anyone who is not an admin (schema.sql section 18).
+const hangoutToDelete = ref(null)
+
+function askDelete(hangout) {
+  message.value = ''
+  error.value = ''
+  hangoutToDelete.value = hangout
+}
+
+async function confirmDelete() {
+  const hangout = hangoutToDelete.value
+  hangoutToDelete.value = null
+  const result = await store.adminDelete(hangout.id)
+  if (result.ok) message.value = `"${hangout.title}" has been deleted.`
+  else error.value = result.error
+}
+
 async function complete(hangout) {
   message.value = ''
   error.value = ''
@@ -176,7 +197,7 @@ async function complete(hangout) {
         <h1 class="page-title">Hangouts</h1>
         <p class="page-subtitle">Casual meet-ups at your estate's favourite spots.</p>
       </div>
-      <router-link v-if="store.openHangouts.length > 0" to="/app/hangouts/new"
+      <router-link v-if="store.openHangouts.length > 0 && !auth.isAdmin" to="/app/hangouts/new"
         class="btn btn-primary btn-lg">Propose a hangout</router-link>
     </div>
 
@@ -218,7 +239,7 @@ async function complete(hangout) {
     <EmptyState v-if="shownHangouts.length === 0 && isFiltered"
       :message="`Sorry, there are no hangouts at ${filterLabel}.`" data-testid="no-hangouts-here">
       <div class="d-grid gap-3 d-sm-flex justify-content-sm-center mt-4">
-        <router-link to="/app/hangouts/new" class="btn btn-primary btn-lg"
+        <router-link v-if="!auth.isAdmin" to="/app/hangouts/new" class="btn btn-primary btn-lg"
           data-testid="propose-instead">Propose a hangout instead</router-link>
         <button type="button" class="btn btn-outline-secondary btn-lg" @click="clearFilter">
           Show all places
@@ -229,11 +250,23 @@ async function complete(hangout) {
     <!-- Nothing anywhere yet -->
     <EmptyState v-else-if="shownHangouts.length === 0"
       message="No hangouts here yet. Why not propose one for your neighbours?">
-      <router-link to="/app/hangouts/new" class="btn btn-primary btn-lg mt-4">Propose a hangout</router-link>
+      <router-link v-if="!auth.isAdmin" to="/app/hangouts/new" class="btn btn-primary btn-lg mt-4">Propose a hangout</router-link>
     </EmptyState>
 
     <!-- Yours first, then everyone else's. A heading only appears when that
          half has something in it, so nobody is shown an empty box. -->
+    <!-- Admin: every open hangout in one list, ended ones too, each with Delete -->
+    <section v-else-if="auth.isAdmin" data-testid="admin-hangouts">
+      <h2 class="page-title fs-4 mb-3">
+        All hangouts
+        <span class="page-subtitle">({{ shownHangouts.length }})</span>
+      </h2>
+      <div class="request-list">
+        <HangoutCard v-for="hangout in shownHangouts" :key="hangout.id" :hangout="hangout" admin
+          @delete="askDelete" />
+      </div>
+    </section>
+
     <template v-else>
       <section v-if="myHangouts.length > 0" class="mb-5" data-testid="my-hangouts">
         <h2 class="page-title fs-4 mb-3">
@@ -264,5 +297,10 @@ async function complete(hangout) {
         Nobody else has proposed a hangout yet.
       </p>
     </template>
+
+    <ConfirmModal v-if="hangoutToDelete" title="Delete this hangout?"
+      message="It will be removed for everyone. This cannot be undone."
+      confirm-label="Yes, delete" cancel-label="Keep it" danger testid="confirm-admin-delete"
+      @confirm="confirmDelete" @cancel="hangoutToDelete = null" />
   </div>
 </template>

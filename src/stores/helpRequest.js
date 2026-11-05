@@ -162,11 +162,15 @@ export const useHelpRequestStore = defineStore('helpRequest', () => {
     return result
   }
 
+  // Admin only: delete any request (schema.sql section 18). The database
+  // refuses this for everyone else, whatever the app shows.
+  const adminDelete = (id) => run(supabase.rpc('admin_delete_help_request', { request_id: id }))
+
   return {
     requests, loading, loadError,
     myRequests, openRequests, myTasks, activeCount, atLimit,
     getRequestById, load,
     createRequest, updateRequest, cancelRequest, confirmDone, deleteRequest,
-    acceptRequest, markDone, withdrawFromTask,
+    acceptRequest, markDone, withdrawFromTask, adminDelete,
   }
 })

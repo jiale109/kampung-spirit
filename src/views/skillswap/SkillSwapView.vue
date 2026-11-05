@@ -26,6 +26,8 @@ import SkillSwapCard from '../../components/SkillSwapCard.vue'
 import HotspotMap from '../../components/HotspotMap.vue'
 import { NEAR_KM, isNearPoint, countWithoutPin, placeMarkers } from '../../lib/nearby.js'
 import { useSkillSwapStore } from '../../stores/skillSwap.js'
+import { useAuthStore } from '../../stores/auth.js'
+import ConfirmModal from '../../components/ConfirmModal.vue'
 import { useTelegramPrompt } from '../../composables/useTelegramPrompt.js'
 import {
   formatDate,
@@ -38,6 +40,7 @@ import {
 
 const route = useRoute()
 const store = useSkillSwapStore()
+const auth = useAuthStore()
 const { askToLinkTelegram } = useTelegramPrompt()
 
 //selected filter
@@ -211,6 +214,7 @@ const emptyMessage = computed(() => {
   if (isNarrowed.value) return 'No sessions match. Try fewer filters or a shorter search.'
   if (filter.value === 'hosting') return 'You are not hosting a session yet.'
   if (filter.value === 'going') return 'You have not joined a session yet.'
+  if (auth.isAdmin) return 'No sessions yet.'
   return 'No sessions yet. Be the first to host one.'
 })
 
@@ -250,6 +254,21 @@ function onCancel(s) {
   return act(() => store.cancelSession(s.id), `“${s.title}” is cancelled.`)
 }
  
+// Admin: delete a session after "Yes, delete". The database refuses this
+// for anyone who is not an admin (schema.sql section 18).
+const sessionToDelete = ref(null)
+
+function onDelete(s) {
+  notice.value = null
+  sessionToDelete.value = s
+}
+
+function confirmDelete() {
+  const s = sessionToDelete.value
+  sessionToDelete.value = null
+  return act(() => store.adminDelete(s.id), `“${s.title}” has been deleted.`)
+}
+
 async function onComplete(s) {
   if (busy.value) return
   busy.value = true
@@ -279,14 +298,14 @@ onMounted(() => {
         <h1 class="page-title">Skill Swaps</h1>
         <p class="page-subtitle">Small sessions where neighbours teach each other.</p>
       </div>
-      <RouterLink :to="createPath" class="btn btn-primary btn-lg">Host a session</RouterLink>
+      <RouterLink v-if="!auth.isAdmin" :to="createPath" class="btn btn-primary btn-lg">Host a session</RouterLink>
     </div>
-    <p class="points-note mt-4">
+    <p v-if="!auth.isAdmin" class="points-note mt-4">
       Hosting or joining a session earns you points once the host marks it as completed.
     </p>
 
     <!--all | hosting | going-->
-    <div class="d-flex flex-wrap gap-3 mb-4" role="group" aria-label="Show sessions">
+    <div v-if="!auth.isAdmin" class="d-flex flex-wrap gap-3 mb-4" role="group" aria-label="Show sessions">
       <button
         v-for="t in tabs"
         :key="t.key"
@@ -405,14 +424,19 @@ onMounted(() => {
         v-for="s in shown"
         :key="s.id"
         :session="s"
+        :admin="auth.isAdmin"
+        @delete="onDelete"
         @join="onJoin"
         @leave="onLeave"
         @cancel="onCancel"
         @complete="onComplete"
       />
     </div>
- 
-    
+
+    <ConfirmModal v-if="sessionToDelete" title="Delete this session?"
+      message="It will be removed for everyone. This cannot be undone."
+      confirm-label="Yes, delete" cancel-label="Keep it" danger testid="confirm-admin-delete"
+      @confirm="confirmDelete" @cancel="sessionToDelete = null" />
   </div>
 
 </template>

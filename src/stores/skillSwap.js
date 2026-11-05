@@ -71,8 +71,9 @@ export const useSkillSwapStore = defineStore('skillSwap', () => {
 
   const hasStarted = (item) => sessionStart(item.date, item.time) <= now.value
   const hasEnded = (item) => sessionEnd(item.date, item.time, item.duration) <= now.value
-  // Ended items stay for their host only, until they mark them done or cancel
-  const stillShown = (item) => !hasEnded(item) || isHost(item)
+  // Ended items stay for their host only, until they mark them done or cancel.
+  // An admin sees them all, so they can tidy up ones nobody closed.
+  const stillShown = (item) => !hasEnded(item) || isHost(item) || auth.isAdmin
  
   const needSignIn = () => ({ ok: false, error: 'Please sign in first.' })
   const notFound = () => ({ ok: false, error: 'We could not find that session.' })
@@ -202,6 +203,14 @@ export const useSkillSwapStore = defineStore('skillSwap', () => {
     return { ok: true, points }
   }
  
+  // Admin only: delete any session (schema.sql section 18). The database
+  // refuses this for everyone else. Reloads either way, so the list is current.
+  async function adminDelete(id) {
+    const { error } = await supabase.rpc('admin_delete_skill_session', { swap_id: id })
+    await load()
+    return error ? { ok: false, error: error.message } : { ok: true }
+  }
+
   return {
     sessions,
     loading,
@@ -220,5 +229,6 @@ export const useSkillSwapStore = defineStore('skillSwap', () => {
     cancelRsvp,
     cancelSession,
     completeSession,
+    adminDelete,
   }
 })

@@ -68,7 +68,7 @@ If you get a merge conflict, do not guess: ask the person who owns the file.
 1. Text is **22px** for everyone, and **27px** when "Use large text" is on (sign up or Profile page; `html.large-text` in `theme.css`, applied by `MainLayout.vue` and `lib/profile.js`). Everything is sized in `rem`, so use `rem` too, never `px` for text, padding or button size.
 2. Buttons and inputs are at least 48px tall. One clear main action per screen.
 3. Never show a state by colour alone. Write it ("Open", "Full", "Awaiting confirmation").
-4. Keep screens calm: show the title and status first, and put details behind hover or tap (see `components/RequestCard.vue`).
+4. Keep screens calm: show the title and status first, and put details behind hover or tap: request cards open on mouse hover and a click keeps them open (see `components/RequestCard.vue`).
 5. Every control must work with the keyboard and show a visible focus ring.
 6. Errors say what went wrong and how to fix it, without blame ("Write at least 5 characters.").
 7. Check your page on a phone width (about 390px) and at senior text size before opening a PR.
@@ -83,5 +83,5 @@ npx playwright test hangouts   # run one file
 ```
 
 Useful helpers are in `e2e/helpers.js`: `resetApp`, `login`, `logout`, `card`, `openCard`.
-Request cards only show their buttons on hover, so use `openCard()` before clicking a button inside one.
+Request cards only show their buttons while open (on mouse hover, or after a click pins them), so use `openCard()` before clicking a button inside one.
 If Playwright says a browser is missing, run `npx playwright install chromium` once.

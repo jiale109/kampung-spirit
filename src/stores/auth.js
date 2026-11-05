@@ -9,6 +9,8 @@
   age_group is 'youth' (12-21), 'adult' (22-64) or 'senior' (65+).
   guardian_status is 'not_needed', 'pending' or 'verified' (under 18s need a
   verified guardian before they can accept tasks).
+  is_admin is true only for an admin (schema.sql section 18). It only changes
+  what the app SHOWS: the database refuses admin actions from anyone else.
 
   Every action returns { ok: true } or { ok: false, error: 'Plain message' }.
   The database rules (age limits, guardian details) are in supabase/schema.sql.
@@ -23,7 +25,11 @@ import { supabase } from '../lib/supabase.js'
 // arrives as undefined in auth.user, however well it saved, so ADD TO THIS
 // LIST whenever a new column is added to public.profiles.
 const PROFILE_COLUMNS =
-  'id, name, block, interests, large_text, age_group, guardian_status, gender, skin_tone, hidden_interests, show_walker'
+  'id, name, block, interests, large_text, age_group, guardian_status, gender, skin_tone, hidden_interests, show_walker, is_admin'
+
+// Typing just "admin" in the email box logs in as the demo admin
+// (scripts/seed-demo.js creates it, README "Admin account")
+const ADMIN_EMAIL = 'admin@example.com'
 
 export const useAuthStore = defineStore('auth', () => {
   // The logged-in person (or null)
@@ -33,7 +39,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   // TEMPORARY until the senior and youth pages are merged into one set:
   // seniors start on the senior pages, everyone else on the youth pages.
-  const homePath = computed(() => (user.value?.age_group === 'senior' ? '/app/requests' : '/app'))
+  const isAdmin = computed(() => user.value?.is_admin === true)
+  // An admin starts on the Help Board, where every request is listed
+  const homePath = computed(() => {
+    if (isAdmin.value) return '/app'
+    return user.value?.age_group === 'senior' ? '/app/requests' : '/app'
+  })
 
   // Logged out somewhere else (another tab, or the session expired)
   supabase.auth.onAuthStateChange((event) => {
@@ -115,6 +126,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function login({ email, password }) {
+    if (!email.includes('@') && email.toLowerCase() === 'admin') email = ADMIN_EMAIL
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) return { ok: false, error: 'That email or password is not right.' }
 
@@ -192,5 +204,5 @@ export const useAuthStore = defineStore('auth', () => {
     return { ok: true }
   }
 
-  return { user, ready, homePath, init, register, login, updateProfile, logout, deleteAccount }
+  return { user, ready, isAdmin, homePath, init, register, login, updateProfile, logout, deleteAccount }
 })

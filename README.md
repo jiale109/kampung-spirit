@@ -2,7 +2,7 @@
 
 > Neighbours helping neighbours, one small favour at a time.
 
-IS216 group project (G6, Team 1). A web app for one HDB estate (Eunos) where seniors post help requests, youths in the same estate accept them, residents join hangouts and skill-swap sessions, and helpers earn points they can redeem for (simulated) vouchers from local merchants.
+IS216 group project (G6, Team 1). A web app for HDB estates across Singapore where seniors post help requests, youths nearby accept them, residents join hangouts and skill-swap sessions, and helpers earn points they can redeem for (simulated) vouchers from local merchants.
 
 Built with Vue 3, Pinia, Vue Router and Bootstrap 5. Tested with Playwright. Deployed on Vercel.
 
@@ -48,6 +48,23 @@ All demo accounts use the password **`kampung-demo-123`**.
 | Wei Jie | `demo.weijie@example.com` | Youth |
 | Aisha | `demo.aisha@example.com` | Youth |
 
+### Admin account
+
+An admin can see every help request, hangout and skill swap session, and delete any of them. An admin does not take part: they cannot post, accept, host or join anything.
+
+- **Log in:** type **`admin`** in the email box and the password **`admin123!`**. (The full email is `admin@example.com`.)
+- **Created by** `pnpm seed:demo`, like the other demo accounts.
+- **Made an admin** by running this once in **SQL Editor > New query**. The seed script prints it at the end too. Until you run it, the account is an ordinary user.
+  ```sql
+  insert into public.admins (user_id)
+    select id from auth.users where email = 'admin@example.com'
+    on conflict do nothing;
+  ```
+
+The database decides who is an admin (`supabase/schema.sql` section 18, or `migrations/20261105120000_admin.sql` on an existing project), so it refuses admin actions from anyone else, whatever the app shows.
+
+> **Warning:** `admin123!` is for demos only. Change the admin's password (or remove the account) before the site is open to the public.
+
 ## Team and who builds what
 
 | Feature | Owner | Start here |
@@ -88,7 +105,7 @@ src/
     rewards/                 Vouchers, wallet and the community challenge           /app/rewards
     profile/                 Your details, interests and "Use large text"           /app/profile
   components/
-    RequestCard.vue          A request: simple card, details on hover or tap
+    RequestCard.vue          A request: simple card, details on hover, click keeps open
     RequestForm.vue          Create/edit form with validation (including when help is needed)
     HangoutCard.vue  HangoutForm.vue  HotspotMap.vue (+ locationSearch.vue)
     SkillSwapCard.vue  SkillSwapForm.vue  VoucherCard.vue
@@ -125,7 +142,7 @@ Pages in the navbar (the same for everyone, since anyone can ask for help and an
 The users are seniors, so the design is deliberately calm and large.
 
 - **Text size:** **22px for everyone**, and **27px when "Use large text" is on** (chosen at sign up or on the Profile page). The larger size is the `html.large-text` rule in `styles/theme.css`, applied by `MainLayout.vue` and `lib/profile.js`. Everything is sized in `rem` so text, buttons and spacing grow together. Always use `rem`.
-- **Simple by default:** request cards show only the category, status and title. The details and buttons open on mouse hover, or on tap, or with Enter on the keyboard (`components/RequestCard.vue`). Reuse this idea for other lists.
+- **Simple by default:** request cards show only the category, status and title. The details and buttons open on mouse hover, and a click (or a tap, or Enter on the keyboard) keeps them open until clicked again (`components/RequestCard.vue`). Reuse this idea for other lists.
 - **Big targets:** buttons and inputs are at least 48px tall, with one main action per screen.
 - **Status in words:** colour is only a hint. States are always written ("Open", "Awaiting confirmation").
 - **Colours and fonts** are variables at the top of `styles/theme.css`. Change `--ks-teal` to re-colour the whole app.

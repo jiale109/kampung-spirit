@@ -19,6 +19,24 @@ if (!url || !key) {
 
 const DEMO_PASSWORD = 'kampung-demo-123'
 
+/*
+  The admin (README "Admin account"). Log in with just "admin" and this
+  password. For demos only: change it on any site the public can reach.
+
+  This script only creates the account. Making it an ADMIN needs the line
+  printed at the end, run in the SQL Editor: the publishable key used here
+  cannot write to public.admins, on purpose. The admin posts, hosts and
+  joins nothing (the database would refuse it anyway).
+*/
+const ADMIN_PASSWORD = 'admin123!'
+const admin = {
+  email: 'admin@example.com', name: 'Admin', block: 'Kampung Spirit admin',
+  birthDate: '1990-01-01', largeText: false, password: ADMIN_PASSWORD,
+}
+const MAKE_ADMIN_SQL = `insert into public.admins (user_id)
+  select id from auth.users where email = 'admin@example.com'
+  on conflict do nothing;`
+
 // Youth birth years are worked out from today, so they stay 19-21
 const thisYear = new Date().getFullYear()
 
@@ -47,6 +65,14 @@ function pinAt(hotspotId) {
   return { latitude, longitude }
 }
 
+// Everything a hangout row needs about its place, from a hotspot. Hangouts
+// keep their own name, pin and outdoor flag (schema.sql section 11), the same
+// columns createHangout() in src/stores/hangout.js sends.
+function placeAt(hotspotId) {
+  const { name, latitude, longitude, outdoor } = findHotspot(hotspotId)
+  return { hotspot_id: hotspotId, place_name: name, latitude, longitude, outdoor }
+}
+
 // Requests for each senior, by email. Together they cover all 5 categories.
 // Each has a place name and a pin. The CC ones match a hotspot exactly; the
 // rest are not hotspots, so they use the nearest one (check before the demo).
@@ -68,37 +94,40 @@ const requestsBySenior = {
 }
 
 // Hangouts for each host, by email. Dates are 1 to 6 days ahead, because the
-// database refuses hangouts in the past. Hotspot ids come from src/lib/hotspots.js.
+// database refuses hangouts in the past. placeAt() fills in the place from
+// src/lib/hotspots.js.
 const hangoutsByHost = {
   'demo.tan@example.com': [
-    { title: 'Morning walk at the park', description: 'A gentle walk and a chat. We stop whenever anyone needs a rest.', hotspot_id: 'eunos-park', hangout_date: dateFromToday(1), hangout_time: '08:30', duration: 60 },
+    { title: 'Morning walk at the park', description: 'A gentle walk and a chat. We stop whenever anyone needs a rest.', ...placeAt('eunos-park'), hangout_date: dateFromToday(1), hangout_time: '08:30', duration: 60 },
   ],
   'demo.fatimah@example.com': [
-    { title: 'Herb garden morning', description: 'Watering and weeding together. Gloves provided.', hotspot_id: 'eunos-community-garden', hangout_date: dateFromToday(3), hangout_time: '09:00', duration: 90 },
+    { title: 'Herb garden morning', description: 'Watering and weeding together. Gloves provided.', ...placeAt('eunos-community-garden'), hangout_date: dateFromToday(3), hangout_time: '09:00', duration: 90 },
   ],
   'demo.weijie@example.com': [
-    { title: 'Board games at the CC', description: 'Chinese chess, Monopoly Deal and snacks. Beginners welcome.', hotspot_id: 'eunos-cc', hangout_date: dateFromToday(2), hangout_time: '19:00', duration: 120 },
+    { title: 'Board games at the CC', description: 'Chinese chess, Monopoly Deal and snacks. Beginners welcome.', ...placeAt('eunos-cc'), hangout_date: dateFromToday(2), hangout_time: '19:00', duration: 120 },
   ],
   'demo.aisha@example.com': [
-    { title: 'Kopi and newspapers', description: 'Read the papers together over kopi. Come and go as you like.', hotspot_id: 'eunos-crescent-market', hangout_date: dateFromToday(5), hangout_time: '10:00', duration: 60 },
+    { title: 'Kopi and newspapers', description: 'Read the papers together over kopi. Come and go as you like.', ...placeAt('eunos-crescent-market'), hangout_date: dateFromToday(5), hangout_time: '10:00', duration: 60 },
   ],
 }
 
 // Skill sessions for each host, by email. Categories come from CATEGORIES in
 // src/lib/skillSwapFormat.js (0 Tech, 1 Cooking, 2 Crafts, 5 Languages).
+// Each has a pin, like a session hosted from the app: the CC ones match the
+// hotspot, and the void deck uses the nearest one (as the requests do).
 const sessionsByHost = {
   'demo.tan@example.com': [
     // Capacity 2, and two people join it below, so the demo has a full session
-    { title: 'Crochet for beginners', description: 'Learn the basic stitches and make your first coaster. Wool and hooks are provided.', category: CATEGORIES[2], venue: 'Void deck, Blk 412 Eunos Cres', session_date: dateFromToday(4), session_time: '10:00', duration: 90, capacity: 2 },
+    { title: 'Crochet for beginners', description: 'Learn the basic stitches and make your first coaster. Wool and hooks are provided.', category: CATEGORIES[2], venue: 'Void deck, Blk 412 Eunos Cres', ...pinAt('eunos-crescent-market'), session_date: dateFromToday(4), session_time: '10:00', duration: 90, capacity: 2 },
   ],
   'demo.lim@example.com': [
-    { title: 'Traditional kueh making', description: 'Make kueh dadar from a family recipe, then taste it together.', category: CATEGORIES[1], venue: 'Eunos CC kitchen', session_date: dateFromToday(6), session_time: '11:00', duration: 120, capacity: 6 },
+    { title: 'Traditional kueh making', description: 'Make kueh dadar from a family recipe, then taste it together.', category: CATEGORIES[1], venue: 'Eunos CC kitchen', ...pinAt('eunos-cc'), session_date: dateFromToday(6), session_time: '11:00', duration: 120, capacity: 6 },
   ],
   'demo.weijie@example.com': [
-    { title: 'Staying safe with digital banking', description: 'Learn how to spot scam messages and use your banking app with confidence.', category: CATEGORIES[0], venue: 'Eunos CC, Level 2', session_date: dateFromToday(3), session_time: '15:00', duration: 60, capacity: 8 },
+    { title: 'Staying safe with digital banking', description: 'Learn how to spot scam messages and use your banking app with confidence.', category: CATEGORIES[0], venue: 'Eunos CC, Level 2', ...pinAt('eunos-cc'), session_date: dateFromToday(3), session_time: '15:00', duration: 60, capacity: 8 },
   ],
   'demo.aisha@example.com': [
-    { title: 'Basic Malay for neighbours', description: 'Greetings and everyday phrases for the market and the coffee shop.', category: CATEGORIES[5], venue: 'Eunos CC, Level 1', session_date: dateFromToday(2), session_time: '16:30', duration: 60, capacity: 10 },
+    { title: 'Basic Malay for neighbours', description: 'Greetings and everyday phrases for the market and the coffee shop.', category: CATEGORIES[5], venue: 'Eunos CC, Level 1', ...pinAt('eunos-cc'), session_date: dateFromToday(2), session_time: '16:30', duration: 60, capacity: 10 },
   ],
 }
 
@@ -119,12 +148,14 @@ function newClient() {
 }
 
 // Sign up (with the same metadata as stores/auth.js register()), or log in if the account exists.
+// Uses person.password if it has one (the admin), otherwise DEMO_PASSWORD.
 // Returns { client, created } or throws with a plain message.
 async function signUpOrLogIn(person) {
   const client = newClient()
+  const password = person.password ?? DEMO_PASSWORD
   const { data, error } = await client.auth.signUp({
     email: person.email,
-    password: DEMO_PASSWORD,
+    password,
     options: {
       data: {
         name: person.name,
@@ -142,7 +173,7 @@ async function signUpOrLogIn(person) {
   if (!error && !data.session) throw new Error('No session after sign up. Switch off "Confirm email" in Supabase.')
   if (error.code !== 'user_already_exists') throw new Error(`Could not sign up ${person.email}: ${error.message}`)
 
-  const login = await client.auth.signInWithPassword({ email: person.email, password: DEMO_PASSWORD })
+  const login = await client.auth.signInWithPassword({ email: person.email, password })
   if (login.error) throw new Error(`${person.email} already exists but the demo password did not work: ${login.error.message}`)
   return { client, created: false }
 }
@@ -210,7 +241,9 @@ async function main() {
     if (count > 0) {
       console.log(`  ${senior.name} already has ${count} request(s), not adding more.`)
     } else {
-      const rows = requestsBySenior[senior.email]
+      // is_physical and at_home are sent like RequestForm.vue does. The database
+      // still sets is_physical for Lifting and Companion Walk itself.
+      const rows = requestsBySenior[senior.email].map((r) => ({ is_physical: false, at_home: false, ...r }))
       const { error } = await client.from('help_requests').insert(rows)
       if (error) throw new Error(`Could not add ${senior.name}'s requests: ${error.message}`)
       console.log(`  ${senior.name}: added ${rows.length} open requests.`)
@@ -240,9 +273,18 @@ async function main() {
     })
   }
 
+  // 5. The admin account. It takes part in nothing, so it is only created.
+  console.log('\nAdmin')
+  const { client: adminClient, created: adminCreated } = await signUpOrLogIn(admin)
+  console.log(`${adminCreated ? 'Created' : 'Skipped (already exists)'}: admin ${admin.name} <${admin.email}>`)
+  await adminClient.auth.signOut()
+
   for (const person of Object.values(people)) await person.client.auth.signOut()
 
   console.log(`\nDone. Every demo account uses the password: ${DEMO_PASSWORD}`)
+  console.log(`The admin logs in with "admin" and the password: ${ADMIN_PASSWORD}`)
+  console.log('\nNow make the admin an admin: run this in the Supabase SQL Editor:\n')
+  console.log(MAKE_ADMIN_SQL)
 }
 
 main().catch((err) => {

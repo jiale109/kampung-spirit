@@ -301,7 +301,7 @@ function cancel() {
 
         <label for="location" class="form-label mt-3">What is this place called?</label>
         <input id="location" ref="locationInput" v-model="form.location" type="text" class="form-control"
-          :class="{ 'is-invalid': errors.location }" maxlength="100" placeholder="e.g. Eunos CC entrance"
+          :class="{ 'is-invalid': errors.location }" maxlength="100" placeholder="e.g. Void deck of my block"
           :aria-describedby="describedBy('location-name-hint', errors.location && 'location-error')"
           :aria-invalid="!!errors.location" required @input="errors.location = ''" />
         <div id="location-error" class="invalid-feedback">{{ errors.location }}</div>

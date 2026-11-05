@@ -115,14 +115,14 @@ async function logout() {
       <div ref="navMenu" class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav me-auto">
           <!-- Ask for help (the old Senior home page) -->
-          <li class="nav-item">
+          <li v-if="!auth.isAdmin" class="nav-item">
             <router-link class="nav-link nav-pixel-amber" to="/app/requests" active-class="active">My Requests</router-link>
           </li>
           <!-- Help others (the old Youth home page). exact so it is not lit up on every /app page -->
           <li class="nav-item">
             <router-link class="nav-link nav-pixel-aqua" to="/app" exact-active-class="active">Help Board</router-link>
           </li>
-          <li class="nav-item">
+          <li v-if="!auth.isAdmin" class="nav-item">
             <router-link class="nav-link nav-pixel-blue" to="/app/tasks" active-class="active">My Tasks</router-link>
           </li>
           <li class="nav-item">
@@ -131,7 +131,7 @@ async function logout() {
           <li class="nav-item">
             <router-link class="nav-link nav-pixel-green" to="/app/skill-swaps" active-class="active">Skill Swaps</router-link>
           </li>
-          <li class="nav-item">
+          <li v-if="!auth.isAdmin" class="nav-item">
             <router-link class="nav-link nav-pixel-violet" to="/app/rewards" active-class="active">Rewards</router-link>
           </li>
         </ul>
@@ -147,18 +147,20 @@ async function logout() {
                 <span v-else class="avatar-initial">{{ avatarInitial }}</span>
               </span>
               <span class="user-name" data-testid="username">{{ auth.user.name }}</span>
+              <span v-if="auth.isAdmin" class="badge admin-badge" data-testid="admin-badge">Admin</span>
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
               <li>
                 <div class="dropdown-header">
                   <div class="fw-bold">{{ auth.user.name }}</div>
                   <div class="menu-meta">{{ auth.user.block }}</div>
-                  <span class="points-pill" data-testid="points"><img src="/images/coin.svg"
+                  <span v-if="!auth.isAdmin" class="points-pill" data-testid="points"><img src="/images/coin.svg"
                     class="point-coin-img" alt="" />{{ points.myPoints }} pts</span>
                 </div>
               </li>
               <li><hr class="dropdown-divider" /></li>
-              <li>
+              <!-- An admin has no profile page (router/index.js, notForAdmin) -->
+              <li v-if="!auth.isAdmin">
                 <router-link class="dropdown-item" to="/app/profile">Profile</router-link>
               </li>
               <li>

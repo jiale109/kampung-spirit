@@ -153,4 +153,7 @@ test-results/
 playwright-report/
 
 .DS_Store
-**/.DS_Storepackage-lock.json
+**/.DS_Store
+
+# pnpm only: npm's lock file must never be committed (see CONTRIBUTING.md)
+package-lock.json

@@ -338,7 +338,7 @@ onMounted(() => {
         <p class="page-subtitle mb-0">
           Search for a place, or tap anywhere on the map to find sessions near it.
         </p>
-        <HotspotMap :places="mapPlaces" pickable label="Find a place"
+        <HotspotMap :places="mapPlaces" :count-label="['session', 'sessions']" pickable label="Find a place"
           @marker="pickPlace" @select="pickPoint" @pick="pickPoint" />
       </div>
     </div>

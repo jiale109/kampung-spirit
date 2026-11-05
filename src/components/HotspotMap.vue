@@ -35,6 +35,9 @@ const props = defineProps({
   // One line of help between the search box and the map. Left out, nothing
   // is shown, so a page that explains itself above the card says it once.
   hint: { type: String, default: '' },
+  // What one marker's count is of, for its popup: "1 hangout", "3 hangouts".
+  // [one, many]. The Help Board and Skill Swaps pass their own words.
+  countLabel: { type: Array, default: () => ['hangout', 'hangouts'] },
   // true where tapping the map should drop the pin there (and emit 'pick')
   pickable: { type: Boolean, default: false },
 })
@@ -84,7 +87,7 @@ onMounted(() => {
     }).addTo(map)
     // The popup says it in words as well, so the map never relies on a dot alone
     const count = h.count === undefined ? '' :
-      `<br>${h.count === 1 ? '1 hangout' : `${h.count} hangouts`}`
+      `<br>${h.count === 1 ? `1 ${props.countLabel[0]}` : `${h.count} ${props.countLabel[1]}`}`
     marker.bindPopup(`<strong>${h.name}</strong>${count}`)
     // Pressing a marker tells the page, which filters the list below
     marker.on('click', () => emit('marker', h))

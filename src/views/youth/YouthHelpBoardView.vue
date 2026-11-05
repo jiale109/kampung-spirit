@@ -243,7 +243,7 @@ async function doAccept(request, physicalOk) {
         <p class="page-subtitle mb-0">
           Search for a place, or tap anywhere on the map to find help you can give nearby.
         </p>
-        <HotspotMap :places="mapPlaces" pickable label="Find a place"
+        <HotspotMap :places="mapPlaces" :count-label="['request', 'requests']" pickable label="Find a place"
           @marker="pickPlace" @select="pickPoint" @pick="pickPoint" />
       </div>
     </div>

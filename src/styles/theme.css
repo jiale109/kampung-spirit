@@ -1236,23 +1236,25 @@ form.d-grid {
 }
 
 /* At xl the tabs always take a row of their own, below the brand and the
-   name chip, even on screens wide enough to fit them all on one line */
+   name chip, even on screens wide enough to fit them all on one line. The
+   gap above them keeps the chip's shadow from sitting on the tabs. */
 @media (min-width: 1200px) {
   .app-navbar .navbar-collapse {
     flex-basis: 100%;
+    margin-top: 1rem;
   }
 }
 
 /*
   Below xl the menu button sits to the right of the chip, so the menu's right
-  edge is moved over to line up with the button's: ms-2 (0.5rem), plus the
+  edge is moved over to line up with the button's: ms-3 (1rem), plus the
   button's padding (2 x 0.65rem), border (2 x 2px) and icon (1.5em of 1.25rem).
   It may never be wider than the screen less the gutters, so it cannot run
   off the left edge or make the page scroll sideways.
 */
 @media (max-width: 1199.98px) {
   .app-navbar .account-nav .dropdown-menu[data-bs-popper] {
-    right: calc(-0.5rem - 1.3rem - 4px - 1.875rem);
+    right: calc(-1rem - 1.3rem - 4px - 1.875rem);
     min-width: min(15rem, calc(100vw - 2 * clamp(1rem, 3vw, 2.5rem)));
     max-width: calc(100vw - 2 * clamp(1rem, 3vw, 2.5rem));
   }

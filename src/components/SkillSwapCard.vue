@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import LanguageBar from './LanguageBar.vue'
 import { useSkillSwapStore } from '../stores/skillSwap.js'
 import { t, translate, chosenLanguage } from '../lib/translate.js'
@@ -15,9 +16,13 @@ const props = defineProps({
   // Admin view: only a Delete button, no joining or hosting buttons
   admin: { type: Boolean, default: false },
 })
-const emit = defineEmits(['join', 'leave', 'cancel', 'complete', 'delete'])
+const emit = defineEmits(['join', 'leave', 'cancel', 'delete'])
  
 const store = useSkillSwapStore()
+const route = useRoute()
+
+// The host says who came on its own page before anyone earns points
+const attendancePath = computed(() => `${route.path.replace(/\/$/, '')}/${props.session.id}/attendance`)
  
 // ---- who is looking at this card ----
 const isHost = computed(() => store.isHost(props.session))
@@ -193,9 +198,9 @@ const detailsId = computed(() => `swap-details-${props.session.id}`)
             </button>
  
             <template v-if="isHost">
-              <button v-if="hasStarted" type="button" class="btn btn-primary btn-lg" @click="emit('complete', session)">
+              <RouterLink v-if="hasStarted" :to="attendancePath" class="btn btn-primary btn-lg" data-testid="mark-completed">
                 {{ t('Mark as completed') }}
-              </button>
+              </RouterLink>
               <p v-else class="request-note mb-0" data-testid="complete-later">
                 {{ t('You can mark this as done once it has started.') }}
               </p>

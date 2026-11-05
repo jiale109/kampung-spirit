@@ -101,7 +101,7 @@ src/
     senior/                  Help Board: My Requests (Active and Past), create, edit   /app/requests
     youth/                   Help Board: the board and My Tasks                        /app, /app/tasks
     hangouts/                Hotspot Hangouts: list, map, rain warning, propose     /app/hangouts
-    skillswap/               Skill-Swap Circles: list, tabs, filters, host          /app/skill-swaps
+    skillswap/               Skill-Swap Circles: list, tabs, filters, host, who came /app/skill-swaps
     rewards/                 Vouchers, wallet and the community challenge           /app/rewards
     profile/                 Your details, interests and "Use large text"           /app/profile
   components/
@@ -160,6 +160,15 @@ Run `pnpm seed:demo` first (see [Supabase setup](#supabase-setup)). It also adds
 6. Log in as Wei Jie again: the points in the navbar have gone up.
 
 Request status flow: `open` > `accepted` > `pending_confirmation` > `completed` (or `cancelled`).
+
+## Demo script (Skill Swaps)
+
+1. Log in as any adult or youth and open **Skill Swaps**. **Host a session** (at least 24 hours ahead). Other residents press **Join this session** on its card.
+2. Once the session has started, the host opens its card and presses **Mark as completed**. This opens **Who came to ...?** (`/app/skill-swaps/:id/attendance`), with one row per person who signed up. Nobody is ticked to begin with.
+3. The host ticks the people who actually came (or **Select all**), checks the count ("3 of 5 came") and presses **Confirm and give points**, then **Yes, give points**.
+4. Back on **Skill Swaps**: "Done! 3 people earned 30 points each." Only the people ticked, and the host, get points. People who signed up but did not come get none.
+
+The database checks this too (`complete_skill_session(swap_id, attended_ids)` in `supabase/schema.sql` section 8.4, or `migrations/20261108120000_skill_swap_attendance.sql` on an existing project): only the host, only once the session has started, at least one person ticked, and everyone ticked must have signed up. Each person's row in `skill_session_attendees` keeps `attended` (true or false) afterwards.
 
 ## Deploying
 

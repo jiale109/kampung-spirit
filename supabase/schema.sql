@@ -927,6 +927,9 @@ create table public.skill_session_attendees (
   session_id uuid not null references public.skill_sessions(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
   joined_at timestamptz not null default now(),
+  -- Set by complete_skill_session(): true if the host ticked them as there,
+  -- false if not. null until the session is completed.
+  attended boolean,
   primary key (session_id, user_id)
 );
  
@@ -1089,8 +1092,10 @@ begin
 end;
 $$;
  
--- The host says it happened: the host and everyone with a place earn points
-create function public.complete_skill_session(swap_id uuid)
+-- The host says it happened and ticks who came (attended_ids, on
+-- /app/skill-swaps/:id/attendance): the host and the people who came earn
+-- points. People with a place who did not come get attended = false and no points.
+create function public.complete_skill_session(swap_id uuid, attended_ids uuid[])
 returns void
 language plpgsql
 security definer
@@ -1116,6 +1121,25 @@ begin
     raise exception 'Nobody joined this session, so there are no points to give.';
   end if;
 
+  if attended_ids is null or cardinality(attended_ids) = 0 then
+    raise exception 'Please tick at least one person who came.';
+  end if;
+
+  -- Everyone ticked must have had a place (a null in the list fails this too)
+  if exists (
+    select 1 from unnest(attended_ids) as ticked(user_id)
+    where not exists (
+      select 1 from public.skill_session_attendees a
+      where a.session_id = s.id and a.user_id = ticked.user_id
+    )
+  ) then
+    raise exception 'Some of the people you ticked did not sign up for this session. Please reload the page and try again.';
+  end if;
+
+  update public.skill_session_attendees a
+  set attended = (a.user_id = any(attended_ids))
+  where a.session_id = s.id;
+
   update public.skill_sessions set status = 'completed' where id = s.id;
 
   pts := public.skill_swap_points(s.duration);
@@ -1126,22 +1150,22 @@ begin
   insert into public.points_ledger (user_id, amount, reason)
   select a.user_id, pts, 'Joined skill swap: ' || s.title
   from public.skill_session_attendees a
-  where a.session_id = s.id;
+  where a.session_id = s.id and a.attended;
 end;
 $$;
- 
+
 revoke execute on function
   public.join_skill_session(uuid),
   public.leave_skill_session(uuid),
   public.cancel_skill_session(uuid),
-  public.complete_skill_session(uuid)
+  public.complete_skill_session(uuid, uuid[])
 from public, anon;
- 
+
 grant execute on function
   public.join_skill_session(uuid),
   public.leave_skill_session(uuid),
   public.cancel_skill_session(uuid),
-  public.complete_skill_session(uuid)
+  public.complete_skill_session(uuid, uuid[])
 to authenticated;
  
 grant execute on function public.skill_swap_points(int) to authenticated;

@@ -19,6 +19,7 @@ import YouthMyTasksView from '../views/youth/YouthMyTasksView.vue'
 import HangoutsView from '../views/hangouts/HangoutsView.vue'
 import SkillSwapView from '../views/skillswap/SkillSwapView.vue'
 import SkillSwapCreateView from '../views/skillswap/SkillSwapCreateView.vue'
+import SkillSwapAttendanceView from '../views/skillswap/SkillSwapAttendanceView.vue'
 import RewardsView from '../views/rewards/RewardsView.vue'
 import ProfileView from '../views/profile/ProfileView.vue'
 import HangoutCreateView from '../views/hangouts/HangoutCreateView.vue'
@@ -36,6 +37,7 @@ const sharedChildren = [
   { path: 'hangouts/new', component: HangoutCreateView, meta: notForAdmin },
   { path: 'skill-swaps', component: SkillSwapView },
   { path: 'skill-swaps/new', component: SkillSwapCreateView, meta: notForAdmin },
+  { path: 'skill-swaps/:id/attendance', component: SkillSwapAttendanceView, meta: notForAdmin },
   { path: 'rewards', component: RewardsView, meta: notForAdmin },
   { path: 'profile', component: ProfileView, meta: notForAdmin },
 ]

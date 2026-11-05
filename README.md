@@ -2,7 +2,7 @@
 
 > Neighbours helping neighbours, one small favour at a time.
 
-Kampung Spirit is a web app for one HDB estate (Eunos, Singapore). Seniors ask for everyday help, youths and other neighbours nearby take it on, residents meet at casual hangouts and teach each other in skill-swap sessions, and helpers earn points they can redeem for (simulated) vouchers from local merchants.
+Kampung Spirit is a web app for HDB estates all over Singapore. Seniors ask for everyday help, youths and other neighbours nearby take it on, residents meet at casual hangouts and teach each other in skill-swap sessions, and helpers earn points they can redeem for (simulated) vouchers from local merchants.
 
 IS216 Web Application Development II, G6 Team 1.
 
@@ -70,7 +70,7 @@ Anyone can ask for help and anyone can help. The app is designed first for senio
 ### Rewards and Community Challenge
 - Every completed help request, hangout and skill swap earns **Kampung Points**, worked out in the database from effort and duration.
 - **Redeem points for vouchers** from local merchants (simulated for this project). Vouchers are kept in a personal **wallet** with a code to show at the counter, and can be marked as used.
-- A **monthly estate-wide challenge** (10,000 points) with a live progress bar; when the estate reaches it, every contributor that month receives a 50-point bonus, paid once by the database.
+- A **monthly community challenge** (10,000 points) with a live progress bar; when the community reaches it, every contributor that month receives a 50-point bonus, paid once by the database.
 
 ### Profile
 - **Pixel-art avatar** built from age group, gender and skin tone, optionally **walking across the navbar**.
@@ -332,7 +332,7 @@ kampung-spirit/
 - **Guardian verification is manual:** an admin marks an under-18 as verified in the database; there is no email link to the guardian yet.
 - **Hangouts and skill swaps cannot be edited** after they are posted; the host can cancel and post again.
 - **Translation** uses MyMemory's free daily allowance, so heavy use may pause translations until the next day.
-- **One estate:** hotspots, the community challenge and the sample data are set up for Eunos.
+- **The sample data is from one estate:** the demo accounts and sample events (`pnpm seed:demo`) are all in Eunos, although anyone in Singapore can sign up and post. The community challenge is one shared goal for everyone using the app, not one per estate.
 
 ---
 

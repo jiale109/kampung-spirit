@@ -10,9 +10,9 @@
 
   WHAT THE PROPOSAL SAYS
   Every completed task, hangout and skill-swap earns points based on
-  difficulty and duration. Users redeem points for vouchers from local Eunos
+  difficulty and duration. Users redeem points for vouchers from local
   merchants (hawker, kopitiam, supermarket, pharmacy) and keep them in a
-  personal wallet. A monthly estate-wide challenge (e.g. 10,000 points) shows
+  personal wallet. A monthly community-wide challenge (e.g. 10,000 points) shows
   a live progress bar, and all contributors receive bonus points when the
   target is reached. Vouchers are SIMULATED for this prototype.
 
@@ -163,9 +163,9 @@ async function markUsed(id) {
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
           <div>
             <span class="badge bg-warning text-dark px-3 py-1 rounded-pill  fw-bold mb-1">
-               Monthly Estate Challenge
+               Monthly Community Challenge
             </span>
-            <h2 class="h5 fw-bold mb-0 text-white">Eunos Kampung Spirit Goal</h2>
+            <h2 class="h5 fw-bold mb-0 text-white">Kampung Spirit Goal</h2>
           </div>
           <!-- Numbers as text -->
           <div class="text-end">

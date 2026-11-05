@@ -141,7 +141,7 @@ export async function signUp(page, { name, birthYear, block }) {
 }
 
 export async function loginWith(page, email, password = TEST_PASSWORD) {
-  await page.goto('/landing')
+  await page.goto('/login')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button', { name: 'Log in' }).click()

@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 
 import LandingView from '../views/LandingView.vue'
+import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 
 import MainLayout from '../layouts/MainLayout.vue'
@@ -37,8 +38,9 @@ const routes = [
   // Root redirect
   { path: '/', redirect: '/landing' },
 
-  // Public routes: log in, and sign up
+  // Public routes: the home page, log in, and sign up
   { path: '/landing', component: LandingView, meta: { guestOnly: true } },
+  { path: '/login', component: LoginView, meta: { guestOnly: true } },
   { path: '/register', component: RegisterView, meta: { guestOnly: true } },
 
    {
@@ -66,7 +68,7 @@ const router = createRouter({
 })
 
 // router.beforeEach runs before every route change. Here it checks that the
-// person is logged in, and if not, sends them back to the landing page.
+// person is logged in, and if not, sends them to the login page.
 // Anyone can ask for help and anyone can help, so there is no role check.
 // Returning nothing allows the navigation.
 router.beforeEach(async (to) => {
@@ -75,12 +77,12 @@ router.beforeEach(async (to) => {
   // On the first page load, wait until we know whether there is a saved session
   await auth.init()
 
-  // Pages with meta.requiresAuth (the /senior and /app pages) need a login
+  // Pages with meta.requiresAuth (the /app pages) need a login
   if (to.meta.requiresAuth && !auth.user) {
-    return '/landing'
+    return '/login'
   }
 
-  // Already logged in: skip the login and sign-up pages
+  // Already logged in: skip the home, login and sign-up pages
   if (to.meta.guestOnly && auth.user) {
     return auth.homePath
   }

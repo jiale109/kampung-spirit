@@ -2025,8 +2025,11 @@ form.d-grid {
 }
 
 
-/* 9. Landing page: a calm teal panel with the tagline, and a simple sign-in
-   -------------------------------------------------------------------------- */
+/* 9. Photo band, and the login and sign-up pages
+   --------------------------------------------------------------------------
+   .landing-hero is the full-width photo band on the home page
+   (components/LandingHero.vue). .auth-page is the plain frame around the
+   login and sign-up forms (components/AuthShell.vue). */
 .landing-hero {
   display: flex;
   flex-direction: column;
@@ -2034,22 +2037,7 @@ form.d-grid {
   gap: 3rem;
   padding: clamp(1.75rem, 5vw, 4rem);
   background-color: var(--ks-teal-deep);
-  background-image:
-    radial-gradient(circle at 88% 10%, rgba(233, 185, 73, 0.9) 0 4.5rem, transparent 4.55rem),
-    radial-gradient(circle at 96% 24%, rgba(255, 255, 255, 0.1) 0 8rem, transparent 8.05rem),
-    radial-gradient(circle at 6% 98%, rgba(255, 255, 255, 0.09) 0 14rem, transparent 14.05rem);
   color: #fff;
-}
-
-.landing-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-  font-family: var(--ks-font-display);
-  font-size: clamp(1.75rem, 1rem + 3vw, 3.25rem);
-  font-weight: 700;
-  line-height: 1.1;
 }
 
 .landing-tagline {
@@ -2064,29 +2052,373 @@ form.d-grid {
   line-height: 1.12;
 }
 
-.landing-panel {
+.auth-page {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 2.5rem 1.5rem;
+  gap: 1.5rem;
+  min-height: 100vh;
+  padding: clamp(1.5rem, 5vw, 3rem) 16px;
   background: var(--ks-bg);
 }
 
-.login-box {
+.auth-card {
   width: 100%;
-  max-width: 26rem;
+  max-width: 32rem;
 }
 
-.role-hint {
-  min-height: 3.2em;
-  text-wrap: balance;
-  margin: 0.75rem 0 1.5rem;
-  color: var(--ks-muted);
+.auth-card .card-body {
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+}
+
+
+/* 10. Home page: the top bar, and "How Kampung Spirit works"
+   --------------------------------------------------------------------------
+   Like Duolingo: everything sits in one centred column (--landing-width,
+   about 1,050px) with wide margins, and only the backgrounds, the bar and the
+   photo band run edge to edge.
+   views/LandingView.vue and components/LandingStory.vue. Cards fade up as
+   they scroll into view: composables/useReveal.js adds .reveal-ready to the
+   section (so nothing is hidden if JavaScript never runs) and .is-revealed to
+   each card. */
+:root {
+  --landing-width: 48rem;
+  /* 16px on phones, growing to about 88px on a wide screen */
+  --landing-gutter: clamp(16px, 6vw, 4rem);
+}
+
+.landing-topbar {
+  --topbar-height: 5.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  min-height: var(--topbar-height);
+  padding: 0.5rem var(--landing-gutter);
+  background: var(--ks-surface);
+  border-bottom: 1px solid var(--ks-line);
+  box-shadow: 0 2px 8px rgba(10, 60, 60, 0.06);
+}
+
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: var(--landing-width);
+  min-height: calc(var(--topbar-height) - 1rem);
+  margin: 0 auto;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  color: var(--ks-heading);
+  font-family: var(--ks-font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.topbar-brand:hover {
+  color: var(--ks-heading);
+}
+
+.topbar-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* Never "Log / in" on two lines */
+.topbar-actions .btn {
+  white-space: nowrap;
+}
+
+/* Phones: the logo alone, so both buttons still fit beside it */
+@media (max-width: 575.98px) {
+  .topbar-brand-name {
+    display: none;
+  }
+
+  /* Still the large size, just a little narrower, so both fit beside the logo */
+  .topbar-actions {
+    gap: 0.5rem;
+  }
+
+  .topbar-actions .btn {
+    --bs-btn-padding-x: 1.1rem;
+  }
+}
+
+/* The smallest phones (320px): slimmer again, normal-size words, and the
+   logo at half size (32px keeps the pixel art sharp, see BrandMark.vue) */
+@media (max-width: 359.98px) {
+  .topbar-brand .brand-mark {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .topbar-actions .btn {
+    --bs-btn-padding-x: 0.75rem;
+    --bs-btn-font-size: 1rem;
+  }
+}
+
+/* The first screen: the tagline and a few words, with the waving neighbours
+   beside them (stacked, words first, on phones). Fills most of what is left
+   under the bar on a laptop. */
+.landing-intro {
+  display: grid;
+  align-items: center;
+  gap: clamp(2rem, 5vw, 4rem);
+  max-width: calc(var(--landing-width) + 2 * var(--landing-gutter));
+  margin: 0 auto;
+  padding: clamp(2.5rem, 7vw, 5rem) var(--landing-gutter);
 }
 
 @media (min-width: 992px) {
-  .landing-row {
-    min-height: 100vh;
+  .landing-intro {
+    grid-template-columns: 5fr 6fr;
+    min-height: calc(90vh - 5.5rem);
+  }
+}
+
+.landing-intro-title {
+  margin-bottom: 1.25rem;
+  color: var(--ks-heading);
+  text-wrap: balance;
+  font-family: var(--ks-font-display);
+  font-size: clamp(2rem, 1rem + 3vw, 3.4rem);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.landing-intro-text {
+  max-width: 34ch;
+  margin-bottom: 1.5rem;
+  color: var(--ks-muted);
+  font-size: 1.15rem;
+  line-height: 1.6;
+}
+
+/* 96x48 pixel art: keep the pixels square and sharp */
+.landing-intro-picture {
+  display: block;
+  width: 100%;
+  max-width: 40rem;
+  height: auto;
+  margin-inline: auto;
+  image-rendering: pixelated;
+}
+
+/* Clear of the sticky bar when "See how it works" scrolls here */
+#how-it-works {
+  scroll-margin-top: 5.5rem;
+}
+
+.see-how {
+  /* Not inline-flex like other buttons, so the arrow stays at the end of the words when they wrap */
+  display: inline-block;
+  color: var(--ks-teal);
+  font-weight: 600;
+  text-align: left;
+}
+
+.landing-story {
+  background: var(--ks-bg);
+}
+
+.story-section {
+  padding: clamp(3.5rem, 9vw, 7rem) var(--landing-gutter);
+}
+
+/* "What you can do" a shade lighter, so each section reads as its own part */
+.story-section--white {
+  background: var(--ks-surface);
+}
+
+.story-inner {
+  max-width: var(--landing-width);
+  margin: 0 auto;
+}
+
+.story-title {
+  margin: 0 auto 2.5rem;
+  max-width: 24ch;
+  color: var(--ks-heading);
+  text-align: center;
+  text-wrap: balance;
+  font-family: var(--ks-font-display);
+  font-size: clamp(1.6rem, 1rem + 1.6vw, 2.4rem);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.story-card-title {
+  margin-bottom: 0.5rem;
+  color: var(--ks-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.story-steps,
+.story-safety {
+  display: grid;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.story-steps {
+  /* Two by two from tablets up: four across was too squashed in the narrower column */
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 576px) {
+  .story-steps {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.story-step {
+  padding: 1.75rem 1.5rem;
+}
+
+.step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  margin-bottom: 1rem;
+  border-radius: 50%;
+  background: var(--ks-teal);
+  color: #fff;
+  font-weight: 700;
+}
+
+.story-features {
+  display: grid;
+  gap: clamp(3rem, 8vw, 6rem);
+}
+
+/* One feature per row: the picture on one side, the words on the other,
+   swapping sides every other row. Stacked, picture first, on phones. */
+.story-feature {
+  display: grid;
+  align-items: center;
+  gap: clamp(1.5rem, 4vw, 4rem);
+}
+
+@media (min-width: 768px) {
+  .story-feature {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .story-feature:nth-child(even) .feature-picture {
+    order: 2;
+  }
+}
+
+/* The scenes are 64x48 pixel art: keep the pixels square and sharp */
+.feature-picture {
+  display: block;
+  width: 100%;
+  max-width: 30rem;
+  height: auto;
+  margin-inline: auto;
+  image-rendering: pixelated;
+}
+
+.feature-words {
+  max-width: 30rem;
+}
+
+.feature-title {
+  margin-bottom: 0.75rem;
+  color: var(--ks-teal);
+  font-family: var(--ks-font-display);
+  font-size: clamp(1.6rem, 1rem + 1.6vw, 2.4rem);
+  font-weight: 700;
+}
+
+.feature-text {
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.story-safety {
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+}
+
+.story-safety-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.safety-tick {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  background: var(--ks-teal-tint);
+  color: var(--ks-teal-dark);
+  font-weight: 700;
+}
+
+/* The same deep teal as the photo panel at the top, so the page ends where it began */
+.story-cta {
+  padding: clamp(3.5rem, 9vw, 6rem) var(--landing-gutter);
+  background: var(--ks-teal-deep);
+  color: #fff;
+}
+
+.story-cta-button {
+  padding-inline: 2.5rem;
+  color: var(--ks-teal-deep);
+  font-weight: 700;
+}
+
+.story-cta-login {
+  color: #fff;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.story-cta-login:hover,
+.story-cta-login:focus-visible {
+  color: #fff;
+}
+
+/* The fade-up itself */
+.reveal-ready [data-reveal] {
+  opacity: 0;
+  transform: translateY(1.5rem);
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s ease;
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.reveal-ready [data-reveal].is-revealed {
+  opacity: 1;
+  transform: none;
+}
+
+/* The pictures grow slightly into place instead of sliding up */
+.reveal-ready [data-reveal='pop'] {
+  transform: scale(0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-ready [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
 

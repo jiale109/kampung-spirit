@@ -1,8 +1,9 @@
 <script setup>
 /*
-  The left half of the login and sign-up pages: the brand and tagline over
-  photos that slide by on their own every few seconds. There are no buttons or
-  dots; nobody needs to touch it.
+  A full-width band of photos on the home page (inside LandingStory.vue,
+  after "What you can do"), with one line over them. The photos slide by on
+  their own every few seconds. There are no buttons or dots; nobody needs to
+  touch it.
 
   - Photos live in public/images/landing/. Add or remove one in `photos` below.
   - The photos are decoration (the words say what the app is), so they have
@@ -11,7 +12,6 @@
     slide. The slideshow also pauses while the browser tab is hidden.
 */
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import BrandMark from './BrandMark.vue'
 
 const photos = [
   '/images/landing/photo-1.webp',
@@ -75,7 +75,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="col-lg-6 landing-hero landing-hero--photos">
+  <div class="landing-hero landing-hero--photos photo-band">
     <div class="hero-photos" aria-hidden="true">
       <!-- Fade (less motion): photos stacked, the current one fully visible -->
       <template v-if="reduceMotion">
@@ -88,12 +88,11 @@ onUnmounted(() => {
         <img v-for="(src, i) in slides" :key="i" :src="src" alt="" class="hero-photo" />
       </div>
 
-      <!-- Darkens the top and bottom so the white words stay easy to read -->
+      <!-- Darkens the bottom so the white words stay easy to read -->
       <div class="hero-shade"></div>
     </div>
 
-    <p class="landing-brand"><BrandMark :size="128" />Kampung Spirit</p>
-    <h1 class="landing-tagline">Neighbours helping neighbours, one small favour at a time.</h1>
+    <p class="landing-tagline photo-band-caption">Real neighbours, real favours, all over Singapore.</p>
   </div>
 </template>
 
@@ -102,7 +101,18 @@ onUnmounted(() => {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  min-height: 24rem;
+}
+
+/* Tall enough to feel like a break in the page, never taller than the screen */
+.photo-band {
+  justify-content: flex-end;
+  height: clamp(22rem, 70vh, 40rem);
+  /* The photos run edge to edge, but the words line up with the page column */
+  padding-inline: max(var(--landing-gutter), calc((100% - var(--landing-width)) / 2));
+}
+
+.photo-band-caption {
+  max-width: 22ch;
 }
 
 .hero-photos {
@@ -143,23 +153,13 @@ onUnmounted(() => {
   inset: 0;
   background: linear-gradient(
     to bottom,
-    rgba(6, 40, 40, 0.7) 0%,
-    rgba(6, 40, 40, 0.15) 35%,
-    rgba(6, 40, 40, 0.25) 55%,
+    rgba(6, 40, 40, 0) 0%,
+    rgba(6, 40, 40, 0.1) 45%,
     rgba(6, 40, 40, 0.85) 100%
   );
 }
 
-.landing-brand,
 .landing-tagline {
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
-}
-@media (min-width: 992px) {
-  .landing-hero--photos {
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    align-self: flex-start;
-  }
 }
 </style>

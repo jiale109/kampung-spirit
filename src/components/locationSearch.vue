@@ -48,7 +48,7 @@ function choose(place) {
              form, and Enter in a text box submits the form it is in. Without
              this, searching for a place would send the whole form. -->
         <input id="place-search" v-model="query" type="text" class="form-control"
-          placeholder="e.g. Eunos Community Club" data-testid="place-search"
+          placeholder="e.g. a community club, park or MRT station" data-testid="place-search"
           @keydown.enter.prevent="search" />
       </div>
       <div class="col-auto">
@@ -85,7 +85,7 @@ function choose(place) {
     </template>
 
     <p v-else-if="searched && !searching" class="place-empty mt-3 mb-0">
-      No places found. Try part of the name, like &ldquo;eunos&rdquo;.
+      No places found. Try part of the name, or the name of the street.
     </p>
   </div>
 </template>

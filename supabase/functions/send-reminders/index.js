@@ -52,6 +52,10 @@ const REGIONS = {
 
 const isWet = (text) => /shower|rain|thunder/i.test(text)
 
+// Hosts cannot change a hangout or message anyone, but they can cancel it,
+// and everyone going is told on Telegram if they do (notify, hangoutCancelled)
+const WET_WEATHER_TIP = ' Bring an umbrella. If the host cancels, you will get a message here.'
+
 async function readJson(url) {
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
@@ -96,7 +100,7 @@ async function forecastFor(start, lat, lng) {
     const text = period.regions?.[region]?.text
     if (text) {
       return `Weather: ${text.toLowerCase()} expected in the ${region} around then.`
-        + (isWet(text) ? ' Bring an umbrella, and check the app in case the host changes plans.' : '')
+        + (isWet(text) ? WET_WEATHER_TIP : '')
     }
   }
 
@@ -106,7 +110,7 @@ async function forecastFor(start, lat, lng) {
   const summary = forDay?.forecast?.summary || forDay?.forecast?.text
   if (summary) {
     return `Weather that day: ${summary.toLowerCase()}.`
-      + (isWet(summary) ? ' Bring an umbrella, and check the app in case the host changes plans.' : '')
+      + (isWet(summary) ? WET_WEATHER_TIP : '')
   }
   return ''
 }

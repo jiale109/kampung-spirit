@@ -121,11 +121,6 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
               · <span data-testid="location">{{ request.location }}</span>
             </p>
 
-            <p v-if="showWaiting && request.status === 'open' && waitingDays >= 2" class="request-waiting"
-              data-testid="waiting">
-              Waiting for a helper for {{ waitingDays }} days
-            </p>
-
             <div v-if="$slots.notice" class="request-notice">
               <slot name="notice" />
             </div>

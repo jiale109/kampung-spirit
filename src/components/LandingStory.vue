@@ -47,8 +47,8 @@ const features = [
 
 const safety = [
   {
-    title: 'Parents stay in the loop',
-    text: 'Under-18s need a parent or guardian to confirm before they can help, only between 8 am and 7 pm, and never inside a home.',
+    title: 'No money, OTPs or passwords',
+    text: 'Requests that ask for money, OTPs or passwords are blocked, and helpers are reminded never to accept them.',
   },
   {
     title: 'No sharing phone numbers',

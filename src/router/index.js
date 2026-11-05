@@ -24,13 +24,19 @@ import HangoutCreateView from '../views/hangouts/HangoutCreateView.vue'
 
 // Shared pages are listed once and added under both /senior and /app, so each
 // role sees them inside its own layout (navbar). Add new shared pages here.
+// meta.notForAdmin: pages an admin has no use for (they do not take part, so
+// have no tasks, points or profile). The guard below sends them to /app. The
+// database refuses an admin taking part anyway; this just keeps them off the
+// pages.
+const notForAdmin = { notForAdmin: true }
+
 const sharedChildren = [
   { path: 'hangouts', component: HangoutsView },
-  { path: 'hangouts/new', component: HangoutCreateView },
+  { path: 'hangouts/new', component: HangoutCreateView, meta: notForAdmin },
   { path: 'skill-swaps', component: SkillSwapView },
-  { path: 'skill-swaps/new', component: SkillSwapCreateView },
-  { path: 'rewards', component: RewardsView },
-  { path: 'profile', component: ProfileView },
+  { path: 'skill-swaps/new', component: SkillSwapCreateView, meta: notForAdmin },
+  { path: 'rewards', component: RewardsView, meta: notForAdmin },
+  { path: 'profile', component: ProfileView, meta: notForAdmin },
 ]
 
 const routes = [
@@ -47,10 +53,10 @@ const routes = [
      meta: { requiresAuth: true },
      children: [
        { path: '', component: YouthHelpBoardView },
-       { path: 'tasks', component: YouthMyTasksView },
-       { path: 'requests', component: SeniorHelpBoardView },
-       { path: 'requests/create', component: SeniorCreateRequestView },
-       { path: 'requests/edit/:requestId', component: SeniorEditRequestView },
+       { path: 'tasks', component: YouthMyTasksView, meta: notForAdmin },
+       { path: 'requests', component: SeniorHelpBoardView, meta: notForAdmin },
+       { path: 'requests/create', component: SeniorCreateRequestView, meta: notForAdmin },
+       { path: 'requests/edit/:requestId', component: SeniorEditRequestView, meta: notForAdmin },
        ...sharedChildren,
      ],
    },
@@ -83,6 +89,11 @@ router.beforeEach(async (to) => {
   // Already logged in: skip the login and sign-up pages
   if (to.meta.guestOnly && auth.user) {
     return auth.homePath
+  }
+
+  // An admin only uses the Help Board, Hangouts and Skill Swaps
+  if (to.meta.notForAdmin && auth.isAdmin) {
+    return '/app'
   }
 })
 

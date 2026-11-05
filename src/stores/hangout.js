@@ -97,8 +97,9 @@ export const useHangoutStore = defineStore('hangout', () => {
 
   const hasStarted = (item) => sessionStart(item.date, item.time) <= now.value
   const hasEnded = (item) => sessionEnd(item.date, item.time, item.duration) <= now.value
-  // Ended items stay for their host only, until they mark them done or cancel
-  const stillShown = (item) => !hasEnded(item) || isHost(item)
+  // Ended items stay for their host only, until they mark them done or cancel.
+  // An admin sees them all, so they can tidy up ones nobody closed.
+  const stillShown = (item) => !hasEnded(item) || isHost(item) || auth.isAdmin
 
   const needSignIn = () => ({ ok: false, error: 'Please sign in first.' })
   const notFound = () => ({ ok: false, error: 'We could not find that hangout.' })
@@ -234,6 +235,14 @@ export const useHangoutStore = defineStore('hangout', () => {
     return { ok: true }
   }
 
+  // Admin only: delete any hangout (schema.sql section 18). The database
+  // refuses this for everyone else. Reloads either way, so the list is current.
+  async function adminDelete(id) {
+    const { error } = await supabase.rpc('admin_delete_hangout', { hangout_id: id })
+    await load()
+    return error ? { ok: false, error: error.message } : { ok: true }
+  }
+
   return {
     hangouts,
     loading,
@@ -255,5 +264,6 @@ export const useHangoutStore = defineStore('hangout', () => {
     leaveHangout,
     cancelHangout,
     completeHangout,
+    adminDelete,
   }
 })

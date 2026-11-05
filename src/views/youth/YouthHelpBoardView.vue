@@ -79,8 +79,10 @@ onMounted(async () => {
 })
 
 // Open requests that have not already passed: what the map and the list
-// are both built from
-const openRequests = computed(() => store.openRequests.filter((r) => !isPastTime(r)))
+// are both built from. An admin sees every request, whatever its status,
+// so they can remove any of them (schema.sql section 18).
+const openRequests = computed(() =>
+  auth.isAdmin ? store.requests : store.openRequests.filter((r) => !isPastTime(r)))
 
 const isFiltered = computed(() => selectedPlace.value !== '' || pickedPoint.value !== null)
 
@@ -136,7 +138,8 @@ const filteredRequests = computed(() => {
   return list
 })
 
-const firstLoad = computed(() => store.loading && store.openRequests.length === 0)
+const firstLoad = computed(() =>
+  store.loading && (auth.isAdmin ? store.requests : store.openRequests).length === 0)
 const countText = computed(() => `${filteredRequests.value.length} request${filteredRequests.value.length === 1 ? '' : 's'}`)
 
 function accept(request) {
@@ -151,6 +154,38 @@ function confirmAccept() {
   const request = requestToAccept.value
   requestToAccept.value = null
   doAccept(request, request.isPhysical)
+}
+
+/*
+  Admin: delete a request. Only shown to an admin, and the database refuses
+  it for anyone else anyway.
+*/
+const requestToDelete = ref(null)
+const deletedTitle = ref('')
+const deletedAlert = ref(null)
+
+function askDelete(request) {
+  acceptedTitle.value = ''
+  deletedTitle.value = ''
+  error.value = ''
+  requestToDelete.value = request
+}
+
+async function confirmDelete() {
+  const request = requestToDelete.value
+  requestToDelete.value = null
+  busyId.value = request.id
+  try {
+    const result = await store.adminDelete(request.id)
+    if (result.ok) deletedTitle.value = request.title
+    else error.value = result.error
+
+    await nextTick()
+    const alert = result.ok ? deletedAlert.value : errorAlert.value
+    alert?.focus()
+  } finally {
+    busyId.value = null
+  }
 }
 
 async function doAccept(request, physicalOk) {
@@ -180,7 +215,7 @@ async function doAccept(request, physicalOk) {
         <h1 class="page-title">Help your neighbours</h1>
         <p class="page-subtitle">Pick a request you can help with.</p>
       </div>
-      <span class="count-pill" :class="{ 'is-full': store.atLimit }" data-testid="active-count">
+      <span v-if="!auth.isAdmin" class="count-pill" :class="{ 'is-full': store.atLimit }" data-testid="active-count">
         Active tasks: {{ store.activeCount }} / {{ MAX_ACTIVE_TASKS }}
       </span>
     </div>
@@ -255,8 +290,10 @@ async function doAccept(request, physicalOk) {
           data-testid="close-message" @click="acceptedTitle = ''">✕</button>
       </span>
     </div>
+    <div v-if="deletedTitle" ref="deletedAlert" class="alert alert-success" role="status" tabindex="-1"
+      data-testid="admin-delete-success">"{{ deletedTitle }}" has been deleted.</div>
     <div v-if="error" ref="errorAlert" class="alert alert-danger" role="alert" tabindex="-1">{{ error }}</div>
-    <div v-if="store.atLimit" class="alert alert-warning">
+    <div v-if="store.atLimit && !auth.isAdmin" class="alert alert-warning">
       You have {{ MAX_ACTIVE_TASKS }} active tasks. Finish one before accepting another.
     </div>
 
@@ -281,9 +318,15 @@ async function doAccept(request, physicalOk) {
     <EmptyState v-else-if="filteredRequests.length === 0" message="No open requests here right now. Check back soon!" />
 
     <div v-else class="request-list">
-      <RequestCard v-for="request in filteredRequests" :key="request.id" :request="request" hide-status compact show-waiting>
+      <RequestCard v-for="request in filteredRequests" :key="request.id" :request="request"
+        :hide-status="!auth.isAdmin" compact show-waiting>
         <template #actions>
-          <p v-if="minorLimit(request)" class="minor-note mb-0" data-testid="minor-note">{{ minorLimit(request) }}</p>
+          <!-- An admin removes requests instead of helping with them -->
+          <button v-if="auth.isAdmin" type="button" class="btn btn-outline-danger" data-testid="admin-delete"
+            :disabled="busyId !== null" @click="askDelete(request)">
+            {{ busyId === request.id ? 'Deleting…' : 'Delete' }}
+          </button>
+          <p v-else-if="minorLimit(request)" class="minor-note mb-0" data-testid="minor-note">{{ minorLimit(request) }}</p>
           <button v-else class="btn btn-primary btn-lg" data-testid="accept" :disabled="store.atLimit || busyId !== null"
             @click="accept(request)">
             {{ busyId === request.id ? 'Saving…' : 'I can help' }}
@@ -295,6 +338,11 @@ async function doAccept(request, physicalOk) {
     <ConfirmModal v-if="requestToAccept" title="Can you make it?" :message="acceptMessage"
       confirm-label="Yes, I can help" cancel-label="Not now" testid="confirm-accept"
       @confirm="confirmAccept" @cancel="requestToAccept = null" />
+
+    <ConfirmModal v-if="requestToDelete" title="Delete this request?"
+      message="It will be removed for everyone. This cannot be undone."
+      confirm-label="Yes, delete" cancel-label="Keep it" danger testid="confirm-admin-delete"
+      @confirm="confirmDelete" @cancel="requestToDelete = null" />
   </div>
 </template>
 

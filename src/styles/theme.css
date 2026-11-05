@@ -1239,6 +1239,16 @@ form.d-grid {
   white-space: nowrap;
 }
 
+/* "Admin" beside the name (MainLayout.vue). Words, not just a colour.
+   Amber ink on amber is 8.1:1. */
+.admin-badge {
+  flex-shrink: 0;
+  background: var(--ks-amber-bg);
+  color: var(--ks-amber-ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 /*
   The points counter, built the same way as the nav buttons above: coloured
   border, dark ring outside it, and the same ring again offset down and right

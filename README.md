@@ -48,6 +48,23 @@ All demo accounts use the password **`kampung-demo-123`**.
 | Wei Jie | `demo.weijie@example.com` | Youth |
 | Aisha | `demo.aisha@example.com` | Youth |
 
+### Admin account
+
+An admin can see every help request, hangout and skill swap session, and delete any of them. An admin does not take part: they cannot post, accept, host or join anything.
+
+- **Log in:** type **`admin`** in the email box and the password **`admin123!`**. (The full email is `admin@example.com`.)
+- **Created by** `pnpm seed:demo`, like the other demo accounts.
+- **Made an admin** by running this once in **SQL Editor > New query**. The seed script prints it at the end too. Until you run it, the account is an ordinary user.
+  ```sql
+  insert into public.admins (user_id)
+    select id from auth.users where email = 'admin@example.com'
+    on conflict do nothing;
+  ```
+
+The database decides who is an admin (`supabase/schema.sql` section 18, or `migrations/20261105120000_admin.sql` on an existing project), so it refuses admin actions from anyone else, whatever the app shows.
+
+> **Warning:** `admin123!` is for demos only. Change the admin's password (or remove the account) before the site is open to the public.
+
 ## Team and who builds what
 
 | Feature | Owner | Start here |

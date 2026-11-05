@@ -19,6 +19,24 @@ if (!url || !key) {
 
 const DEMO_PASSWORD = 'kampung-demo-123'
 
+/*
+  The admin (README "Admin account"). Log in with just "admin" and this
+  password. For demos only: change it on any site the public can reach.
+
+  This script only creates the account. Making it an ADMIN needs the line
+  printed at the end, run in the SQL Editor: the publishable key used here
+  cannot write to public.admins, on purpose. The admin posts, hosts and
+  joins nothing (the database would refuse it anyway).
+*/
+const ADMIN_PASSWORD = 'admin123!'
+const admin = {
+  email: 'admin@example.com', name: 'Admin', block: 'Kampung Spirit admin',
+  birthDate: '1990-01-01', largeText: false, password: ADMIN_PASSWORD,
+}
+const MAKE_ADMIN_SQL = `insert into public.admins (user_id)
+  select id from auth.users where email = 'admin@example.com'
+  on conflict do nothing;`
+
 // Youth birth years are worked out from today, so they stay 19-21
 const thisYear = new Date().getFullYear()
 
@@ -130,12 +148,14 @@ function newClient() {
 }
 
 // Sign up (with the same metadata as stores/auth.js register()), or log in if the account exists.
+// Uses person.password if it has one (the admin), otherwise DEMO_PASSWORD.
 // Returns { client, created } or throws with a plain message.
 async function signUpOrLogIn(person) {
   const client = newClient()
+  const password = person.password ?? DEMO_PASSWORD
   const { data, error } = await client.auth.signUp({
     email: person.email,
-    password: DEMO_PASSWORD,
+    password,
     options: {
       data: {
         name: person.name,
@@ -153,7 +173,7 @@ async function signUpOrLogIn(person) {
   if (!error && !data.session) throw new Error('No session after sign up. Switch off "Confirm email" in Supabase.')
   if (error.code !== 'user_already_exists') throw new Error(`Could not sign up ${person.email}: ${error.message}`)
 
-  const login = await client.auth.signInWithPassword({ email: person.email, password: DEMO_PASSWORD })
+  const login = await client.auth.signInWithPassword({ email: person.email, password })
   if (login.error) throw new Error(`${person.email} already exists but the demo password did not work: ${login.error.message}`)
   return { client, created: false }
 }
@@ -253,9 +273,18 @@ async function main() {
     })
   }
 
+  // 5. The admin account. It takes part in nothing, so it is only created.
+  console.log('\nAdmin')
+  const { client: adminClient, created: adminCreated } = await signUpOrLogIn(admin)
+  console.log(`${adminCreated ? 'Created' : 'Skipped (already exists)'}: admin ${admin.name} <${admin.email}>`)
+  await adminClient.auth.signOut()
+
   for (const person of Object.values(people)) await person.client.auth.signOut()
 
   console.log(`\nDone. Every demo account uses the password: ${DEMO_PASSWORD}`)
+  console.log(`The admin logs in with "admin" and the password: ${ADMIN_PASSWORD}`)
+  console.log('\nNow make the admin an admin: run this in the Supabase SQL Editor:\n')
+  console.log(MAKE_ADMIN_SQL)
 }
 
 main().catch((err) => {

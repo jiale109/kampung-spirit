@@ -51,7 +51,11 @@ async function submit() {
           <form class="d-grid gap-4" novalidate @submit.prevent="submit">
             <div>
               <label for="email" class="form-label">Email</label>
-              <input id="email" v-model="form.email" type="email" class="form-control" autocomplete="email" />
+              <!-- type="text" so the admin can type just "admin" (stores/auth.js);
+                   inputmode still brings up the email keyboard on phones -->
+              <input id="email" v-model="form.email" type="text" inputmode="email" class="form-control"
+                autocomplete="username" aria-describedby="email-hint" />
+              <div id="email-hint" class="form-text">Your email address</div>
             </div>
             <div>
               <label for="password" class="form-label">Password</label>

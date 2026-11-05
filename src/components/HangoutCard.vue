@@ -13,8 +13,10 @@ import { formatDate, formatTime, formatDuration } from '../lib/skillSwapFormat.j
 
 const props = defineProps({
   hangout: { type: Object, required: true },
+  // Admin view: only a Delete button, no joining or hosting buttons
+  admin: { type: Boolean, default: false },
 })
-const emit = defineEmits(['join', 'leave', 'cancel', 'complete'])
+const emit = defineEmits(['join', 'leave', 'cancel', 'complete', 'delete'])
 
 const store = useHangoutStore()
 
@@ -115,7 +117,11 @@ const detailsId = computed(() => `hangout-details-${props.hangout.id}`)
             <span>Hosted by <strong>{{ isHost ? 'you' : hangout.hostName }}</strong></span>
           </p>
 
-          <div class="request-actions">
+          <div v-if="admin" class="request-actions">
+            <button type="button" class="btn btn-outline-danger" data-testid="admin-delete"
+              @click="emit('delete', hangout)">Delete</button>
+          </div>
+          <div v-else class="request-actions">
             <button v-if="canJoin" type="button" class="btn btn-primary btn-lg" data-testid="join"
               @click="emit('join', hangout)">I am coming</button>
 

@@ -133,9 +133,18 @@ export const useSkillSwapStore = defineStore('skillSwap', () => {
     if (!Number.isInteger(capacity) || capacity < MIN_CAPACITY || capacity > MAX_CAPACITY) {
       return { ok: false, error: `Choose between ${MIN_CAPACITY} and ${MAX_CAPACITY} people.` }
     }
-    if (!data.date || !data.time) return { ok: false, error: 'Please choose a day and a time.' }
-    if (sessionStart(data.date, data.time) < new Date()) {
-      return { ok: false, error: 'That day and time have already passed.' }
+    if (!data.date || !data.time) {
+      return { ok: false, error: 'Please choose a day and a time.' }
+    }
+
+    const startTime = sessionStart(data.date, data.time)
+    const MIN_NOTICE_MS = 24 * 60 * 60 * 1000
+
+    if (startTime.getTime() - Date.now() < MIN_NOTICE_MS) {
+      return {
+        ok: false,
+        error: 'SkillSwap sessions must be scheduled at least 24 hours in advance.',
+      }
     }
  
     const result = await run(

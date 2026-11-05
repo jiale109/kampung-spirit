@@ -78,11 +78,16 @@ onMounted(async () => {
   mapReady.value = true
 })
 
+// Admin: requests not completed or cancelled whose time (start + duration) is not over yet.
+const isLiveForAdmin = (r) =>
+  r.status !== 'completed' && r.status !== 'cancelled' &&
+  r.neededAt + r.duration * 60 * 1000 > Date.now()
+
 // Open requests that have not already passed: what the map and the list
-// are both built from. An admin sees every request, whatever its status,
-// so they can remove any of them (schema.sql section 18).
+// are both built from. An admin also sees requests still in progress, so
+// they can remove them (schema.sql section 18).
 const openRequests = computed(() =>
-  auth.isAdmin ? store.requests : store.openRequests.filter((r) => !isPastTime(r)))
+  auth.isAdmin ? store.requests.filter(isLiveForAdmin) : store.openRequests.filter((r) => !isPastTime(r)))
 
 const isFiltered = computed(() => selectedPlace.value !== '' || pickedPoint.value !== null)
 
@@ -139,7 +144,7 @@ const filteredRequests = computed(() => {
 })
 
 const firstLoad = computed(() =>
-  store.loading && (auth.isAdmin ? store.requests : store.openRequests).length === 0)
+  store.loading && (auth.isAdmin ? openRequests.value : store.openRequests).length === 0)
 const countText = computed(() => `${filteredRequests.value.length} request${filteredRequests.value.length === 1 ? '' : 's'}`)
 
 function accept(request) {

@@ -168,8 +168,6 @@ pnpm install
 2. Open **SQL Editor → New query**, paste the **whole of `supabase/schema.sql`** and press **Run**. This creates every table, rule and function.
 3. Open **Authentication → Sign In / Providers → Email** and turn **Confirm email off**, so new accounts can log in straight away.
 
-> Already have a project with an older version of the schema? Instead of `schema.sql`, run each file in `supabase/migrations/` that you have not run yet, **oldest first**. Every migration is safe to run again.
-
 ### 4. Environment variables
 
 Copy the example file and fill it in:

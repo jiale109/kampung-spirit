@@ -12,6 +12,7 @@
   so keep the two in step if you change them.
 */
 import { ref, computed } from 'vue'
+import { showFirstError, showElement } from '../composables/useScrollToError.js'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import AuthShell from '../components/AuthShell.vue'
@@ -166,9 +167,16 @@ function validate() {
   return Object.keys(e).length === 0
 }
 
+const formEl = ref(null)
+const formErrorEl = ref(null)
+
 async function submit() {
   formError.value = ''
-  if (!validate()) return
+  if (!validate()) {
+    // The form is longer than a phone screen: show the first problem
+    showFirstError(formEl.value)
+    return
+  }
 
   const f = form.value
   busy.value = true
@@ -185,8 +193,13 @@ async function submit() {
   })
   busy.value = false
 
-  if (result.ok) router.push(auth.homePath)
-  else formError.value = result.error
+  if (result.ok) {
+    router.push(auth.homePath)
+  } else {
+    // At the top of the form, so usually off screen by the time they press the button
+    formError.value = result.error
+    showElement(() => formErrorEl.value)
+  }
 }
 </script>
 
@@ -195,9 +208,9 @@ async function submit() {
     <h1 class="page-title">Create an account</h1>
     <p class="page-subtitle mb-4">Ask for help, help others, or both.</p>
 
-    <div v-if="formError" class="alert alert-danger" role="alert">{{ formError }}</div>
+    <div v-if="formError" ref="formErrorEl" class="alert alert-danger" role="alert">{{ formError }}</div>
 
-    <form class="d-grid gap-4" novalidate @submit.prevent="submit">
+    <form ref="formEl" class="d-grid gap-4" novalidate @submit.prevent="submit">
       <div>
         <label for="name" class="form-label">Your name</label>
         <input id="name" v-model="form.name" type="text" class="form-control" autocomplete="name"

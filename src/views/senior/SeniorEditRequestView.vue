@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { showElement } from '../../composables/useScrollToError.js'
 import { useRoute, useRouter } from 'vue-router'
 import { useHelpRequestStore } from '../../stores/helpRequest.js'
 import RequestForm from '../../components/RequestForm.vue'
@@ -11,6 +12,7 @@ const store = useHelpRequestStore()
 
 const loaded = ref(false)
 const error = ref('')
+const errorEl = ref(null)
 const busy = ref(false)
 
 const request = computed(() => store.getRequestById(route.params.requestId))
@@ -26,7 +28,10 @@ async function save(data) {
   try {
     const result = await store.updateRequest(request.value.id, data)
     if (result.ok) router.push('/app/requests')
-    else error.value = result.error
+    else {
+      error.value = result.error
+      showElement(() => errorEl.value)
+    }
   } finally {
     busy.value = false
   }
@@ -43,7 +48,7 @@ async function save(data) {
 
     <!-- Only open requests can be edited -->
     <template v-else-if="request && request.status === 'open'">
-      <p v-if="error" class="text-danger">{{ error }}</p>
+      <p v-if="error" ref="errorEl" class="text-danger" role="alert">{{ error }}</p>
       <RequestForm :request="request" submit-label="Save changes" :busy="busy" @save="save" />
     </template>
 

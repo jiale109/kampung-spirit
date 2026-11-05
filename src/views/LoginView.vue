@@ -7,6 +7,7 @@
   home page that explains the app is views/LandingView.vue.
 */
 import { ref } from 'vue'
+import { showElement } from '../composables/useScrollToError.js'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import AuthShell from '../components/AuthShell.vue'
@@ -16,12 +17,14 @@ const auth = useAuthStore()
 
 const form = ref({ email: '', password: '' })
 const error = ref('')
+const errorEl = ref(null)
 const busy = ref(false)
 
 async function submit() {
   error.value = ''
   if (!form.value.email.trim() || !form.value.password) {
     error.value = 'Please enter your email and password.'
+    showElement(() => errorEl.value)
     return
   }
 
@@ -30,7 +33,10 @@ async function submit() {
   busy.value = false
 
   if (result.ok) router.push(auth.homePath)
-  else error.value = result.error
+  else {
+    error.value = result.error
+    showElement(() => errorEl.value)
+  }
 }
 </script>
 
@@ -39,7 +45,7 @@ async function submit() {
     <h1 class="page-title">Welcome back</h1>
     <p class="page-subtitle mb-4">Log in to ask for help or to help a neighbour.</p>
 
-    <div v-if="error" class="alert alert-danger" role="alert">{{ error }}</div>
+    <div v-if="error" ref="errorEl" class="alert alert-danger" role="alert">{{ error }}</div>
 
     <form class="d-grid gap-4" novalidate @submit.prevent="submit">
       <div>

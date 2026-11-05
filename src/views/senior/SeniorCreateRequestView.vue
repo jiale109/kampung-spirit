@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { showElement } from '../../composables/useScrollToError.js'
 import { useRouter } from 'vue-router'
 import { useHelpRequestStore, DAILY_LIMIT_NOTE } from '../../stores/helpRequest.js'
 import RequestForm from '../../components/RequestForm.vue'
@@ -10,6 +11,7 @@ const store = useHelpRequestStore()
 const { askToLinkTelegram } = useTelegramPrompt()
 
 const error = ref('')
+const errorEl = ref(null)
 const busy = ref(false)
 async function save(data) {
   error.value = ''
@@ -21,6 +23,7 @@ async function save(data) {
       router.push('/app/requests')
     } else {
       error.value = result.error
+      showElement(() => errorEl.value)
     }
   } finally {
     busy.value = false
@@ -37,7 +40,7 @@ onMounted(store.load)
       <h1 class="page-title">What do you need help with?</h1>
     </div>
     <!-- Also shows the database's own message, e.g. if the limit was reached in another tab -->
-    <p v-if="error" class="text-danger" role="alert" data-testid="create-error">{{ error }}</p>
+    <p v-if="error" ref="errorEl" class="text-danger" role="alert" data-testid="create-error">{{ error }}</p>
     <p v-if="store.loading && store.requests.length === 0">Loading…</p>
     <div v-else-if="store.dailyLimitReached" class="limit-box">
       <p v-if="!error" class="limit-note" data-testid="daily-limit-note">{{ DAILY_LIMIT_NOTE }}</p>

@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, nextTick} from 'vue'
+import { ref, computed, watch } from 'vue'
+import { showElement } from '../composables/useScrollToError.js'
 import {
   dateOptions,
   sessionStart,
@@ -15,7 +16,7 @@ import {
 import DayPicker from '../components/DayPicker.vue'   // adjust path to wherever it lives
 import HotspotMap from '../components/HotspotMap.vue'
 
-defineProps({
+const props = defineProps({
   //cancel --> session list 
   cancelTo: { type: String, required: true },
   serverError: { type: String, default: '' },
@@ -172,12 +173,17 @@ function validate() {
   return Object.keys(e).length === 0
 }
 
+// The create page passes the database's refusal in; show it, it is above the form
+const serverErrorEl = ref(null)
+watch(() => props.serverError, (message) => {
+  if (message) showElement(() => serverErrorEl.value)
+})
+
 async function onSubmit() {
   if (!validate()) {
-    await nextTick()
-    // Put the cursor on the first field with a problem
+    // The first field with a problem, in the middle of the screen, cursor in it
     const first = Object.keys(errors.value)[0]
-    document.getElementById(`swap-${first}`)?.focus()
+    await showElement(() => document.getElementById(`swap-${first}`))
     return
   }
   const f = form.value
@@ -201,7 +207,7 @@ async function onSubmit() {
     <div v-if="errorCount" class="alert alert-danger" role="alert">
       Please fix {{ errorCount === 1 ? '1 thing' : `${errorCount} things` }} below, then try again.
     </div>
-    <div v-else-if="serverError" class="alert alert-danger" role="alert">{{ serverError }}</div>
+    <div v-else-if="serverError" ref="serverErrorEl" class="alert alert-danger" role="alert">{{ serverError }}</div>
 
     <!-- name -->
     <div class="mb-4">

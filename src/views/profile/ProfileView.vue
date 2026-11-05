@@ -18,6 +18,7 @@
   STILL LEFT: an e2e test for editing the profile.
 */
 import { ref, computed } from 'vue'
+import { showFirstError, showElement } from '../../composables/useScrollToError.js'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth.js'
 import { usePointsStore } from '../../stores/points.js'
@@ -300,6 +301,9 @@ function toggleInterest(name) {
   }
 }
 
+const formEl = ref(null)
+const saveErrorEl = ref(null)
+
 async function save() {
   errors.value = {}
   saveError.value = ''
@@ -314,8 +318,11 @@ async function save() {
     errors.value.block = 'Please choose your block and street.'
   }
 
-  // Stop here if anything is wrong
-  if (Object.keys(errors.value).length > 0) return
+  // Stop here if anything is wrong, and show the first problem
+  if (Object.keys(errors.value).length > 0) {
+    showFirstError(formEl.value)
+    return
+  }
 
   saving.value = true
   const result = await auth.updateProfile({
@@ -342,7 +349,9 @@ async function save() {
     // this the change would not appear until a full page reload.
     applyLargeText(form.value.largeText)
   } else {
+    // Shown above the form, so usually off screen from the Save button
     saveError.value = result.error
+    showElement(() => saveErrorEl.value)
   }
 }
 
@@ -380,7 +389,7 @@ async function deleteAccount() {
     </div>
 
     <div v-if="message" class="alert alert-success" role="status">{{ message }}</div>
-    <div v-if="saveError" class="alert alert-danger" role="alert">{{ saveError }}</div>
+    <div v-if="saveError" ref="saveErrorEl" class="alert alert-danger" role="alert">{{ saveError }}</div>
 
     <!-- 1. Reading: name, block, age group, points and interests -->
     <div v-if="!editing" class="d-grid gap-4">
@@ -476,7 +485,7 @@ async function deleteAccount() {
     </div>
 
     <!-- 2. Editing: only the four things the database lets a user change -->
-    <form v-else class="card form-page" novalidate @submit.prevent="save">
+    <form v-else ref="formEl" class="card form-page" novalidate @submit.prevent="save">
       <div class="card-body p-4 d-grid gap-4">
 
         <div>

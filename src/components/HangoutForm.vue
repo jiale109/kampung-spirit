@@ -28,6 +28,7 @@
   The same rules are checked again in stores/hangout.js and in the database.
 */
 import { ref, computed } from 'vue'
+import { showFirstError } from '../composables/useScrollToError.js'
 import { HANGOUT_DURATIONS } from '../stores/hangout.js'
 import { todayISO, dateFromToday, TIME_OPTIONS, formatDuration, sessionStart } from '../lib/skillSwapFormat.js'
 import HotspotMap from './HotspotMap.vue'
@@ -92,6 +93,8 @@ function onPlacePicked(point) {
 // True once somewhere has been chosen, either way
 const hasPoint = computed(() => Number.isFinite(form.value.latitude) && Number.isFinite(form.value.longitude))
 
+const formEl = ref(null)
+
 function submit() {
   errors.value = {}
 
@@ -124,8 +127,11 @@ function submit() {
     }
   }
 
-  // Stop here if anything is wrong
-  if (Object.keys(errors.value).length > 0) return
+  // Stop here if anything is wrong, and show the first problem
+  if (Object.keys(errors.value).length > 0) {
+    showFirstError(formEl.value)
+    return
+  }
 
   emit('save', {
     ...form.value,
@@ -137,7 +143,7 @@ function submit() {
 </script>
 
 <template>
-  <form class="card" novalidate @submit.prevent="submit">
+  <form ref="formEl" class="card" novalidate @submit.prevent="submit">
     <div class="card-body p-4 vstack gap-4">
 
       <div>

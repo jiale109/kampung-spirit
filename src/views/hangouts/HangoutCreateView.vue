@@ -5,6 +5,7 @@
   HangoutForm.vue, sends the result to the store and goes back to the list.
 */
 import { ref } from 'vue'
+import { showElement } from '../../composables/useScrollToError.js'
 import { useRouter } from 'vue-router'
 import { useHangoutStore } from '../../stores/hangout.js'
 import HangoutForm from '../../components/HangoutForm.vue'
@@ -15,6 +16,7 @@ const store = useHangoutStore()
 const { askToLinkTelegram } = useTelegramPrompt()
 
 const error = ref('')
+const errorEl = ref(null)
 
 async function save(data) {
   error.value = ''
@@ -24,6 +26,7 @@ async function save(data) {
     router.push('/app/hangouts')
   } else {
     error.value = result.error
+    showElement(() => errorEl.value)
   }
 }
 </script>
@@ -37,7 +40,7 @@ async function save(data) {
       </div>
     </div>
 
-    <div v-if="error" class="alert alert-danger" role="alert">{{ error }}</div>
+    <div v-if="error" ref="errorEl" class="alert alert-danger" role="alert">{{ error }}</div>
 
     <HangoutForm @save="save" />
   </div>

@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed } from 'vue'
+import { showElement } from '../composables/useScrollToError.js'
 import { useRouter } from 'vue-router'
 import { categories, difficulties, durations, calcPoints, categoryClass } from '../lib/points.js'
 import { todayISO, dateFromToday, toISO, sessionStart, formatTime, TIME_OPTIONS } from '../lib/skillSwapFormat.js'
@@ -194,9 +195,9 @@ async function submit() {
   else if (safetyCheck.value.contact.length) errors.value.safety = 'Please keep contact details out of requests. Everyone on the Help Board can see them.'
 
   if (Object.keys(errors.value).length > 0) {
-    await nextTick()
+    // The first field with an error, in the middle of the screen, cursor in it
     const first = fieldOrder.find(([key]) => errors.value[key])
-    first[1]()?.focus()
+    await showElement(first[1])
     return
   }
 

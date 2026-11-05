@@ -2189,3 +2189,76 @@ form.d-grid {
     0 0 0 0.1875rem #06101a,
     0.25rem 0.25rem 0 0.1875rem #06101a;
 }
+
+/* ==========================================================================
+   14. The black outline, everywhere else
+   ==========================================================================
+   The buttons, the navbar and the page headers already carry it; this brings
+   the boxes along so nothing is left looking soft beside them. Same three
+   numbers throughout: a 0.1875rem edge, a 0.45rem corner, and where the thing
+   sits ON the page rather than inside something, a 0.25rem shadow down-right.
+
+   WHAT IS NOT BLACK, ON PURPOSE
+   - an input while you are typing in it stays teal, and a wrong one stays
+     red: those borders are how the form answers you, and painting them black
+     would take the answer away
+   - today, in the calendar, keeps its amber ring. The chosen day is teal and
+     filled, today is amber and outlined, and every other day is black. Three
+     states, three looks, none of them colour on its own.
+   ========================================================================== */
+.card {
+  border: 0.1875rem solid #06101a;
+  border-radius: 0.45rem;
+  box-shadow: 0.25rem 0.25rem 0 0 #06101a;
+}
+
+/* Only the width and the colour: the padding and min-height above are what
+   keep these the right size for an older hand, and they are left alone */
+.form-control,
+.form-select {
+  border-width: 0.1875rem;
+  border-color: #06101a;
+  border-radius: 0.45rem;
+}
+
+.count-pill {
+  border: 0.1875rem solid #06101a;
+  box-shadow: 0.2rem 0.2rem 0 0 #06101a;
+}
+
+.place-results,
+.avatar-picker {
+  border: 0.1875rem solid #06101a;
+  border-radius: 0.45rem;
+}
+
+/*
+  These two keep their teal BACKGROUND, which is what says "something is
+  switched on". Only the edge turns black, so the signal survives.
+*/
+.chosen-address,
+.filter-banner {
+  border: 0.1875rem solid #06101a;
+  border-radius: 0.45rem;
+}
+
+.modal-content {
+  border: 0.1875rem solid #06101a;
+  border-radius: 0.45rem;
+}
+
+/*
+  The calendar. em, NOT rem: .day-picker is font-size: min(1rem, 4.2vw), so
+  the whole month shrinks on a narrow phone and every size inside it is in em
+  to follow. A rem border would stay put while the cells around it shrank,
+  and the grid would stop fitting.
+*/
+.day-cell {
+  border-width: 0.17em;
+  border-color: #06101a;
+}
+
+/* Today keeps its amber ring - see the note at the top of this section */
+.day-cell.is-today.btn-outline-secondary {
+  border-color: var(--ks-amber-ink);
+}

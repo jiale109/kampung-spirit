@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
   await resetApp(page)
 })
 
-test('Request cards open and close by click, tap or keyboard, not by hover', async ({ page }) => {
+test('Request cards open on hover, and stay open after a click', async ({ page }) => {
   const title = uniqueTitle('Singpass')
   await login(page, 'Senior', 'Mdm Tan')
   await postRequest(page, { title })
@@ -19,25 +19,32 @@ test('Request cards open and close by click, tap or keyboard, not by hover', asy
 
   // Closed: the title shows, the details and buttons do not
   await expect(toggle).toBeVisible()
-  await expect(accept).toBeHidden()
-
-  // Mouse over: the card stays closed and keeps its height
-  const closedHeight = (await singpass.boundingBox()).height
-  await singpass.hover()
   await expect(toggle).toHaveAttribute('aria-expanded', 'false')
   await expect(accept).toBeHidden()
-  expect((await singpass.boundingBox()).height).toBe(closedHeight)
 
-  // Click: it opens
-  await toggle.click()
+  // Mouse over: it opens
+  await singpass.hover()
   await expect(toggle).toHaveAttribute('aria-expanded', 'true')
   await expect(accept).toBeVisible()
 
-  // "Hide details" closes it, even though the mouse is still over the card
+  // Mouse away: it closes again
+  await page.mouse.move(0, 0)
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(accept).toBeHidden()
+
+  // Click the title while hovering: it is pinned, and stays open after the mouse leaves
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  await page.mouse.move(0, 0)
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  await expect(accept).toBeVisible()
+
+  // "Hide details" closes it, even though the mouse is over the card again
   const hint = await singpass.getByText('Hide details').boundingBox()
   await page.mouse.click(hint.x + hint.width / 2, hint.y + hint.height / 2)
   await expect(toggle).toHaveAttribute('aria-expanded', 'false')
   await expect(accept).toBeHidden()
+  await page.mouse.move(0, 0)
 
   // Keyboard: Enter on the title opens it, and Enter again closes it
   await toggle.focus()

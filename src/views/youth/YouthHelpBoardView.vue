@@ -220,9 +220,13 @@ async function doAccept(request, physicalOk) {
         <h1 class="page-title">Help your neighbours</h1>
         <p class="page-subtitle">Pick a request you can help with.</p>
       </div>
-      <span v-if="!auth.isAdmin" class="points-pill" :class="{ 'is-full': store.atLimit }" data-testid="active-count">
+      <!-- Opens My Tasks whatever the count, so the tasks are one press away from here -->
+      <router-link v-if="!auth.isAdmin" to="/app/tasks" class="points-pill active-tasks-link"
+        :class="{ 'is-full': store.atLimit }" data-testid="active-count"
+        :aria-label="`Active tasks: ${store.activeCount} of ${MAX_ACTIVE_TASKS}. Open My Tasks`">
         Active tasks: {{ store.activeCount }} / {{ MAX_ACTIVE_TASKS }}
-      </span>
+        <span aria-hidden="true">›</span>
+      </router-link>
     </div>
 
     <div class="alert alert-light safety-tip">
@@ -352,6 +356,17 @@ async function doAccept(request, physicalOk) {
 </template>
 
 <style scoped>
+/* The counter is a link to My Tasks: no underline, and a lift on hover like the nav buttons */
+.active-tasks-link {
+  text-decoration: none;
+}
+
+.active-tasks-link:hover,
+.active-tasks-link:focus-visible {
+  color: #fff;
+  filter: brightness(1.15);
+}
+
 /* Small and calm, not a warning */
 .safety-tip {
   font-size: 0.95rem;

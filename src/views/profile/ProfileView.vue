@@ -439,8 +439,7 @@ async function deleteAccount() {
 
       <div class="card">
         <div class="card-body p-4">
-          <h2 class="page-title fs-4">Interests</h2>
-          <p class="page-subtitle mb-3">Neighbours can see these, so they know what you enjoy.</p>
+          <h2 class="page-title fs-4 mb-3">Interests</h2>
 
           <ul v-if="myInterests.length > 0" class="list-unstyled d-flex flex-wrap gap-3 mb-0"
             data-testid="profile-interests">

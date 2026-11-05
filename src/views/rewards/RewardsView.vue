@@ -9,8 +9,8 @@
   Route: /app/rewards (in sharedChildren in router/index.js).
 
   WHAT THE PROPOSAL SAYS
-  Every completed task, hangout and skill-swap earns points based on
-  difficulty and duration. Users redeem points for vouchers from local
+  Every completed task and skill swap earns points based on difficulty and
+  duration (hangouts do not earn points). Users redeem points for vouchers from local
   merchants (hawker, kopitiam, supermarket, pharmacy) and keep them in a
   personal wallet. A monthly community-wide challenge (e.g. 10,000 points) shows
   a live progress bar, and all contributors receive bonus points when the

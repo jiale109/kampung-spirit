@@ -68,7 +68,7 @@ Anyone can ask for help and anyone can help. The app is designed first for senio
 - Sessions are booked at least 24 hours ahead.
 
 ### Rewards and Community Challenge
-- Every completed help request, hangout and skill swap earns **Kampung Points**, worked out in the database from effort and duration.
+- Every completed help request and skill swap earns **Kampung Points**, worked out in the database from effort and duration. Hangouts do not earn points: anyone can turn up, so nobody can say who came.
 - **Redeem points for vouchers** from local merchants (simulated for this project). Vouchers are kept in a personal **wallet** with a code to show at the counter, and can be marked as used.
 - A **monthly community challenge** (10,000 points) with a live progress bar; when the community reaches it, every contributor that month receives a 50-point bonus, paid once by the database.
 

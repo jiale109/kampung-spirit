@@ -748,8 +748,8 @@ begin
 end;
 $$;
 
--- Host marks it done once it has started and someone else came. Everyone who
--- went, the host included, is paid once.
+-- Host marks it done once it has started. Hangouts earn no points (see
+-- migrations/20261108140000_no_hangout_points.sql), so this only closes it.
 create function public.complete_hangout(hangout_id uuid)
 returns void
 language plpgsql
@@ -758,7 +758,6 @@ set search_path = ''
 as $$
 declare
   h public.hangouts;
-  pay int;
 begin
   -- Lock the row and run every check before anything changes
   select * into h from public.hangouts
@@ -774,20 +773,9 @@ begin
     raise exception 'You can mark a hangout as done once it has started.';
   end if;
 
-  -- The host is added as an attendee automatically, so look for anyone else
-  if not exists (select 1 from public.hangout_attendees a
-                 where a.hangout_id = h.id and a.user_id <> h.host_id) then
-    raise exception 'Nobody else joined this hangout, so there are no points to give.';
-  end if;
-
+  -- Hangouts earn no points (anyone may turn up, so nobody can say who came),
+  -- so marking one done only closes it
   update public.hangouts set status = 'completed' where id = h.id;
-
-  pay := public.calc_hangout_points(h.duration);
-
-  insert into public.points_ledger (user_id, amount, reason)
-  select a.user_id, pay, 'Hangout: ' || h.title
-  from public.hangout_attendees a
-  where a.hangout_id = h.id;
 end;
 $$;
 

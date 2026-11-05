@@ -11,7 +11,8 @@
   Uses: stores/hangout.js (rules repeated from supabase/schema.sql sections 7
   and 9), lib/hotspots.js, lib/weather.js (data.gov.sg forecast; no warning if
   it fails), components/HangoutCard.vue, HangoutForm.vue and HotspotMap.vue.
-  Completing a hangout pays points in complete_hangout() in the database.
+  Hangouts earn no points: marking one done (complete_hangout() in the
+  database) only closes it.
 
   STILL LEFT: hangouts cannot be edited after they are proposed, and there is
   no e2e test for cancelling or completing one.
@@ -196,7 +197,7 @@ async function complete(hangout) {
   message.value = ''
   error.value = ''
   const result = await store.completeHangout(hangout.id)
-  if (result.ok) message.value = `Thank you! Everyone who came to "${hangout.title}" has earned points.`
+  if (result.ok) message.value = `Thank you for hosting "${hangout.title}". It is marked as done.`
   else error.value = result.error
 }
 </script>

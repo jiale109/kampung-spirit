@@ -14,7 +14,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useAuthStore } from './auth.js'
-import { usePointsStore } from './points.js'
 import { sessionStart, sessionEnd } from '../lib/skillSwapFormat.js'
 import { supabase } from '../lib/supabase.js'
 import { NEAR_KM, nearPoint as filterNearPoint } from '../lib/nearby.js'
@@ -227,7 +226,7 @@ export const useHangoutStore = defineStore('hangout', () => {
     return run(supabase.rpc('cancel_hangout', { hangout_id: id }))
   }
 
-  // Everyone who went, the host included, is paid by the database function
+  // Closes a hangout that has happened. Hangouts earn no points.
   async function completeHangout(id) {
     if (!me.value) return needSignIn()
     const h = find(id)
@@ -236,12 +235,8 @@ export const useHangoutStore = defineStore('hangout', () => {
     if (sessionStart(h.date, h.time) > new Date()) {
       return { ok: false, error: 'You can mark a hangout as done once it has started.' }
     }
-    // Other refusals (e.g. nobody else joined) come back from the database as plain sentences
-    const result = await run(supabase.rpc('complete_hangout', { hangout_id: id }))
-    if (!result.ok) return result
-    // complete_hangout() adds points_ledger rows, so refresh the balance in the navbar
-    await usePointsStore().load()
-    return { ok: true }
+    // Any other refusal comes back from the database as a plain sentence
+    return run(supabase.rpc('complete_hangout', { hangout_id: id }))
   }
 
   // Admin only: delete any hangout (schema.sql section 18). The database

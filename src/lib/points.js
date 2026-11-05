@@ -6,9 +6,9 @@
     (public.calc_points in supabase/schema.sql) and that one decides the real
     points. The copy here is only for the preview in RequestForm.vue. If you
     change the formula, change BOTH, or the preview will not match.
-  - pointsForHangout() and pointsForSkillSwap(): rules for the other features.
-    Points can only be added to points_ledger by a database function, so the
-    Hangouts and Skill Swaps functions must use the same formula in SQL.
+  - pointsForSkillSwap(): the rule for skill swaps. Points can only be added
+    to points_ledger by a database function, so the Skill Swaps function must
+    use the same formula in SQL. Hangouts earn no points.
   - COMMUNITY_TARGET and COMMUNITY_BONUS: the monthly challenge
     (used by stores/points.js and views/rewards/RewardsView.vue).
 */
@@ -39,11 +39,6 @@ export const MAX_ACTIVE_TASKS = 2
 // e.g. Medium, 45 min -> 10 x 2 x 1.5 = 30 points
 export function calcPoints(difficulty, duration) {
   return Math.round(10 * difficulties[difficulty] * (duration / 30))
-}
-
-// Hangout attendance or hosting (e.g. 60 mins base = 20 points)
-export function pointsForHangout(durationMinutes = 60) {
-  return Math.round(20 * (durationMinutes / 60))
 }
 
 // Skill swap teaching or participation (e.g. 60 mins base = 30 points)

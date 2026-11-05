@@ -1476,6 +1476,23 @@ form.d-grid {
     flex: 1 1 auto;
   }
 
+  /*
+    Large text: at 27px the six tabs need about 1,450px, so on 1200-1440px
+    laptops Rewards wrapped onto a row of its own and then grew across the
+    whole navbar. Tighter tabs keep all six on one line. The words are 0.85
+    of the large size, which is still a touch bigger than the tabs with
+    normal text (23px against 22px). 0.7rem between them still clears the
+    0.625rem their frames take (see the gap note above).
+  */
+  html.large-text .app-navbar .navbar-nav.me-auto {
+    gap: 0.7rem;
+  }
+
+  html.large-text .app-navbar .navbar-nav.me-auto .nav-link {
+    padding-inline: 0.7rem;
+    font-size: 0.85rem;
+  }
+
   /* The words sit in the middle of the room the button has been given */
   .app-navbar .navbar-nav.me-auto .nav-link {
     text-align: center;

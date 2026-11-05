@@ -2,7 +2,6 @@
 import { ref, computed, nextTick} from 'vue'
 import {
   dateOptions,
-  todayISO,
   sessionStart,
   TIME_OPTIONS,
   DURATION_OPTIONS,
@@ -149,10 +148,19 @@ function validate() {
     e.venue = 'Please give this place a name, so people know where to go.'
   }
 
-  if (!f.date || f.date < todayISO()) {
-    e.date = 'Pick a day that has not passed.'
-  } else if (f.time && sessionStart(f.date, f.time) < new Date()) {
-    e.time = 'Pick a time that has not passed yet.'
+  const MIN_NOTICE_MS = 24 * 60 * 60 * 1000
+
+  if (!f.date) {
+    e.date = 'Please choose a session date.'
+  } else if (!f.time) {
+    e.time = 'Please choose a session time.'
+  } else {
+    const startTime = sessionStart(f.date, f.time)
+    const hoursUntilSession = startTime.getTime() - Date.now()
+
+    if (hoursUntilSession < MIN_NOTICE_MS) {
+      e.time = 'Please schedule your session at least 24 hours in advance.'
+    }
   }
 
   const cap = Number(f.capacity)

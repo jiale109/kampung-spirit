@@ -18,6 +18,7 @@
 --   - Age groups: youth 12-21, adult 22-64, senior 65+ (worked out from the birth date).
 --   - Anyone can ask for help and anyone can help, but not on their own request.
 --   - A helper can have at most 2 active tasks.
+--   - A person can post at most 3 help requests a day, Singapore time (section 20).
 --   - Under 18s cannot accept tasks until an admin sets guardian_verified_at.
 --   - Seniors must confirm a warning before accepting a physical task.
 --   - Points are calculated here, and only awarded when the requester confirms.
@@ -816,9 +817,9 @@ insert into public.hangouts (host_id, title, description, hotspot_id, hangout_da
 select p.id, v.title, v.description, v.hotspot_id, current_date + v.days, v.at, v.duration
 from (select id from public.profiles order by created_at limit 1) p,
 (values
-  ('Morning walk at the park', 'A gentle walk and a chat. We stop whenever anyone needs a rest.', 'eunos-park', 1, time '07:30', 60),
-  ('Kopi and newspapers', 'Read the papers together over kopi. Come and go as you like.', 'eunos-crescent-market', 2, time '09:00', 60),
-  ('Herb garden morning', 'Watering and weeding together. Gloves provided.', 'eunos-community-garden', 3, time '08:00', 90)
+  ('Morning walk at the park', 'A gentle walk and a chat. We stop whenever anyone needs a rest.', 'eunos-park', 2, time '07:30', 60),
+  ('Kopi and newspapers', 'Read the papers together over kopi. Come and go as you like.', 'eunos-crescent-market', 3, time '09:00', 60),
+  ('Herb garden morning', 'Watering and weeding together. Gloves provided.', 'eunos-community-garden', 4, time '08:00', 90)
 ) as v(title, description, hotspot_id, days, at, duration);
 
 
@@ -932,24 +933,35 @@ create table public.skill_session_attendees (
 create index on public.skill_session_attendees (user_id);
  
 -- Checks a new session before it is saved
-create function public.skill_sessions_check()
-returns trigger
-language plpgsql
-set search_path = ''
-as $$
-begin
-  if public.skill_session_start(new.session_date, new.session_time) < now() then
-    raise exception 'That day and time have already passed.';
-  end if;
- 
-  if public.is_unverified_minor(new.host_id) then
-    raise exception 'Your parent or guardian needs to confirm your account before you can host.';
-  end if;
- 
-  return new;
-end;
-$$;
- 
+CREATE OR REPLACE FUNCTION public.skill_sessions_check()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  session_starts_at timestamptz;
+BEGIN
+  session_starts_at :=
+    public.skill_session_start(NEW.session_date, NEW.session_time);
+
+  IF session_starts_at < NOW() THEN
+    RAISE EXCEPTION
+      'That day and time have already passed.';
+  END IF;
+
+  IF session_starts_at < NOW() + INTERVAL '24 hours' THEN
+    RAISE EXCEPTION
+      'SkillSwap sessions must be scheduled at least 24 hours in advance.';
+  END IF;
+
+  IF public.is_unverified_minor(NEW.host_id) THEN
+    RAISE EXCEPTION
+      'Your parent or guardian needs to confirm your account before you can host.';
+  END IF;
+
+  RETURN NEW;
+END;
+$$; 
 revoke execute on function public.skill_sessions_check() from public, anon, authenticated;
  
 create trigger skill_sessions_check
@@ -1955,3 +1967,154 @@ drop trigger if exists help_requests_check_time on public.help_requests;
 create trigger help_requests_check_time
   before insert or update of needed_at, helper_id on public.help_requests
   for each row execute function public.help_requests_check_time();
+
+
+-- ============================================================================
+-- 20. Help requests: at most 3 posted per person per day (Singapore time)
+-- ============================================================================
+-- Why: so one person cannot flood the Help Board. Every request posted today
+-- counts, whatever its status now, so cancelling one does not free a place.
+-- Editing a request is an update, not an insert, so it never counts.
+-- The pages (SeniorHelpBoardView.vue, SeniorCreateRequestView.vue) only show
+-- the limit early; this trigger is what enforces it.
+
+-- Must match MAX_REQUESTS_PER_DAY in src/stores/helpRequest.js
+create or replace function public.help_requests_daily_limit()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  posted_today int;
+begin
+  -- One post at a time per person, so two posts sent at the same moment cannot
+  -- both count 2 and slip through. The lock is let go when the transaction ends.
+  perform pg_advisory_xact_lock(hashtext('help_requests_daily_limit'), hashtext(new.requester_id::text));
+
+  select count(*) into posted_today
+  from public.help_requests r
+  where r.requester_id = new.requester_id
+    and (r.created_at at time zone 'Asia/Singapore')::date = (now() at time zone 'Asia/Singapore')::date;
+
+  if posted_today >= 3 then
+    raise exception 'You can post up to 3 help requests a day. Please try again tomorrow.';
+  end if;
+  return new;
+end;
+$$;
+
+revoke execute on function public.help_requests_daily_limit() from public, anon, authenticated;
+
+drop trigger if exists help_requests_daily_limit on public.help_requests;
+create trigger help_requests_daily_limit
+  before insert on public.help_requests
+  for each row execute function public.help_requests_daily_limit();
+
+
+-- ============================================================================
+-- 21. Help requests: Telegram reminders, "nobody could help in time", and
+--     "please confirm"
+-- ============================================================================
+-- The hourly send-reminders function (supabase/functions/send-reminders)
+-- reads these columns to send each message once:
+--   reminder_sent_at        about a day before an accepted request, to the
+--                           helper and the person who asked
+--   expired_notice_sent_at  the time passed while nobody had accepted it, to
+--                           the person who asked
+--   confirm_nudge_sent_at   the helper said it was done a day ago and it is
+--                           still not confirmed, to the person who asked
+-- and marked_done_at is when the helper pressed "done", so it knows when a
+-- day has gone by.
+--
+-- None of these can be written from the browser: help_requests only grants
+-- update on the request's own details (schema.sql section 4).
+
+alter table public.help_requests add column if not exists reminder_sent_at timestamptz;
+alter table public.help_requests add column if not exists expired_notice_sent_at timestamptz;
+alter table public.help_requests add column if not exists confirm_nudge_sent_at timestamptz;
+alter table public.help_requests add column if not exists marked_done_at timestamptz;
+
+-- Keeps those columns right as a request changes, without touching the
+-- functions that change it (accept_help_request and the others): a trigger
+-- on the row, like the rules in sections 18 to 20.
+create or replace function public.help_requests_notice_times()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  -- Moved to a new time: everyone should hear about the new one
+  if new.needed_at is distinct from old.needed_at then
+    new.reminder_sent_at := null;
+    new.expired_notice_sent_at := null;
+  end if;
+
+  -- A different helper (someone withdrew and another accepted): remind them too
+  if new.helper_id is distinct from old.helper_id then
+    new.reminder_sent_at := null;
+  end if;
+
+  -- The helper pressed "done": start the one-day wait before "please confirm"
+  if new.status = 'pending_confirmation' and old.status is distinct from 'pending_confirmation' then
+    new.marked_done_at := now();
+    new.confirm_nudge_sent_at := null;
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.help_requests_notice_times() from public, anon, authenticated;
+
+drop trigger if exists help_requests_notice_times on public.help_requests;
+create trigger help_requests_notice_times
+  before update of needed_at, helper_id, status on public.help_requests
+  for each row execute function public.help_requests_notice_times();
+
+-- Requests already waiting for a confirmation start their day now, so they
+-- get one nudge tomorrow instead of never
+update public.help_requests
+set marked_done_at = now()
+where status = 'pending_confirmation' and marked_done_at is null;
+
+
+-- ============================================================================
+-- 22. Hangouts: at least 24 hours' notice                    Owner: Kelsey Wong
+-- ============================================================================
+-- Here at the end, not in section 7, because it uses skill_session_start()
+-- from section 8.1, and the sample hangouts in section 7 would fire it before
+-- that exists (the same reason as section 9). The skill swap half of this
+-- rule is in skill_sessions_check(), section 8. For an existing project:
+-- supabase/migrations/20261107130000_advance_notice.sql.
+
+-- A trigger of its own beside hangouts_check (section 9), which keeps its
+-- past-time and guardian checks unchanged.
+create or replace function public.hangouts_check_advance_notice()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  hangout_starts_at timestamptz;
+begin
+  hangout_starts_at := public.skill_session_start(new.hangout_date, new.hangout_time);
+
+  if hangout_starts_at < now() then
+    raise exception 'That day and time have already passed.';
+  end if;
+
+  if hangout_starts_at < now() + interval '24 hours' then
+    raise exception 'Hangouts must be scheduled at least 24 hours in advance.';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.hangouts_check_advance_notice() from public, anon, authenticated;
+
+drop trigger if exists hangouts_check_advance_notice on public.hangouts;
+create trigger hangouts_check_advance_notice
+  before insert or update of hangout_date, hangout_time on public.hangouts
+  for each row execute function public.hangouts_check_advance_notice();

@@ -54,12 +54,7 @@ function makeTitle(category, details) {
 const nextToday = TIME_OPTIONS.find((t) => sessionStart(FIRST_DAY, t.value) > new Date())
 const firstFree = nextToday ? { date: FIRST_DAY, time: nextToday.value } : { date: dateFromToday(1), time: '09:00' }
 
-/*
-  Rescheduling a request whose day has gone: the old day can no longer be
-  picked, so the day starts empty and the person must choose a new one (the
-  "Please choose the day" check below). The old time is kept if it is one in
-  the list, otherwise the first free time.
-*/
+
 const savedDate = props.request ? toISO(new Date(props.request.neededAt)) : ''
 const savedTime = props.request ? toTime(props.request.neededAt) : ''
 const dayHasPassed = props.request && savedDate < FIRST_DAY
@@ -88,13 +83,7 @@ const form = ref({
 })
 const errors = ref({})
 
-/*
-  WHERE TO MEET (same idea as components/HangoutForm.vue)
-  Search OneMap and press a place, or tap the map. Either way a pin appears,
-  so the senior can see they picked the right spot. A search fills in the
-  name; a tap leaves the name for the senior to write. The name box below
-  the map is what helpers read, and stays editable ("Use my block" too).
-*/
+
 const savedPlace = props.request && Number.isFinite(props.request.latitude) ? [{
   // HotspotMap puts the name into the popup as HTML, so escape it
   name: `Saved place: ${escapeHtml(props.request.location)}`,

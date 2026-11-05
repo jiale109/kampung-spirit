@@ -1,7 +1,9 @@
 <script setup>
 /*
-  "How Kampung Spirit works": the part of the home page below the photos,
-  for people who have not signed up yet. Three sections and a sign-up band.
+  "How Kampung Spirit works": the part of the home page below the intro,
+  for people who have not signed up yet: what you can do, the four steps
+  (#how-it-works, where "See how Kampung Spirit works" scrolls to), the
+  photos, the safety points and a sign-up band.
   Each card fades up as it scrolls into view (composables/useReveal.js).
   "What you can do" is one wide row per feature, picture and words swapping
   sides each row, so each one has room to breathe.
@@ -69,19 +71,6 @@ const delay = (i) => ({ '--reveal-delay': `${i * 120}ms` })
 <template>
   <div ref="root" class="landing-story">
 
-    <section id="how-it-works" class="story-section" aria-labelledby="how-title">
-      <div class="story-inner">
-        <h2 id="how-title" class="story-title" data-reveal>Neighbours helping neighbours, in four steps</h2>
-        <ol class="story-steps">
-          <li v-for="(step, i) in steps" :key="step.title" class="card story-step" data-reveal :style="delay(i)">
-            <span class="step-number" aria-hidden="true">{{ i + 1 }}</span>
-            <h3 class="story-card-title">{{ step.title }}</h3>
-            <p class="mb-0">{{ step.text }}</p>
-          </li>
-        </ol>
-      </div>
-    </section>
-
     <section class="story-section story-section--white" aria-labelledby="features-title">
       <div class="story-inner">
         <h2 id="features-title" class="story-title" data-reveal>What you can do</h2>
@@ -96,6 +85,19 @@ const delay = (i) => ({ '--reveal-delay': `${i * 120}ms` })
             </div>
           </article>
         </div>
+      </div>
+    </section>
+
+    <section id="how-it-works" class="story-section" aria-labelledby="how-title">
+      <div class="story-inner">
+        <h2 id="how-title" class="story-title" data-reveal>Neighbours helping neighbours, in four steps</h2>
+        <ol class="story-steps">
+          <li v-for="(step, i) in steps" :key="step.title" class="card story-step" data-reveal :style="delay(i)">
+            <span class="step-number" aria-hidden="true">{{ i + 1 }}</span>
+            <h3 class="story-card-title">{{ step.title }}</h3>
+            <p class="mb-0">{{ step.text }}</p>
+          </li>
+        </ol>
       </div>
     </section>
 

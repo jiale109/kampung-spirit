@@ -104,14 +104,6 @@ All five resident accounts use the password **`kampung-demo-123`**.
 | Wei Jie | `demo.weijie@example.com` | Youth | Accepting and completing tasks, earning and redeeming points |
 | Aisha | `demo.aisha@example.com` | Youth | Hosting a hangout and a skill swap |
 
-**Admin account**
-
-| Username | Password | Notes |
-|---|---|---|
-| `admin` (full email `admin@example.com`) | `admin123!` | Type just `admin` in the email box. Sees only Help Board, Hangouts and Skill Swaps, with a Delete button on each item. |
-
-You can also create your own account on the **Create an account** page. Anyone aged 12 or older can join; under-18s need a parent or guardian's details.
-
 ---
 
 ## Tech stack

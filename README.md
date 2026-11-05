@@ -2,174 +2,351 @@
 
 > Neighbours helping neighbours, one small favour at a time.
 
-IS216 group project (G6, Team 1). A web app for HDB estates across Singapore where seniors post help requests, youths nearby accept them, residents join hangouts and skill-swap sessions, and helpers earn points they can redeem for (simulated) vouchers from local merchants.
+Kampung Spirit is a web app for one HDB estate (Eunos, Singapore). Seniors ask for everyday help, youths and other neighbours nearby take it on, residents meet at casual hangouts and teach each other in skill-swap sessions, and helpers earn points they can redeem for (simulated) vouchers from local merchants.
 
-Built with Vue 3, Pinia, Vue Router and Bootstrap 5. Tested with Playwright. Deployed on Vercel.
+IS216 Web Application Development II, G6 Team 1.
 
-**Current state:** every page works with real accounts and data in [Supabase](https://supabase.com/) (database and login): the **Help Board**, **Hotspot Hangouts** (with a OneMap map and a rain warning), **Skill-Swap Circles**, **Rewards** (vouchers, wallet and the monthly community challenge) and **Profile**. There is no Express server. Each feature's main file starts with a **GUIDE** comment saying how it works and what is still left.
+## Quick links
 
-## Quick start
+| | |
+|---|---|
+| **Live application** | **https://kampung-spirit.vercel.app** (opens on the landing page, `/landing`) |
+| **Git repository** | **https://github.com/jiale109/kampung-spirit** |
+| **Demo login** | `demo.tan@example.com` / `kampung-demo-123` (all demo accounts are [below](#demo-accounts)) |
 
-You need [Node.js](https://nodejs.org/) 22 or newer and [pnpm](https://pnpm.io/installation).
+
+---
+
+## Contents
+
+1. [About](#about)
+2. [Features](#features)
+3. [Demo accounts](#demo-accounts)
+4. [Tech stack](#tech-stack)
+5. [External APIs](#external-apis)
+6. [Getting started](#getting-started)
+7. [Telegram notifications (optional)](#telegram-notifications-optional)
+8. [Testing](#testing)
+9. [Deployment](#deployment)
+10. [Project structure](#project-structure)
+11. [Accessibility and design for seniors](#accessibility-and-design-for-seniors)
+12. [Security](#security)
+13. [Known limitations](#known-limitations)
+14. [Credits](#credits)
+
+---
+
+## About
+
+Many seniors in HDB estates live alone and need small, practical help: setting up Singpass on a new phone, carrying a gas tank up the stairs, understanding a letter from a government agency. Many younger residents live a few blocks away and would help if they knew. Kampung Spirit brings back the *kampung* spirit of looking out for one another by connecting the two, inside one familiar neighbourhood.
+
+Anyone can ask for help and anyone can help. The app is designed first for seniors: large text, big buttons, plain words and one clear action per screen.
+
+---
+
+## Features
+
+### Help Board
+- **Ask for help** in one of six categories (Tech, Grocery, Lifting, Translation, Companion Walk, Other), with a calendar to pick the day, a time list, and a meeting place chosen on a map (OneMap search, tap the map, or "Use my address").
+- **Help a neighbour** from the Help Board: filter by category, sort by points, time or date, and see requests as pins on a map.
+- **Clear status flow:** Open → Accepted → Waiting for confirmation → Completed (or Cancelled), always written in words, never shown by colour alone.
+- **Points are released only when the person who asked confirms** the help happened.
+- **Fair-use rules:** a helper can have at most 2 active tasks; a person can post at most 3 requests a day; physical tasks ask the helper to confirm they are comfortable.
+- **Reschedule, edit, cancel and delete** your own requests; past requests move to a "Past" section.
+
+### Hotspot Hangouts
+- Residents propose casual meet-ups (morning walks, kopi and newspapers, a herb-garden morning) at familiar estate spots or any place found on **OneMap**.
+- A **map of hotspots**; press a marker or search a place to see hangouts near it.
+- **Rain warning** for outdoor hangouts from the data.gov.sg 2-hour forecast, shown when a hangout is about to start.
+- Join or leave with one button; the host marks it done after it starts, and everyone who came earns points.
+- Hangouts are booked at least 24 hours ahead and last 30 minutes to 3 hours.
+
+### Skill-Swap Circles
+- Seniors and youths **host small sessions** to share what they know (crochet, digital-banking safety, kueh making, a language), with a date, time, venue, map pin and capacity (1 to 10).
+- **Search, filter** (type, next 7 days, weekends) **and sort** sessions; "Full" sessions say so in words.
+- After the session, the host **ticks who actually came**; the host and those people earn points.
+- Sessions are booked at least 24 hours ahead.
+
+### Rewards and Community Challenge
+- Every completed help request, hangout and skill swap earns **Kampung Points**, worked out in the database from effort and duration.
+- **Redeem points for vouchers** from local merchants (simulated for this project). Vouchers are kept in a personal **wallet** with a code to show at the counter, and can be marked as used.
+- A **monthly estate-wide challenge** (10,000 points) with a live progress bar; when the estate reaches it, every contributor that month receives a 50-point bonus, paid once by the database.
+
+### Profile
+- **Pixel-art avatar** built from age group, gender and skin tone, optionally **walking across the navbar**.
+- **Interests** chosen from a list or typed in, a **large-text** setting, Telegram connection, and **delete my account**.
+- Age group (youth 12–21, adult 22–64, senior 65+) is worked out from the date of birth, which only the user can see.
+
+### Translation
+- Cards can be read in **English, 中文, Melayu or தமிழ்**. Interface words use a fixed, checked table; what neighbours write is machine-translated (MyMemory). Names and addresses are never translated.
+
+### Telegram notifications
+- Link an account to the Kampung Spirit Telegram bot to get a message when a request is accepted, done or cancelled, when someone joins your hangout or session, and a reminder about a day before anything you are going to.
+
+### Safety
+- Requests cannot contain blocked phrases (for example asking a helper to keep secrets or come alone) or contact details; everyone is reminded never to share OTPs, passwords or bank details.
+- **Under-18s** sign up with a parent or guardian's name, email and consent, cannot accept tasks until their guardian is verified, and cannot accept requests inside someone's home or before 8 am / from 7 pm.
+
+### Admin
+- An admin account sees every live help request, hangout and skill swap and can **delete** any of them. It cannot post, accept, host or join anything. The database enforces this, not just the screen.
+
+---
+
+## Demo accounts
+
+All five resident accounts use the password **`kampung-demo-123`**.
+
+| Name | Email | Age group | Good for showing |
+|---|---|---|---|
+| Mdm Tan Siew Lan | `demo.tan@example.com` | Senior (large text on) | Asking for help, confirming a task, hosting a hangout and a full skill swap |
+| Mr Lim Ah Kow | `demo.lim@example.com` | Senior (large text on) | Asking for help, hosting a skill swap |
+| Mdm Fatimah | `demo.fatimah@example.com` | Senior | Asking for help, hosting a hangout |
+| Wei Jie | `demo.weijie@example.com` | Youth | Accepting and completing tasks, earning and redeeming points |
+| Aisha | `demo.aisha@example.com` | Youth | Hosting a hangout and a skill swap |
+
+**Admin account**
+
+| Username | Password | Notes |
+|---|---|---|
+| `admin` (full email `admin@example.com`) | `admin123!` | Type just `admin` in the email box. Sees only Help Board, Hangouts and Skill Swaps, with a Delete button on each item. |
+
+You can also create your own account on the **Create an account** page. Anyone aged 12 or older can join; under-18s need a parent or guardian's details.
+
+---
+
+## Tech stack
+
+| Layer | Technology | Used for |
+|---|---|---|
+| Front end | [Vue 3](https://vuejs.org/) (`<script setup>`) | All pages and components |
+| Build tool | [Vite 7](https://vite.dev/) | Development server and production build |
+| State | [Pinia](https://pinia.vuejs.org/) | One store per feature (auth, help requests, hangouts, skill swaps, points, wallet) |
+| Routing | [Vue Router 4](https://router.vuejs.org/) | Pages, login guard, admin-only rules |
+| Styling | [Bootstrap 5](https://getbootstrap.com/) + our own `theme.css` | Layout, components, senior-friendly sizing |
+| Maps | [Leaflet](https://leafletjs.com/) with OneMap tiles | Hotspot, request and session maps |
+| HTTP | [axios](https://axios-http.com/) | Calls to OneMap, data.gov.sg and Edge Functions |
+| Database | [Supabase](https://supabase.com/) (PostgreSQL) | All data, with Row Level Security and database functions for every rule |
+| Authentication | Supabase Auth | Sign up, log in, sessions |
+| Server code | Supabase Edge Functions (Deno) + Cron | Telegram bot and hourly reminders |
+| Hosting | [Vercel](https://vercel.com/) | Live site, deployed from `main` |
+| Unit tests | [Vitest](https://vitest.dev/) | Pure logic in `src/lib/` |
+| End-to-end tests | [Playwright](https://playwright.dev/) | Full user journeys in a real browser |
+| Package manager | [pnpm](https://pnpm.io/) | Installing and running everything |
+
+There is no separate Express or Node server: the browser talks to Supabase directly, and the database itself enforces every rule.
+
+---
+
+## External APIs
+
+| API | Used for | Key needed |
+|---|---|---|
+| [OneMap](https://www.onemap.gov.sg/apidocs) (Singapore Land Authority) | Place search, turning a place into coordinates, and the map tiles | Optional (`VITE_ONEMAP_TOKEN`) |
+| [data.gov.sg 2-hour weather forecast](https://data.gov.sg/) | Rain warning on outdoor hangouts | No |
+| [MyMemory Translation](https://mymemory.translated.net/) | Translating what residents write into 中文, Melayu and தமிழ் | No |
+| [Telegram Bot API](https://core.telegram.org/bots/api) | Notifications and reminders (through Supabase Edge Functions only) | Yes, kept as a Supabase secret |
+
+If OneMap, data.gov.sg or MyMemory is unavailable, the app carries on without that extra (no map search, no rain warning or no translation) and never blocks the page.
+
+---
+
+## Getting started
+
+These steps run the application from the submitted files on your own computer, against your own Supabase project.
+
+### 1. Prerequisites
+
+- [Node.js](https://nodejs.org/) **22 or newer**
+- [pnpm](https://pnpm.io/installation) (`npm install -g pnpm`)
+- A free [Supabase](https://supabase.com/) account
+
+### 2. Get the code and install
 
 ```bash
+git clone https://github.com/jiale109/kampung-spirit.git
+cd kampung-spirit
 pnpm install
-pnpm dev            # http://localhost:5173
-pnpm build          # production build, run this before opening a pull request
-pnpm test:e2e       # Playwright tests (starts the dev server itself)
 ```
 
-First time running the tests? Run `npx playwright install chromium` once.
+(If you have the submitted folder instead, open a terminal in it and run `pnpm install`.)
 
-Login is real (Supabase Auth): sign up on the **Create an account** page, or log in with one of the [demo accounts](#demo-accounts). Seniors (65+) start on **My Requests**, everyone else on the **Help Board**. Nothing is saved in the browser except the login session.
+### 3. Create the database
 
-## Supabase setup
+1. In Supabase, create a **new project**.
+2. Open **SQL Editor → New query**, paste the **whole of `supabase/schema.sql`** and press **Run**. This creates every table, rule and function.
+3. Open **Authentication → Sign In / Providers → Email** and turn **Confirm email off**, so new accounts can log in straight away.
 
-1. Copy `.env.example` to `.env` and fill in your project's URL and publishable key. Restart `pnpm dev` after changing it.
-2. **New, empty project:** in the Supabase dashboard open **SQL Editor > New query**, paste all of `supabase/schema.sql` and press **Run**. Switch off **Authentication > Email > Confirm email** while developing.
-3. **Project that already has the schema:** run each file in `supabase/migrations/` that you have not run yet, oldest first, the same way. For example `20261020120000_add_needed_at.sql` adds the "When do you need help?" time to requests, and `20261024120000_rewards.sql` moves voucher spending and the wallet into Supabase. Every file in `supabase/migrations/` is safe to run again, so if you are not sure whether you ran one, run it.
-4. Add the demo accounts, some open requests, and demo hangouts and skill swaps (some people already joined, one session full):
-   ```bash
-   pnpm seed:demo
-   ```
-   It is safe to run again: accounts that already exist are skipped, seniors who already have requests do not get more, and hosts who already have open hangouts or skill swaps do not get more.
+> Already have a project with an older version of the schema? Instead of `schema.sql`, run each file in `supabase/migrations/` that you have not run yet, **oldest first**. Every migration is safe to run again.
 
-The e2e tests sign up new `e2e-...@example.com` accounts every run, so point `.env` at a separate test project if you can.
+### 4. Environment variables
 
-### Demo accounts
+Copy the example file and fill it in:
 
-All demo accounts use the password **`kampung-demo-123`**.
+```bash
+cp .env.example .env
+```
 
-| Name | Email | Age group |
+| Variable | Required | Where to find it |
 |---|---|---|
-| Mdm Tan Siew Lan | `demo.tan@example.com` | Senior |
-| Mr Lim Ah Kow | `demo.lim@example.com` | Senior |
-| Mdm Fatimah | `demo.fatimah@example.com` | Senior |
-| Wei Jie | `demo.weijie@example.com` | Youth |
-| Aisha | `demo.aisha@example.com` | Youth |
+| `VITE_SUPABASE_URL` | Yes | Supabase → Project Settings → Data API |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Yes | Supabase → Project Settings → API Keys (the **publishable** key, never the `service_role` key) |
+| `VITE_ONEMAP_TOKEN` | No | Your OneMap account; place search works without it |
+| `VITE_TELEGRAM_BOT_USERNAME` | No | Only for Telegram notifications (see below) |
 
-### Admin account
+`.env` is git-ignored and must never be committed.
 
-An admin sees the help requests, hangouts and skill swap sessions that residents can still see (plus requests that are accepted or awaiting confirmation), and can delete any of them. Finished, cancelled and past items are not shown. An admin does not take part: they cannot post, accept, host or join anything.
+### 5. Add the demo data
 
-- **Log in:** type **`admin`** in the email box and the password **`admin123!`**. (The full email is `admin@example.com`.)
-- **Created by** `pnpm seed:demo`, like the other demo accounts.
-- **Made an admin** by running this once in **SQL Editor > New query**. The seed script prints it at the end too. Until you run it, the account is an ordinary user.
-  ```sql
-  insert into public.admins (user_id)
-    select id from auth.users where email = 'admin@example.com'
-    on conflict do nothing;
-  ```
+```bash
+pnpm seed:demo
+```
 
-The database decides who is an admin (`supabase/schema.sql` section 18, or `migrations/20261105120000_admin.sql` on an existing project), so it refuses admin actions from anyone else, whatever the app shows.
+This creates the five demo residents, the admin account, open help requests, hangouts and skill swaps (all dated in the coming days) and some people who have joined them. It is safe to run again: existing accounts and people with upcoming items are skipped.
 
-> **Warning:** `admin123!` is for demos only. Change the admin's password (or remove the account) before the site is open to the public.
+Then make the admin an admin, once, in **SQL Editor → New query** (the seed script prints this too):
 
-## Team and who builds what
+```sql
+insert into public.admins (user_id)
+  select id from auth.users where email = 'admin@example.com'
+  on conflict do nothing;
+```
 
-| Feature | Owner | Start here |
+### 6. Run it
+
+```bash
+pnpm dev            # http://localhost:5173
+```
+
+Other commands:
+
+| Command | What it does |
+|---|---|
+| `pnpm build` | Production build into `dist/` |
+| `pnpm preview` | Serves the production build locally |
+| `pnpm test:unit` | Unit tests (Vitest) |
+| `pnpm test:e2e` | End-to-end tests (Playwright); see [Testing](#testing) |
+| `pnpm seed:demo` | Demo accounts and data |
+
+---
+
+## Telegram notifications (optional)
+
+The app works fully without this. To turn notifications on for your own Supabase project you need a bot from [@BotFather](https://t.me/BotFather), three Edge Function secrets, the Edge Functions deployed, seven Database Webhooks and one hourly Cron job. The full step-by-step guide is in **[`supabase/functions/README.md`](supabase/functions/README.md)**.
+
+| Function | Triggered by | Does |
 |---|---|---|
-| Help Board (done, on Supabase) | Victoria Soh | `stores/helpRequest.js` |
-| Hotspot Hangouts | Lee Jia Le | `views/hangouts/HangoutsView.vue` |
-| Skill-Swap Circles | Kelsey Wong | `views/skillswap/SkillSwapView.vue` |
-| Points, Rewards and Community Challenge | Nathaniel Low | `views/rewards/RewardsView.vue` |
-| Accounts and login (backend) | Reuben Tham | `stores/auth.js`, `views/LandingView.vue` |
-| Profile pages, layout and theme | Clarence Tay | `views/profile/ProfileView.vue`, `layouts/` |
+| `telegram-webhook` | Messages to the bot | `/start` links an account, `/stop` unlinks |
+| `notify` | Database Webhooks | Messages when a request is accepted, withdrawn, done, confirmed or cancelled, and when someone joins or cancels a hangout or session |
+| `send-reminders` | Cron, every hour | Reminders a day before, "nobody could help in time", and "please confirm" nudges |
+| `telegram-account` | The Profile page | Sends a test message, or disconnects |
 
-How we work in Git (branches, pull requests, who edits which file): see **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+---
+
+## Testing
+
+**Unit tests** (no setup needed):
+
+```bash
+pnpm test:unit
+```
+
+**End-to-end tests** sign up real `e2e-…@example.com` accounts and create real data, so point `.env` at a **separate test Supabase project** (set up as in [step 3](#3-create-the-database)), not the live one:
+
+```bash
+npx playwright install chromium   # once
+pnpm test:e2e                     # starts the dev server itself
+```
+
+To remove the test accounts and everything they created afterwards, run in that project's SQL Editor:
+
+```sql
+delete from auth.users where email like 'e2e-%@example.com';
+```
+
+---
+
+## Deployment
+
+The live site is hosted on **Vercel** and deploys automatically on every push to `main`.
+
+1. Import the GitHub repository in Vercel. It detects Vite: build command `pnpm build`, output directory `dist`, Node.js 22.x.
+2. Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (and optionally `VITE_ONEMAP_TOKEN`, `VITE_TELEGRAM_BOT_USERNAME`) under **Settings → Environment Variables**.
+3. In Supabase → **Authentication → URL Configuration**, set the Site URL to the Vercel address and add `https://<your-app>.vercel.app/**` to the Redirect URLs.
+
+`vercel.json` sends every path to `index.html`, so refreshing on a page such as `/app/rewards` works.
+
+---
 
 ## Project structure
 
 ```
-src/
-  main.js                    Creates the app (Pinia, router, Bootstrap, theme)
-  App.vue                    <router-view />
-  styles/theme.css           All custom styling on top of Bootstrap (colours, text size, buttons, cards)
-  router/index.js            All routes, the login/role guard, and sharedChildren (pages both roles see)
-  stores/
-    auth.js                  Sign up, log in and the logged-in person's profile (Supabase Auth)
-    helpRequest.js           Help requests (Supabase) and the accept limit
-    points.js                Your points balance and the community total (Supabase); the navbar reads it here
-    wallet.js                Your redeemed vouchers (Supabase)
-    hangout.js               Hotspot hangouts (Supabase)
-    skillSwap.js             Skill-swap sessions (Supabase)
-  layouts/
-    MainLayout.vue           The one navbar for everyone (applies "Use large text" to <html>)
-  views/
-    LandingView.vue          Landing page + login
-    RegisterView.vue         Sign up
-    senior/                  Help Board: My Requests (Active and Past), create, edit   /app/requests
-    youth/                   Help Board: the board and My Tasks                        /app, /app/tasks
-    hangouts/                Hotspot Hangouts: list, map, rain warning, propose     /app/hangouts
-    skillswap/               Skill-Swap Circles: list, tabs, filters, host          /app/skill-swaps
-    rewards/                 Vouchers, wallet and the community challenge           /app/rewards
-    profile/                 Your details, interests and "Use large text"           /app/profile
-  components/
-    RequestCard.vue          A request: simple card, details on hover, click keeps open
-    RequestForm.vue          Create/edit form with validation (including when help is needed)
-    HangoutCard.vue  HangoutForm.vue  HotspotMap.vue (+ locationSearch.vue)
-    SkillSwapCard.vue  SkillSwapForm.vue  VoucherCard.vue
-    CategoryBadge.vue  StatusBadge.vue  EmptyState.vue  ConfirmModal.vue  BrandMark.vue
-  lib/
-    supabase.js              The one Supabase client (reads .env)
-    points.js                Help Board settings, points rules and the community challenge numbers
-    vouchers.js              Voucher catalogue (costs must match public.vouchers)
-    hotspots.js  onemap.js  weather.js   Hangout places, the OneMap API and the rain forecast
-    skillSwapFormat.js       Date/time formatting and skill-swap option lists
-    profile.js               Interests list and "Use large text"
-supabase/
-  schema.sql                 The whole database, for a new project
-  migrations/                Changes to run on a project that already has the schema
-scripts/
-  seed-demo.js               pnpm seed:demo: demo accounts, open requests, hangouts and skill swaps
-e2e/                         Playwright tests (helpers.js + one spec per area)
+kampung-spirit/
+├── index.html
+├── package.json             Scripts and dependencies
+├── vercel.json              Single-page-app rewrite for Vercel
+├── .env.example             Environment variables to copy into .env
+├── public/images/           Avatars, merchant logos, icons, landing photos
+├── src/
+│   ├── main.js              Creates the app (Pinia, router, Bootstrap, theme)
+│   ├── router/index.js      Routes, login guard and admin rules
+│   ├── layouts/             MainLayout.vue: the navbar and page frame
+│   ├── views/               One folder per feature: senior/ (My Requests),
+│   │                        youth/ (Help Board, My Tasks), hangouts/,
+│   │                        skillswap/, rewards/, profile/, plus landing,
+│   │                        login and sign-up
+│   ├── components/          Cards, forms, map, calendar, modals
+│   ├── stores/              Pinia stores: auth, helpRequest, hangout,
+│   │                        skillSwap, points, wallet
+│   ├── lib/                 Supabase client, OneMap, weather, translation,
+│   │                        points rules, vouchers, content rules
+│   └── styles/theme.css     All custom styling on top of Bootstrap
+├── supabase/
+│   ├── schema.sql           The whole database, for a new project
+│   ├── migrations/          Changes for an existing project, oldest first
+│   └── functions/           Edge Functions for Telegram (with their own README)
+├── scripts/
+│   ├── seed-demo.js         pnpm seed:demo
+│   └── demo-video-data.sql  Optional: items starting today, for a recording
+└── e2e/                     Playwright tests (unit tests sit next to src/lib files)
 ```
 
-Pages in the navbar (the same for everyone, since anyone can ask for help and anyone can help): **My Requests, Help Board, My Tasks, Hangouts, Skill Swaps, Rewards**. **Profile** and **Log out** are in the name menu.
+---
 
-## Adding a feature (checklist)
+## Accessibility and design for seniors
 
-1. Read the GUIDE comment at the top of your feature's view.
-2. Put sample data in Supabase (add it to `scripts/seed-demo.js`), so every teammate sees the same rows.
-3. Make a store in `stores/` by copying the pattern in `stores/helpRequest.js`.
-4. Build the page in your feature's folder under `views/`, and shared pieces in `components/`.
-5. Need a new page? Add one line to `sharedChildren` in `router/index.js` (both roles get it) and, if it should be in the menu, a link in both files in `layouts/`.
-6. Write an e2e test (copy `e2e/helpboard.spec.js`).
-7. Run `pnpm build` and `pnpm test:e2e`, then open a pull request.
-
-## Design rules for seniors
-
-The users are seniors, so the design is deliberately calm and large.
-
-- **Text size:** **22px for everyone**, and **27px when "Use large text" is on** (chosen at sign up or on the Profile page). The larger size is the `html.large-text` rule in `styles/theme.css`, applied by `MainLayout.vue` and `lib/profile.js`. Everything is sized in `rem` so text, buttons and spacing grow together. Always use `rem`.
-- **Simple by default:** request cards show only the category, status and title. The details and buttons open on mouse hover, and a click (or a tap, or Enter on the keyboard) keeps them open until clicked again (`components/RequestCard.vue`). Reuse this idea for other lists.
+- **Text** is 22px by default and **27px with "Use large text"** (chosen at sign up or on the Profile page). Everything is sized in `rem`, so buttons and spacing grow with the text.
 - **Big targets:** buttons and inputs are at least 48px tall, with one main action per screen.
-- **Status in words:** colour is only a hint. States are always written ("Open", "Awaiting confirmation").
-- **Colours and fonts** are variables at the top of `styles/theme.css`. Change `--ks-teal` to re-colour the whole app.
-- Content sits in one column (920px max) so lines stay easy to read.
+- **Words, not colour alone:** every state is written ("Open", "Full", "Awaiting confirmation"), and the chosen day on the calendar is also written out underneath.
+- **Calm screens:** cards show the title and status first, with details on hover, tap or Enter.
+- **Keyboard and screen readers:** every control works with the keyboard and has a visible focus ring; decorative images are hidden from screen readers.
+- **Reduced motion:** the landing slideshow and the walking avatar slow down or stop for people whose device asks for less motion, and the walker can be switched off.
+- **Responsive:** checked from 320px phones to wide desktops, with large text on and off.
 
-## Demo script (Help Board)
+---
 
-Run `pnpm seed:demo` first (see [Supabase setup](#supabase-setup)). It also adds demo hangouts and skill swaps, so those pages are not empty.
+## Security
 
-1. Log in as Mdm Tan Siew Lan (`demo.tan@example.com`). You land on **My Requests**.
-2. **+ Ask for Help**: submit empty (validation), then post a request with a time later this week. Hover a card to see its details and when help is needed, then edit and cancel it. The cancelled request moves to **Past**.
-3. Log out (name menu) and log in as Wei Jie (`demo.weijie@example.com`). Filter and sort the board. Accept 2 requests (the 3rd is blocked).
-4. **My Tasks** > **Mark as done**. Points are NOT released yet.
-5. Log out, log in as the senior who owns that request. The card is already open: **Yes, ... helped me**. It moves to **Past**.
-6. Log in as Wei Jie again: the points in the navbar have gone up.
+- **Row Level Security** on every table: people see open items and their own data only; birth dates and guardian details are visible only to their owner.
+- **Every rule lives in the database.** Status changes, points, voucher redemption, joining, limits and admin actions all go through PostgreSQL functions that check the rules, so they cannot be bypassed from the browser. The browser can write only a small set of named columns.
+- **Points cannot be faked:** only database functions can add to the points ledger, and voucher costs are read from the database, not the page.
+- **Secrets stay out of the code:** the browser uses only Supabase's publishable key; the Telegram bot token and service keys live only in Supabase secrets.
 
-Request status flow: `open` > `accepted` > `pending_confirmation` > `completed` (or `cancelled`).
+---
 
-## Deploying
+## Known limitations
 
-The repo is ready for [Vercel](https://vercel.com/): import it, keep the defaults (build command `pnpm build`, output `dist`). `vercel.json` sends every path to `index.html` so refreshing a page like `/app/rewards` works. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` under the project's Environment Variables.
+- **Vouchers are simulated.** Codes are generated by the app and are not accepted by real merchants. Merchant names and logos are used for illustration only.
+- **The weather warning covers the next two hours only**, as that is the forecast data.gov.sg provides, so it appears on the day of an outdoor hangout, shortly before it starts.
+- **Guardian verification is manual:** an admin marks an under-18 as verified in the database; there is no email link to the guardian yet.
+- **Hangouts and skill swaps cannot be edited** after they are posted; the host can cancel and post again.
+- **Translation** uses MyMemory's free daily allowance, so heavy use may pause translations until the next day.
+- **One estate:** hotspots, the community challenge and the sample data are set up for Eunos.
 
-## External APIs (planned)
+---
 
-| API | Used for | Who |
-|---|---|---|
-| OneMap search and map | Finding hotspots and showing them on a map | Hangouts |
-| data.gov.sg 2-hour weather forecast | Rain warning for outdoor hangouts | Hangouts |
+## Credits
 
-Exact endpoints and response shapes are written in `views/hangouts/HangoutsView.vue`. Keep any API keys in a `.env` file (git-ignored), never in the code.
+- Map tiles and place search: **[OneMap](https://www.onemap.gov.sg/)**, © Singapore Land Authority.
+- Weather: **[data.gov.sg](https://data.gov.sg/)**, 2-hour weather forecast, National Environment Agency.
+- Translation: **[MyMemory](https://mymemory.translated.net/)**.
+- Merchant names and logos belong to their owners and are shown only to illustrate the simulated vouchers.

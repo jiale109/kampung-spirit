@@ -304,7 +304,7 @@ as $$
   ]
 $$;
 
--- Contact details are not allowed in requests (people talk through the app).
+-- Contact details are not allowed in requests, because everyone can see them.
 -- Must match CONTACT_PHRASES in src/lib/contentRules.js.
 create function public.contact_phrases()
 returns text[]
@@ -341,7 +341,7 @@ begin
   if t ~ '(^|[^0-9])(\+65 ?)?[689][0-9]{3}[ -]?[0-9]{4}([^0-9]|$)'
      or t ~ '[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+'
      or exists (select 1 from unnest(public.contact_phrases()) p where t ~ ('\m' || p || '\M')) then
-    raise exception 'Please keep contact details out of requests. Talk through the app instead.';
+    raise exception 'Please keep contact details out of requests. Everyone on the Help Board can see them.';
   end if;
   return new;
 end;

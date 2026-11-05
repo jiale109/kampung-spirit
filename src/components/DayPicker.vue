@@ -56,8 +56,16 @@ function parseISO(iso) {
   return new Date(y, m - 1, d)
 }
 
-// Open on the month of the chosen day, or of the first day that may be picked
-const opening = parseISO(props.modelValue || props.min || toISO(new Date()))
+// Open on the month of the chosen day, or of the first day that may be picked.
+// A chosen day outside min..max (e.g. an old request being rescheduled) is
+// pulled back inside, otherwise the calendar would open on a month with
+// nothing to press and the arrow back greyed out.
+function clampToRange(iso) {
+  if (props.min !== '' && iso < props.min) return props.min
+  if (props.max !== '' && iso > props.max) return props.max
+  return iso
+}
+const opening = parseISO(clampToRange(props.modelValue || props.min || toISO(new Date())))
 const viewYear = ref(opening.getFullYear())
 const viewMonth = ref(opening.getMonth())
 
@@ -117,7 +125,10 @@ const canGoForward = computed(() => {
 })
 
 const todayISO = toISO(new Date())
-const chosenLabel = computed(() => (props.modelValue ? formatDate(props.modelValue) : ''))
+// Only a day that can still be picked counts as chosen
+const chosenLabel = computed(() =>
+  props.modelValue && clampToRange(props.modelValue) === props.modelValue ? formatDate(props.modelValue) : '',
+)
 </script>
 
 <template>

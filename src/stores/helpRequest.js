@@ -6,6 +6,17 @@ import { useAuthStore } from './auth.js'
 import { usePointsStore } from './points.js'
 import { MAX_ACTIVE_TASKS } from '../lib/points.js'
 
+// How many requests one person may post a day (Singapore time). Every request
+// posted that day counts, even if it was cancelled later; editing does not.
+// Must match help_requests_daily_limit() in supabase/schema.sql (section 20)
+export const MAX_REQUESTS_PER_DAY = 3
+
+// Shown instead of "+ Ask for Help" once the day's requests are used up
+export const DAILY_LIMIT_NOTE =
+  `You have posted ${MAX_REQUESTS_PER_DAY} requests today. You can ask for more help tomorrow.`
+
+// The day in Singapore as 'YYYY-MM-DD', the same day the database counts by
+const singaporeDay = (ms) => new Date(ms).toLocaleDateString('en-CA', { timeZone: 'Asia/Singapore' })
 
 const COLUMNS = `id, title, description, category, difficulty, duration, points, is_physical, status,
   requester_id, helper_id, needed_at, location, latitude, longitude, at_home, created_at,
@@ -93,6 +104,14 @@ export const useHelpRequestStore = defineStore('helpRequest', () => {
   )
   const atLimit = computed(() => activeCount.value >= MAX_ACTIVE_TASKS)
 
+  // My requests posted today, whatever their status now (the database counts the same way)
+  const postedTodayCount = computed(() => {
+    const today = singaporeDay(Date.now())
+    return myRequests.value.filter((r) => singaporeDay(r.createdAt) === today).length
+  })
+  const requestsLeftToday = computed(() => Math.max(0, MAX_REQUESTS_PER_DAY - postedTodayCount.value))
+  const dailyLimitReached = computed(() => requestsLeftToday.value === 0)
+
   function getRequestById(id) {
     return requests.value.find((r) => r.id === id) ?? null
   }
@@ -169,6 +188,7 @@ export const useHelpRequestStore = defineStore('helpRequest', () => {
   return {
     requests, loading, loadError,
     myRequests, openRequests, myTasks, activeCount, atLimit,
+    postedTodayCount, requestsLeftToday, dailyLimitReached,
     getRequestById, load,
     createRequest, updateRequest, cancelRequest, confirmDone, deleteRequest,
     acceptRequest, markDone, withdrawFromTask, adminDelete,

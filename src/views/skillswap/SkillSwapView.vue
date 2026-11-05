@@ -281,6 +281,9 @@ onMounted(() => {
       </div>
       <RouterLink :to="createPath" class="btn btn-primary btn-lg">Host a session</RouterLink>
     </div>
+    <p class="points-note mt-4">
+      Hosting or joining a session earns you points once the host marks it as completed.
+    </p>
 
     <!--all | hosting | going-->
     <div class="d-flex flex-wrap gap-2 mb-4" role="group" aria-label="Show sessions">
@@ -409,9 +412,7 @@ onMounted(() => {
       />
     </div>
  
-    <p class="points-note mt-4">
-      Hosting or joining a session earns you points once the host marks it as completed.
-    </p>
+    
   </div>
 
 </template>

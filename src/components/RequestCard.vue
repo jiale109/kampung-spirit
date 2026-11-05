@@ -1,11 +1,11 @@
 <script setup>
 import { ref, computed } from 'vue'
-import TranslateText from './TranslateText.vue'
+import LanguageBar from './LanguageBar.vue'
 import CategoryBadge from './CategoryBadge.vue'
 import StatusBadge from './StatusBadge.vue'
 import RequestMapModal from './RequestMapModal.vue'
 import { categoryClass, categories } from '../lib/points.js'
-import { formatNeededAt } from '../stores/helpRequest.js'
+import { t, formatWhen, translate, chosenLanguage } from '../lib/translate.js'
 
 
 const props = defineProps({
@@ -40,7 +40,52 @@ const stepNumbers = { open: 0, accepted: 1, pending_confirmation: 2, completed: 
 const currentStep = computed(() => stepNumbers[props.request.status])
 const inProgress = computed(() => ['accepted', 'pending_confirmation'].includes(props.request.status))
 
-const neededAtText = computed(() => formatNeededAt(props.request.neededAt))
+const neededAtText = computed(() => formatWhen(props.request.neededAt))
+
+/*
+  The two pieces only a machine can translate: what the neighbour typed.
+  Everything else on this card comes from the table in lib/translate.js.
+
+  Empty means "show the original", which is also what happens when English is
+  chosen again - no call, no waiting, the words are already on the screen.
+*/
+const shownTitle = ref('')
+const shownDesc = ref('')
+const wordsBusy = ref(false)
+const wordsFailed = ref(false)
+
+const title = computed(() => shownTitle.value || props.request.title)
+const description = computed(() => shownDesc.value || props.request.description)
+
+/*
+  Called when someone taps a language. Both pieces go at once rather than one
+  after the other, so the card does not change in two steps.
+
+  A failure is not thrown away silently: wordsFailed puts a line under the
+  words saying the original is what is being shown, because a resident who
+  asked for Malay and got English back deserves to know why.
+*/
+async function loadWords(code) {
+  wordsFailed.value = false
+  if (!code) {
+    shownTitle.value = ''
+    shownDesc.value = ''
+    return
+  }
+  wordsBusy.value = true
+  const [titleAnswer, descAnswer] = await Promise.all([
+    translate(props.request.title, code),
+    translate(props.request.description, code),
+  ])
+  // Only keep them if this is still the language being read - a second tap
+  // while the first call was in the air must not be overwritten by it
+  if (chosenLanguage.value === code) {
+    shownTitle.value = titleAnswer.ok ? titleAnswer.text : ''
+    shownDesc.value = descAnswer.ok ? descAnswer.text : ''
+    wordsFailed.value = !titleAnswer.ok || !descAnswer.ok
+  }
+  wordsBusy.value = false
+}
 
 // Whole days since it was posted
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -73,12 +118,12 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
           <div class="d-flex flex-column gap-1 text-start">
             <h2 class="request-title">
               <button type="button" class="request-toggle" :aria-expanded="expanded"
-                @click="pinned = !pinned">{{ request.title }}</button>
+                @click="pinned = !pinned">{{ title }}</button>
             </h2>
 
             <p v-if="compact" class="request-stats" data-testid="card-stats">
               <img src="/images/coin.svg" class="point-coin-img" alt="" />
-              {{ request.points }} pts · {{ request.duration }} min · {{ request.difficulty }} effort
+              {{ request.points }} {{ t('pts') }} · {{ request.duration }} {{ t('min') }} · {{ t(request.difficulty) }} {{ t('effort') }}
             </p>
 
             <p class="request-stats" data-testid="card-summary">
@@ -88,14 +133,14 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
 
             <p v-if="showWaiting && request.status === 'open' && waitingDays >= 2" class="request-waiting"
               data-testid="waiting">
-              Waiting for a helper for {{ waitingDays }} days
+              {{ t('Waiting for a helper for {n} days', { n: waitingDays }) }}
             </p>
 
             <div v-if="$slots.notice" class="request-notice">
               <slot name="notice" />
             </div>
 
-            <span v-if="!open" class="request-hint">{{ expanded ? 'Hide details ▴' : 'Show details ▾' }}</span>
+            <span v-if="!open" class="request-hint">{{ expanded ? t('Hide details') + ' ▴' : t('Show details') + ' ▾' }}</span>
           </div>
         </div>
 
@@ -109,46 +154,56 @@ const waitingDays = computed(() => Math.floor((Date.now() - props.request.create
       <!-- Only visible when the card is open -->
       <div class="request-details">
         <div class="request-details-inner">
-          <p class="request-desc">{{ request.description }}</p>
+          <p class="request-desc">{{ description }}</p>
 
-          <!-- Under the words, never instead of them -->
-          <TranslateText :text="request.description" />
+          <!-- Switches the whole card, in place -->
+          <LanguageBar @change="loadWords" />
+
+          <p v-if="wordsBusy" class="translate-note" data-testid="translate-busy">
+            {{ t('Translating…') }}
+          </p>
+          <p v-else-if="wordsFailed" class="translate-problem" role="status"
+            data-testid="translate-problem">
+            {{ t('This part could not be translated, so the original is shown.') }}
+          </p>
+          <p v-else-if="chosenLanguage" class="translate-note" data-testid="translate-note">
+            {{ t('Translated by machine. The words above are the original.') }}
+          </p>
 
           <div class="request-place">
-            <span>Meeting place: <strong>{{ request.location }}</strong></span>
-            <button type="button" class="btn btn-outline-primary" data-testid="view-map" @click="showMap = true">View
-              map</button>
+            <span>{{ t('Meeting place:') }} <strong>{{ request.location }}</strong></span>
+            <button type="button" class="btn btn-outline-primary" data-testid="view-map" @click="showMap = true">{{ t('View map') }}</button>
           </div>
           <!-- showRequester is false on the requester's own board, so it is their home -->
           <p v-if="request.atHome" class="mb-0" data-testid="at-home">
-            {{ showRequester ? "At the requester's home" : 'At your home' }}
+            {{ showRequester ? t("At the requester's home") : t('At your home') }}
           </p>
 
           <!-- A compact card already shows these on the closed card -->
           <dl v-if="!compact" class="request-facts">
             <div>
-              <dt>Time needed</dt>
-              <dd>{{ request.duration }} minutes</dd>
+              <dt>{{ t('Time needed') }}</dt>
+              <dd>{{ request.duration }} {{ t('minutes') }}</dd>
             </div>
             <div>
-              <dt>Effort</dt>
-              <dd>{{ request.difficulty }}</dd>
+              <dt>{{ t('Effort') }}</dt>
+              <dd>{{ t(request.difficulty) }}</dd>
             </div>
             <div>
-              <dt>Reward</dt>
-              <dd> <img src="/images/coin.svg" class="point-coin-img" alt="" />{{ request.points }} points</dd>
+              <dt>{{ t('Reward') }}</dt>
+              <dd> <img src="/images/coin.svg" class="point-coin-img" alt="" />{{ request.points }} {{ t('points') }}</dd>
             </div>
           </dl>
 
           <p v-if="showRequester || (showHelper && request.helperName)" class="request-people">
             <span v-if="showRequester"><strong>{{ request.seniorName }}</strong></span>
-            <span v-if="showHelper && request.helperName">Helper: <strong>{{ request.helperName }}</strong></span>
+            <span v-if="showHelper && request.helperName">{{ t('Helper:') }} <strong>{{ request.helperName }}</strong></span>
           </p>
 
           <ol v-if="inProgress" class="progress-steps" >
             <li v-for="(step, i) in steps" :key="step"
               :class="{ 'is-done': i <= currentStep, 'is-current': i === currentStep }">
-              {{ step }}
+              {{ t(step) }}
             </li>
           </ol>
 

@@ -2273,64 +2273,10 @@ form.d-grid {
   border-color: var(--ks-amber-ink);
 }
 
-/* ==========================================================================
-   15. "Read this in another language"
-   ==========================================================================
-   components/TranslateText.vue, under the description on a card. Quiet on
-   purpose: it is an offer, not an action, so it must not pull the eye away
-   from the button that actually joins the hangout.
-   ========================================================================== */
-.translate-block {
-  /*
-    No top margin. This is a flex child of .request-details-inner, which
-    already puts 1rem between its children - a margin here is added to that,
-    not instead of it, and the gap under the description came out at 44px
-    (54px with large text) instead of 22px.
-  */
-  margin: 0;
-  padding-top: 0.9rem;
-  border-top: 1px solid var(--ks-line);
-}
 
-.translate-label {
-  display: block;
-  margin-bottom: 0.45rem;
-  font-weight: 600;
-  color: var(--ks-muted);
-}
 
-.translate-row {
-  display: flex;
-  flex-wrap: wrap;
-  /* 1rem, like everywhere else these framed controls sit side by side:
-     0.625rem of any gap is eaten by the frame before anything shows */
-  gap: 1rem;
-  align-items: center;
-}
 
-/*
-  Wide enough for the longest language name, and allowed to shrink on a
-  narrow phone rather than pushing the button off the card.
-*/
-.translate-select {
-  flex: 1 1 12rem;
-  min-width: 0;
-  max-width: 20rem;
-}
 
-/*
-  The translation itself. Teal tint rather than white, so it reads as an
-  addition to the card rather than more of what the neighbour wrote.
-*/
-.translate-result {
-  margin: 0.9rem 0 0;
-  padding: 0.85rem 1rem;
-  background: var(--ks-teal-tint);
-  border: 0.1875rem solid #06101a;
-  border-radius: 0.45rem;
-  /* A translated line can be one long word in some scripts */
-  overflow-wrap: anywhere;
-}
 
 .translate-problem {
   margin: 0.9rem 0 0;
@@ -2341,4 +2287,85 @@ form.d-grid {
   margin: 0.5rem 0 0;
   font-size: 0.9rem;
   color: var(--ks-muted);
+}
+
+/* ---------------------------------------------------------------------------
+   16. The language bar
+
+   Four buttons in a row, each in its own script. They are ordinary .btn
+   elements, so they pick up the pixel frame from section 13 and match every
+   other button in the app without a second set of rules.
+
+   The gap is 0.9rem rather than something smaller because the frame in
+   section 13 spreads 0.4375rem outside each button on both sides - it eats
+   0.625rem of any gap before a single pixel of background shows between two
+   of them. 0.9rem leaves about 6px actually visible.
+
+   flex-wrap, because "English 中文 Melayu தமிழ்" with four frames around it
+   does not fit on a 320px phone in one line, and a row that overflows would
+   push the card wider than the screen.
+--------------------------------------------------------------------------- */
+.language-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.language-bar-label {
+  font-weight: 700;
+  color: var(--ks-ink-soft);
+}
+
+.language-bar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+}
+
+/*
+  No growing: a language button should be as wide as its own word. Stretching
+  "中文" to the width of "English" would make the shorter ones look like
+  empty boxes.
+*/
+.language-chip {
+  flex: 0 1 auto;
+
+  /*
+    The narrower padding is the point of this rule. Section 13 gives every
+    button 1.4em each side, which is right for "Propose a hangout" sitting on
+    its own and much too wide for four chips sharing a line: at 1.4em they
+    need 574px and a 320px phone offers 235px, so all four stacked.
+
+    Measured across 320/360/390/768 with and without large text, 0.7em is the
+    widest padding that still fits two per row on every small-text phone
+    while never letting a chip overflow its row. At 320px WITH large text
+    they stack one per row whatever the padding - "English" and "Melayu" at
+    27px do not fit two across 235px - and four full-width targets is the
+    right way for this to degrade for someone who asked for bigger text.
+  */
+  padding-left: 0.7em;
+  padding-right: 0.7em;
+}
+
+/*
+  The meeting place and its map button.
+
+  This had no rule at all, so the button sat inline straight after the
+  address with nothing between them. That was survivable when the button was
+  a plain rectangle; section 13 gives it a frame drawn 0.4375rem OUTSIDE its
+  own box, which lands on the last word of the address - measured flush or
+  1px over at 768, 1280 and 1920.
+
+  Translation makes it worse rather than causing it: the address line changes
+  length in every language, so where the button lands moves with it.
+
+  1rem of gap, the same as .request-actions, because the frame consumes
+  0.625rem of any gap before a single pixel of background appears between
+  two things.
+*/
+.request-place {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
 }

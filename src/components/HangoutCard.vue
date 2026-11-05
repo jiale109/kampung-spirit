@@ -9,8 +9,9 @@
 */
 import { ref, computed } from 'vue'
 import { useHangoutStore } from '../stores/hangout.js'
-import TranslateText from './TranslateText.vue'
+import LanguageBar from './LanguageBar.vue'
 import { formatDate, formatTime, formatDuration } from '../lib/skillSwapFormat.js'
+import { t, translate, chosenLanguage } from '../lib/translate.js'
 
 const props = defineProps({
   hangout: { type: Object, required: true },
@@ -27,17 +28,50 @@ const hasStarted = computed(() => store.hasStarted(props.hangout))
 const hasEnded = computed(() => store.hasEnded(props.hangout))
 const canJoin = computed(() => !isHost.value && !isGoing.value && !hasStarted.value)
 
+/*
+  The two pieces only a machine can translate. Everything else on this card
+  comes from the table in lib/translate.js - see RequestCard for the reasoning.
+*/
+const shownTitle = ref('')
+const shownDesc = ref('')
+const wordsBusy = ref(false)
+const wordsFailed = ref(false)
+
+const title = computed(() => shownTitle.value || props.hangout.title)
+const description = computed(() => shownDesc.value || props.hangout.description)
+
+async function loadWords(code) {
+  wordsFailed.value = false
+  if (!code) {
+    shownTitle.value = ''
+    shownDesc.value = ''
+    return
+  }
+  wordsBusy.value = true
+  const [titleAnswer, descAnswer] = await Promise.all([
+    translate(props.hangout.title, code),
+    translate(props.hangout.description, code),
+  ])
+  // Only keep them if this is still the language being read
+  if (chosenLanguage.value === code) {
+    shownTitle.value = titleAnswer.ok ? titleAnswer.text : ''
+    shownDesc.value = descAnswer.ok ? descAnswer.text : ''
+    wordsFailed.value = !titleAnswer.ok || !descAnswer.ok
+  }
+  wordsBusy.value = false
+}
+
 // Always words, never colour on its own (the pill has a dot as well)
 const status = computed(() => {
-  if (isHost.value && hasEnded.value) return { label: 'Waiting for you to mark as done', cls: 'status-pending' }
-  if (isHost.value) return { label: 'You are hosting', cls: 'status-accepted' }
-  if (isGoing.value) return { label: 'You are going', cls: 'status-open' }
-  return { label: 'Open to join', cls: 'status-completed' }
+  if (isHost.value && hasEnded.value) return { label: t('Waiting for you to mark as done'), cls: 'status-pending' }
+  if (isHost.value) return { label: t('You are hosting'), cls: 'status-accepted' }
+  if (isGoing.value) return { label: t('You are going'), cls: 'status-open' }
+  return { label: t('Open to join'), cls: 'status-completed' }
 })
 
 const goingText = computed(() => {
   const n = store.goingCount(props.hangout)
-  return n === 1 ? '1 person going' : `${n} people going`
+  return n === 1 ? t('1 person going') : t('{n} people going', { n })
 })
 
 // ---- open and close the details ----
@@ -76,20 +110,28 @@ const detailsId = computed(() => `hangout-details-${props.hangout.id}`)
 
       <h2 class="request-title">
         <button type="button" class="request-toggle" :aria-expanded="open" :aria-controls="detailsId" @click="toggle">
-          {{ hangout.title }}
+          {{ title }}
         </button>
       </h2>
 
       <span class="request-hint">
-        {{ formatDate(hangout.date) }} &middot; {{ formatTime(hangout.time) }}<template v-if="!open"> &middot; Tap for details</template>
+        {{ formatDate(hangout.date) }} &middot; {{ formatTime(hangout.time) }}<template v-if="!open"> &middot; {{ t('Tap for details') }}</template>
       </span>
 
       <div :id="detailsId" class="request-details">
         <div class="request-details-inner">
-          <p class="request-desc">{{ hangout.description }}</p>
+          <p class="request-desc">{{ description }}</p>
 
-          <!-- Under the words, never instead of them -->
-          <TranslateText :text="hangout.description" />
+          <!-- Switches the whole card, in place -->
+          <LanguageBar @change="loadWords" />
+
+          <p v-if="wordsBusy" class="translate-note">{{ t('Translating…') }}</p>
+          <p v-else-if="wordsFailed" class="translate-problem" role="status">
+            {{ t('This part could not be translated, so the original is shown.') }}
+          </p>
+          <p v-else-if="chosenLanguage" class="translate-note">
+            {{ t('Translated by machine. The words above are the original.') }}
+          </p>
 
           <!-- Rain warning for outdoor places only. The page passes it in. -->
           <p v-if="hangout.weatherWarning" class="points-note" data-testid="weather-warning">
@@ -98,40 +140,40 @@ const detailsId = computed(() => `hangout-details-${props.hangout.id}`)
 
           <dl class="request-facts">
             <div>
-              <dt>Day</dt>
+              <dt>{{ t('Day') }}</dt>
               <dd>{{ formatDate(hangout.date) }}</dd>
             </div>
             <div>
-              <dt>Time</dt>
+              <dt>{{ t('Time') }}</dt>
               <dd>{{ formatTime(hangout.time) }} &middot; {{ formatDuration(hangout.duration) }}</dd>
             </div>
             <div>
-              <dt>Where</dt>
-              <dd>{{ hangout.placeName }}<template v-if="hangout.outdoor"> (outdoors)</template></dd>
+              <dt>{{ t('Where') }}</dt>
+              <dd>{{ hangout.placeName }}<template v-if="hangout.outdoor"> ({{ t('outdoors') }})</template></dd>
             </div>
             <div>
-              <dt>Going</dt>
+              <dt>{{ t('Going') }}</dt>
               <dd data-testid="going-text">{{ goingText }}</dd>
             </div>
           </dl>
 
           <p class="request-people">
-            <span>Hosted by <strong>{{ isHost ? 'you' : hangout.hostName }}</strong></span>
+            <span>{{ t('Hosted by') }} <strong>{{ isHost ? t('you') : hangout.hostName }}</strong></span>
           </p>
 
           <div class="request-actions">
             <button v-if="canJoin" type="button" class="btn btn-primary btn-lg" data-testid="join"
-              @click="emit('join', hangout)">I am coming</button>
+              @click="emit('join', hangout)">{{ t('I am coming') }}</button>
 
             <button v-if="isGoing && !isHost" type="button" class="btn btn-outline-primary btn-lg" data-testid="leave"
-              @click="emit('leave', hangout)">I cannot make it</button>
+              @click="emit('leave', hangout)">{{ t('I cannot make it') }}</button>
 
             <template v-if="isHost">
               <button v-if="hasStarted" type="button" class="btn btn-primary btn-lg" data-testid="complete"
-                @click="emit('complete', hangout)">Mark as done</button>
-              <p v-else class="request-note mb-0" data-testid="complete-later">You can mark this as done once it has started.</p>
+                @click="emit('complete', hangout)">{{ t('Mark as done') }}</button>
+              <p v-else class="request-note mb-0" data-testid="complete-later">{{ t('You can mark this as done once it has started.') }}</p>
               <button type="button" class="btn btn-outline-danger" data-testid="cancel"
-                @click="emit('cancel', hangout)">Cancel this hangout</button>
+                @click="emit('cancel', hangout)">{{ t('Cancel this hangout') }}</button>
             </template>
           </div>
         </div>
